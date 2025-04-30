@@ -1,8 +1,4 @@
-
-                                                                                                        <p align="center">
-  <img src="path/to/your/lanimals-logo.png" alt="LANimals Logo" width="300"/>
-</p>
-
+![Uploading ChatGPT Image Apr 30, 2025, 12_01_12 PM.png…]()
 
 # LANimals
 
