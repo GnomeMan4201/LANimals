@@ -1,0 +1,226 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+# Banner
+echo -e "${BOLD}${MAROON}"
+cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+                 NETWORK MAPPER
+BANNER
+echo -e "${NORMAL}"
+
+echo -e "${BOLD}${MAROON}[ INIT ]${NORMAL} Network Mapper Initializing..."
+sleep 0.3
+
+# Get Network Information
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Getting network information..."
+
+# Get primary interface and network details
+PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}')
+LOCAL_IP=$(ip -o -4 addr show $PRIMARY_INTERFACE | awk '{print $4}' | cut -d/ -f1)
+GATEWAY=$(ip route | grep default | awk '{print $3}')
+SUBNET=$(ip -o -4 addr show $PRIMARY_INTERFACE | awk '{print $4}' | cut -d/ -f1 | sed 's/\.[0-9]*$/.0\/24/')
+SUBNET_BASE=$(echo $LOCAL_IP | cut -d. -f1-3)
+
+echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Interface: $PRIMARY_INTERFACE | IP: $LOCAL_IP | Gateway: $GATEWAY"
+echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Subnet: $SUBNET"
+
+# Create network map
+create_network_map() {
+    echo -e "${BOLD}${MAROON}[ MAP ]${NORMAL} Generating network map..."
+    
+    # Get all devices with ARP
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Discovering devices..."
+    DEVICES=$(ip neigh | grep -v FAILED)
+    DEVICE_COUNT=$(echo "$DEVICES" | wc -l)
+    
+    echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Found $DEVICE_COUNT devices"
+    
+    # Create the ASCII art network map
+    echo ""
+    echo -e "${BOLD}${MAROON}Network Map:${NORMAL}"
+    echo ""
+    echo -e "${BOLD}${MAROON}    ┌───────────────────┐${NORMAL}"
+    echo -e "${BOLD}${MAROON}    │     INTERNET      │${NORMAL}"
+    echo -e "${BOLD}${MAROON}    └────────┬──────────┘${NORMAL}"
+    echo -e "${BOLD}${MAROON}             │${NORMAL}"
+    echo -e "${BOLD}${MAROON}             ▼${NORMAL}"
+    echo -e "${BOLD}${MAROON}    ┌───────────────────┐${NORMAL}"
+    echo -e "${BOLD}${MAROON}    │  GATEWAY ROUTER   │${NORMAL}"
+    echo -e "${BOLD}${MAROON}    │  $GATEWAY   │${NORMAL}"
+    echo -e "${BOLD}${MAROON}    └────────┬──────────┘${NORMAL}"
+    echo -e "${BOLD}${MAROON}             │${NORMAL}"
+    
+    # Display connected hosts
+    echo -e "${BOLD}${MAROON}             │${NORMAL}"
+    echo -e "${BOLD}${MAROON}    ┌────────┼──────────┐${NORMAL}"
+    echo -e "${BOLD}${MAROON}    │        │          │${NORMAL}"
+    echo -e "${BOLD}${MAROON}    ▼        ▼          ▼${NORMAL}"
+    
+    # Count hosts by type
+    YOUR_MACHINE=$(echo "$DEVICES" | grep "$LOCAL_IP" | wc -l)
+    LOCAL_COUNT=$((DEVICE_COUNT - YOUR_MACHINE))
+    
+    # Display YOUR HOST
+    echo -e "${BOLD}${GREEN}┌───────────┐${NORMAL}  ${BOLD}${YELLOW}┌───────────┐${NORMAL}  ${BOLD}${BLUE}┌───────────┐${NORMAL}"
+    echo -e "${BOLD}${GREEN}│ YOUR HOST │${NORMAL}  ${BOLD}${YELLOW}│ LOCAL NET │${NORMAL}  ${BOLD}${BLUE}│  GATEWAY  │${NORMAL}"
+    echo -e "${BOLD}${GREEN}│ $LOCAL_IP │${NORMAL}  ${BOLD}${YELLOW}│ $LOCAL_COUNT Devices │${NORMAL}  ${BOLD}${BLUE}│ Services  │${NORMAL}"
+    echo -e "${BOLD}${GREEN}└───────────┘${NORMAL}  ${BOLD}${YELLOW}└───────────┘${NORMAL}  ${BOLD}${BLUE}└───────────┘${NORMAL}"
+    
+    # List local devices
+    echo ""
+    echo -e "${BOLD}${MAROON}Detected Devices:${NORMAL}"
+    echo "$DEVICES" | while read -r line; do
+        IP=$(echo "$line" | awk '{print $1}')
+        MAC=$(echo "$line" | awk '{print $5}')
+        STATE=$(echo "$line" | awk '{print $6}')
+        
+        # Add a special indicator for the local IP
+        if [ "$IP" = "$LOCAL_IP" ]; then
+            echo -e "${BOLD}${GREEN}    • $IP${NORMAL} ($MAC) - $STATE ${BOLD}${GREEN}[YOU]${NORMAL}"
+        elif [ "$IP" = "$GATEWAY" ]; then
+            echo -e "${BOLD}${BLUE}    • $IP${NORMAL} ($MAC) - $STATE ${BOLD}${BLUE}[GATEWAY]${NORMAL}"
+        else
+            echo -e "${BOLD}${YELLOW}    • $IP${NORMAL} ($MAC) - $STATE"
+        fi
+    done
+    
+    # Advanced subnet visualization
+    echo ""
+    echo -e "${BOLD}${MAROON}Subnet Visualization ($SUBNET_BASE.0/24):${NORMAL}"
+    echo ""
+    
+    # Create a grid of IP addresses in the subnet
+    for i in {0..15}; do
+        ROW=""
+        for j in {0..15}; do
+            NUM=$((i*16 + j))
+            IP="$SUBNET_BASE.$NUM"
+            
+            if [ "$IP" = "$LOCAL_IP" ]; then
+                # Your IP
+                ROW+="${BOLD}${GREEN}X${NORMAL} "
+            elif [ "$IP" = "$GATEWAY" ]; then
+                # Gateway
+                ROW+="${BOLD}${BLUE}G${NORMAL} "
+            elif echo "$DEVICES" | grep -q "$IP"; then
+                # Other device on network
+                ROW+="${BOLD}${YELLOW}O${NORMAL} "
+            else
+                # Empty IP
+                ROW+=". "
+            fi
+        done
+        echo -e "$ROW"
+    done
+    
+    echo ""
+    echo -e "${BOLD}${GREEN}X${NORMAL} - Your Host | ${BOLD}${BLUE}G${NORMAL} - Gateway | ${BOLD}${YELLOW}O${NORMAL} - Other Devices | . - Empty"
+}
+
+# Function to scan a specific target
+scan_target() {
+    local target=$1
+    
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Scanning target: $target"
+    
+    # Ping the target
+    echo -e "${BOLD}${MAROON}[ PING ]${NORMAL} Testing connectivity..."
+    ping -c 1 -W 1 $target > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Target is reachable"
+    else
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Target is not responding to ping"
+    fi
+    
+    # Get MAC address
+    MAC=$(ip neigh | grep "$target" | awk '{print $5}')
+    if [ -n "$MAC" ]; then
+        echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} MAC Address: $MAC"
+    fi
+    
+    # Use nc to scan common ports if available
+    if command -v nc &> /dev/null; then
+        echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Scanning common ports..."
+        
+        # Define common ports and services
+        PORTS=("21:FTP" "22:SSH" "23:Telnet" "25:SMTP" "53:DNS" "80:HTTP" "443:HTTPS" "445:SMB" "3389:RDP" "8080:HTTP-Alt")
+        
+        # Scan each port
+        for PORT_INFO in "${PORTS[@]}"; do
+            PORT=$(echo $PORT_INFO | cut -d: -f1)
+            SERVICE=$(echo $PORT_INFO | cut -d: -f2)
+            
+            # Check if port is open
+            timeout 1 nc -zv $target $PORT 2>&1 | grep -i "succeeded" > /dev/null
+            if [ $? -eq 0 ]; then
+                echo -e "${BOLD}${GREEN}[ OPEN ]${NORMAL} Port $PORT ($SERVICE)"
+            fi
+        done
+    else
+        echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} 'nc' not found. Install with 'apt install netcat'"
+    fi
+    
+    # Try to identify OS (very basic)
+    echo -e "${BOLD}${MAROON}[ FINGERPRINT ]${NORMAL} Attempting OS identification..."
+    TTL=$(ping -c 1 -W 1 $target 2>/dev/null | grep "ttl=" | cut -d" " -f6 | cut -d"=" -f2)
+    
+    if [ -n "$TTL" ]; then
+        if [ $TTL -le 64 ]; then
+            echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} OS: Likely Linux/Unix (TTL=$TTL)"
+        elif [ $TTL -le 128 ]; then
+            echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} OS: Likely Windows (TTL=$TTL)"
+        else
+            echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} OS: Unknown (TTL=$TTL)"
+        fi
+    else
+        echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} Could not determine OS"
+    fi
+}
+
+# Command line parsing
+if [ "$1" = "--help" ]; then
+    echo "Usage: lanimals_netmap [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --map              Generate a visual network map (default)"
+    echo "  --scan=TARGET      Scan a specific target IP"
+    echo "  --help             Show this help message"
+    exit 0
+fi
+
+# Parse arguments
+MODE="map"
+TARGET=""
+
+for arg in "$@"; do
+    case $arg in
+        --scan=*)
+            MODE="scan"
+            TARGET="${arg#*=}"
+            ;;
+    esac
+done
+
+# Run the selected mode
+if [ "$MODE" = "map" ]; then
+    create_network_map
+elif [ "$MODE" = "scan" ] && [ -n "$TARGET" ]; then
+    scan_target $TARGET
+else
+    echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Invalid arguments. Use --help for usage information."
+fi
