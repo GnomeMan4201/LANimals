@@ -11,18 +11,6 @@ LANimals is a network reconnaissance, security auditing, and monitoring toolkit 
 ### 
 ![Network Map](docs/screenshots/originals/netmap1.png)
 
-
-### 
-![Network Map](docs/screenshots/originals/netmap1.png)
-
-### 
-![System Info](docs/screenshots/originals/sysinfo.png)
-
-### 
-![Traffic](docs/screenshots/originals/traffic1.png)
-
-
-
 ## Features
 
 - Network reconnaissance and device discovery
