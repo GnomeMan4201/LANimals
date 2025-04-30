@@ -20,4 +20,6 @@ LANimals is a network reconnaissance, security auditing, and monitoring toolkit 
 ```bash
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
-make install
+sudo apt install dos2unix    # One-time install (required!)
+dos2unix bin/*               # Fix line endings if needed
+sudo make install
