@@ -1,0 +1,273 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+# Banner
+echo -e "${BOLD}${MAROON}"
+cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+               AUTONOMOUS RECON
+BANNER
+echo -e "${NORMAL}"
+
+echo -e "${BOLD}${MAROON}[ INIT ]${NORMAL} Initializing Autonomous Recon..."
+sleep 0.3
+
+# Create data directory
+mkdir -p ~/.lanimals/data
+
+# Network information
+PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}')
+LOCAL_IP=$(ip -o -4 addr show $PRIMARY_INTERFACE | awk '{print $4}' | cut -d/ -f1)
+GATEWAY=$(ip route | grep default | awk '{print $3}')
+SUBNET=$(ip -o -4 addr show $PRIMARY_INTERFACE | awk '{print $4}' | cut -d/ -f1 | sed 's/\.[0-9]*$/.0\/24/')
+
+echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Local IP: $LOCAL_IP | Gateway: $GATEWAY | Interface: $PRIMARY_INTERFACE"
+
+# Network scan function
+scan_network() {
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Running network reconnaissance..."
+    
+    # Create a working directory for scan results
+    mkdir -p ~/.lanimals/data/$(date +%Y%m%d)
+    SCAN_DIR=~/.lanimals/data/$(date +%Y%m%d)
+    
+    # Scan local subnet
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Mapping subnet: $SUBNET"
+    
+    # Use different ping techniques based on OS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS ping doesn't support -b for broadcast
+        ping -c 1 -t 1 $GATEWAY > /dev/null 2>&1
+    else
+        # Linux ping
+        ping -c 1 -b -w 1 $(echo $SUBNET | cut -d/ -f1) > /dev/null 2>&1
+    fi
+    
+    # Using ARP to discover hosts
+    sleep 1
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Discovering hosts via ARP..."
+    arp -a > $SCAN_DIR/arp_scan.txt
+    HOST_COUNT=$(cat $SCAN_DIR/arp_scan.txt | wc -l)
+    
+    # Display found hosts
+    if [ $HOST_COUNT -gt 0 ]; then
+        echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Found $HOST_COUNT hosts on local network"
+    else
+        echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} No hosts found via ARP"
+    fi
+    
+    # Get MAC addresses of devices
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Identifying network devices..."
+    ip neigh > $SCAN_DIR/ip_neighbors.txt
+    
+    # Check for gateway
+    if ip neigh | grep -q "$GATEWAY"; then
+        GATEWAY_MAC=$(ip neigh | grep "$GATEWAY" | awk '{print $5}')
+        echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Gateway: $GATEWAY ($GATEWAY_MAC)"
+    else
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Gateway not found in ARP table"
+    fi
+    
+    # Determine MAC address manufacturer if possible
+    if [ -f "/usr/share/nmap/nmap-mac-prefixes" ]; then
+        echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Identifying device manufacturers..."
+        for mac in $(ip neigh | grep -v FAILED | awk '{print $5}'); do
+            PREFIX=$(echo $mac | sed 's/://g' | cut -c 1-6)
+            VENDOR=$(grep -i $PREFIX /usr/share/nmap/nmap-mac-prefixes | cut -d' ' -f2- || echo "Unknown")
+            if [ -n "$VENDOR" ]; then
+                echo -e "${BOLD}${BLUE}[ INFO ]${NORMAL} Device $mac - $VENDOR"
+            fi
+        done
+    fi
+}
+
+# Wireless scan function
+scan_wireless() {
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Running wireless reconnaissance..."
+    
+    # Check if wireless interface exists
+    if [ -d "/sys/class/net/$PRIMARY_INTERFACE/wireless" ] || [ -d "/sys/class/net/$PRIMARY_INTERFACE/phy80211" ]; then
+        echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Detecting wireless networks on $PRIMARY_INTERFACE..."
+        
+        # Create wireless scan directory
+        mkdir -p ~/.lanimals/data/wireless
+        SCAN_DATE=$(date +%Y%m%d_%H%M%S)
+        
+        # Check if we have wireless tools
+        if command -v iwlist &> /dev/null; then
+            # Scan for networks
+            iwlist $PRIMARY_INTERFACE scan > ~/.lanimals/data/wireless/scan_$SCAN_DATE.txt 2>/dev/null
+            
+            # Count and extract SSIDs
+            SSID_COUNT=$(grep -c "ESSID:" ~/.lanimals/data/wireless/scan_$SCAN_DATE.txt)
+            HIDDEN_COUNT=$(grep -c "ESSID:\"\"" ~/.lanimals/data/wireless/scan_$SCAN_DATE.txt)
+            VISIBLE_COUNT=$((SSID_COUNT - HIDDEN_COUNT))
+            
+            echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Found $VISIBLE_COUNT visible and $HIDDEN_COUNT hidden wireless networks"
+            
+            # Show networks with signal strength
+            grep -E "ESSID:|Quality=" ~/.lanimals/data/wireless/scan_$SCAN_DATE.txt | paste - - | grep -v "ESSID:\"\"" | head -5 | while read line; do
+                SSID=$(echo $line | grep -o 'ESSID:"[^"]*"' | cut -d'"' -f2)
+                QUALITY=$(echo $line | grep -o 'Quality=[^ ]*' | cut -d= -f2)
+                echo -e "${BOLD}${BLUE}[ WIFI ]${NORMAL} Network: $SSID - Signal: $QUALITY"
+            done
+            
+            # Check for more networks
+            if [ $VISIBLE_COUNT -gt 5 ]; then
+                echo -e "${BOLD}${BLUE}[ INFO ]${NORMAL} And $(($VISIBLE_COUNT - 5)) more networks..."
+            fi
+        else
+            echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} iwlist not found, unable to scan wireless networks"
+        fi
+    else
+        echo -e "${BOLD}${YELLOW}[ INFO ]${NORMAL} No wireless interface detected on $PRIMARY_INTERFACE"
+    fi
+}
+
+# Service scan function
+scan_services() {
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Detecting network services..."
+    
+    # Check for listening services
+    if command -v ss &> /dev/null; then
+        echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking for listening ports..."
+        mkdir -p ~/.lanimals/data/services
+        SCAN_DATE=$(date +%Y%m%d_%H%M%S)
+        
+        # Get listening ports
+        ss -tuln > ~/.lanimals/data/services/ports_$SCAN_DATE.txt
+        LISTENING_COUNT=$(grep -c "LISTEN" ~/.lanimals/data/services/ports_$SCAN_DATE.txt)
+        
+        echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Found $LISTENING_COUNT listening ports"
+        
+        # Display listening ports
+        grep "LISTEN" ~/.lanimals/data/services/ports_$SCAN_DATE.txt | while read line; do
+            PROTO=$(echo $line | awk '{print $1}')
+            ADDR_PORT=$(echo $line | awk '{print $5}')
+            PORT=$(echo $ADDR_PORT | rev | cut -d: -f1 | rev)
+            
+            # Identify common services
+            SERVICE="unknown"
+            case $PORT in
+                22)
+                    SERVICE="SSH"
+                    ;;
+                80|8080)
+                    SERVICE="HTTP"
+                    ;;
+                443|8443)
+                    SERVICE="HTTPS"
+                    ;;
+                21)
+                    SERVICE="FTP"
+                    ;;
+                25)
+                    SERVICE="SMTP"
+                    ;;
+                53)
+                    SERVICE="DNS"
+                    ;;
+                3306)
+                    SERVICE="MySQL"
+                    ;;
+                5432)
+                    SERVICE="PostgreSQL"
+                    ;;
+                1716)
+                    SERVICE="KDE Connect"
+                    ;;
+            esac
+            
+            echo -e "${BOLD}${BLUE}[ PORT ]${NORMAL} $PROTO port $PORT - $SERVICE"
+        done
+        
+        # Check active connections
+        ACTIVE_CONNECTIONS=$(ss -tu state established | wc -l)
+        echo -e "${BOLD}${BLUE}[ INFO ]${NORMAL} Active outbound connections: $ACTIVE_CONNECTIONS"
+        
+        # Show 5 sample connections
+        if [ $ACTIVE_CONNECTIONS -gt 0 ]; then
+            echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Top active connections:"
+            ss -tu state established | tail -n +2 | head -5 | while read line; do
+                PROTO=$(echo $line | awk '{print $1}')
+                LOCAL=$(echo $line | awk '{print $4}')
+                REMOTE=$(echo $line | awk '{print $5}')
+                
+                echo -e "${BOLD}${BLUE}[ CONN ]${NORMAL} $PROTO connection from $LOCAL to $REMOTE"
+            done
+        fi
+    else
+        echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} ss not found, unable to check network services"
+    fi
+}
+
+# Check external connectivity
+check_external() {
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking external connectivity..."
+    
+    # Ping test to check internet access
+    ping -c 1 -W 2 8.8.8.8 > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Internet is reachable"
+        
+        # Check DNS resolution
+        echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking DNS resolution..."
+        host google.com > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} DNS resolution is working"
+        else
+            echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} DNS resolution failed"
+        fi
+        
+        # Check if VPN is active
+        echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking VPN status..."
+        if ip addr | grep -q "tun0\|wg0\|nordlynx"; then
+            VPN_IFACE=$(ip addr | grep -o "tun0\|wg0\|nordlynx" | head -1)
+            VPN_IP=$(ip -o -4 addr show $VPN_IFACE 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+            echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} VPN is active ($VPN_IFACE: $VPN_IP)"
+        else
+            echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} No VPN detected"
+        fi
+        
+        # Try to get basic geolocation
+        echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking geolocation..."
+        GEO_DATA=$(curl -s https://ipinfo.io 2>/dev/null)
+        if [ -n "$GEO_DATA" ]; then
+            CITY=$(echo "$GEO_DATA" | grep -oP '"city": "\K[^"]+')
+            REGION=$(echo "$GEO_DATA" | grep -oP '"region": "\K[^"]+')
+            COUNTRY=$(echo "$GEO_DATA" | grep -oP '"country": "\K[^"]+')
+            if [ -n "$CITY" ] && [ -n "$REGION" ] && [ -n "$COUNTRY" ]; then
+                echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Location: $CITY, $REGION, $COUNTRY"
+            else
+                echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} Could not parse location data"
+            fi
+        else
+            echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} Could not retrieve geolocation information"
+        fi
+    else
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Internet is not reachable"
+    fi
+}
+
+# Run all scan functions
+scan_network
+scan_wireless
+scan_services
+check_external
+
+echo -e "\n${BOLD}${MAROON}[ OK ]${NORMAL} Autonomous Recon Complete."
+echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Data saved to ~/.lanimals/data/"
