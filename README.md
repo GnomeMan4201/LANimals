@@ -1,13 +1,12 @@
 <div align="center">
-  <img src="path/to/your/lanimals-logo.png" alt="LANimals Logo" width="300"/>
+  <a href="secret.md">
+    <img src="path/to/your/lanimals-logo.png" alt="LANimals Logo" width="300"/>
+  </a>
   
-  <details>
-    <summary>Click the monkey's face to reveal a secret</summary>
-    <p>🔥 SECRET: The LANimals are watching your network! 🔥</p>
-  </details>
+  <p><i>Click the logo to reveal a secret</i></p>
 </div>
 
-README.md
+# LANimals
 # LANimals
 
 ### 
