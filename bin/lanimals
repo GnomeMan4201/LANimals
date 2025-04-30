@@ -1,0 +1,135 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+show_help() {
+    echo -e "${BOLD}${MAROON}LANimals Nexus Command Center${NORMAL}"
+    echo ""
+    echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║               SYSTEM COMMANDS                 ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
+    echo -e "  ${BOLD}dash${NORMAL}      Show LANimals dashboard"
+    echo -e "  ${BOLD}sysinfo${NORMAL}   Analyze system components"
+    echo ""
+    echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║               NETWORK COMMANDS                ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
+    echo -e "  ${BOLD}recon${NORMAL}     Run autonomous recon"
+    echo -e "  ${BOLD}alert${NORMAL}     Run threat alert system"
+    echo -e "  ${BOLD}monitor${NORMAL}   Start continuous monitoring"
+    echo -e "  ${BOLD}traffic${NORMAL}   Analyze network traffic"
+    echo -e "  ${BOLD}netmap${NORMAL}    Map network devices visually"
+    echo ""
+    echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║               SECURITY COMMANDS               ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
+    echo -e "  ${BOLD}fortress${NORMAL}  Security hardening toolkit" 
+    echo -e "  ${BOLD}hunter${NORMAL}    Threat hunting and detection"
+    echo -e "  ${BOLD}threats${NORMAL}   Show recent threats"
+    echo ""
+    echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║               GENERAL COMMANDS                ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
+    echo -e "  ${BOLD}help${NORMAL}      Show this help message"
+    echo -e "  ${BOLD}version${NORMAL}   Show LANimals version"
+    echo -e "  ${BOLD}update${NORMAL}    Check for updates"
+    echo ""
+    echo -e "For command-specific help, use: ${BOLD}lanimals [command] --help${NORMAL}"
+}
+
+show_version() {
+    echo -e "${BOLD}${MAROON}"
+    cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+                       NEXUS
+BANNER
+    echo -e "${NORMAL}"
+    echo -e "${BOLD}LANimals Nexus${NORMAL} - ${BOLD}${MAROON}Version 1.0.0${NORMAL}"
+    echo -e "Security Command & Control System"
+    echo -e "Created: April 28, 2025"
+    echo ""
+    echo -e "${BOLD}Components:${NORMAL}"
+    ls -1 ~/.local/bin/lanimals_* | while read component; do
+        NAME=$(basename $component | cut -d_ -f2-)
+        echo -e "  • $NAME"
+    done
+    echo ""
+    echo -e "Type '${BOLD}lanimals help${NORMAL}' for available commands"
+}
+
+# Check for updates
+check_update() {
+    echo -e "${BOLD}${MAROON}[ UPDATE ]${NORMAL} Checking for updates..."
+    echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} LANimals Nexus is up to date (Version 1.0.0)"
+}
+
+# Create needed directories
+mkdir -p ~/.lanimals/logs
+
+# Handle command line arguments
+case "$1" in
+    dash|dashboard)
+        lanimals_dashboard
+        ;;
+    recon)
+        shift
+        lanimals_recon "$@"
+        ;;
+    alert)
+        shift
+        lanimals_alert "$@"
+        ;;
+    monitor)
+        lanimals_alert --monitor
+        ;;
+    traffic)
+        shift
+        lanimals_traffic "$@"
+        ;;
+    netmap)
+        shift
+        lanimals_netmap "$@"
+        ;;
+    fortress)
+        shift
+        lanimals_fortress "$@"
+        ;;
+    sysinfo)
+        shift
+        lanimals_sysinfo "$@"
+        ;;
+    hunter)
+        shift
+        lanimals_hunter "$@"
+        ;;
+    threats)
+        if [ -f ~/.lanimals/logs/threats.log ]; then
+            echo -e "${BOLD}${MAROON}Recent Threats:${NORMAL}"
+            tail -n 20 ~/.lanimals/logs/threats.log
+        else
+            echo "No threats logged yet."
+        fi
+        ;;
+    version)
+        show_version
+        ;;
+    update)
+        check_update
+        ;;
+    *|help)
+        show_help
+        ;;
+esac
