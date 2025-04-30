@@ -6,8 +6,6 @@ README.md
 
 LANimals is a network reconnaissance, security auditing, and monitoring toolkit built to automate LAN mapping, traffic analysis, system hardening, and threat detection from a unified command center. Designed for Kali Linux and other security-focused distributions.
 
-![LANimals Dashboard](https://raw.githubusercontent.com/GnomeMan4201/LANimals/main/docs/dashboard.png)
-
 ### 
 ![Network Map](docs/screenshots/originals/netmap1.png)
 
