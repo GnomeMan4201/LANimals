@@ -5,6 +5,24 @@ LANimals is a network reconnaissance, security auditing, and monitoring toolkit 
 
 ![LANimals Dashboard](https://raw.githubusercontent.com/GnomeMan4201/LANimals/main/docs/dashboard.png)
 
+## 📸 Screenshots
+
+### 🔍 Threat Hunter View
+![Threat Hunter](docs/screenshots/originals/threat1.png)
+
+### 🌐 Visual Network Map
+![Network Map](docs/screenshots/originals/netmap1.png)
+
+### 🧠 System Info Output
+![System Info](docs/screenshots/originals/sysinfo.png)
+
+### 📊 Traffic Analysis
+![Traffic](docs/screenshots/originals/traffic1.png)
+
+### 🛰️ Recon Output
+![Recon](docs/screenshots/originals/recon2.png)
+
+
 ## Features
 
 - Network reconnaissance and device discovery
