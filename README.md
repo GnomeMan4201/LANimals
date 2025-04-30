@@ -1,6 +1,4 @@
-                                                                                                                                                                                                                                                
-                                                                                                                                                                                                                                                ![LANimals Logo](LANimals_LOGO.png)
-
+![LANimals Logo](LANimals_LOGO.png)
  # LANimals
 
 ### 
