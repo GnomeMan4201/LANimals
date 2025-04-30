@@ -1,17 +1,3 @@
-
-
-![Uploading ChatGPT Image Apr 30, 2025, 11_56_35 AM.png…]()
-
-# LANimals
-
-<details>
-  <summary>🔒 Secret Area - Click to Reveal</summary>
-  
-  ## 🔥 SECRET REVEALED 🔥
-  The LANimals are watching your network traffic...
-  
-  ![Secret Image](path/to/secret-image.png)
-</details>
 # LANimals
 
 ### 
