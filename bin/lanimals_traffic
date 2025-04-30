@@ -1,0 +1,396 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+# Banner
+echo -e "${BOLD}${MAROON}"
+cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+              TRAFFIC ANALYZER
+BANNER
+echo -e "${NORMAL}"
+
+echo -e "${BOLD}${MAROON}[ INIT ]${NORMAL} Traffic Analyzer Initializing..."
+sleep 0.3
+
+# Create log directory
+mkdir -p ~/.lanimals/logs/traffic
+
+# Check for required tools
+TCPDUMP_AVAILABLE=0
+if command -v tcpdump &> /dev/null; then
+    TCPDUMP_AVAILABLE=1
+else
+    echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} tcpdump not found. Please install it with:"
+    echo "sudo apt install tcpdump"
+fi
+
+# Get primary interface
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Identifying network interfaces..."
+PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}')
+echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Primary interface: $PRIMARY_INTERFACE"
+
+# Function to analyze current network traffic
+analyze_live_traffic() {
+    local interface=$1
+    local duration=$2
+    
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Analyzing live traffic on $interface for $duration seconds..."
+    
+    if [ $TCPDUMP_AVAILABLE -eq 1 ]; then
+        # Create a temporary file to store traffic data
+        TMP_FILE=$(mktemp)
+        
+        # Capture traffic for the specified duration
+        echo -e "${BOLD}${MAROON}[ CAPTURE ]${NORMAL} Capturing traffic... (Ctrl+C to stop early)"
+        timeout $duration sudo tcpdump -i $interface -nn -p -q > $TMP_FILE 2>/dev/null
+        
+        # Analyze traffic
+        echo -e "${BOLD}${MAROON}[ ANALYZE ]${NORMAL} Processing captured data..."
+        
+        # Count packets by protocol
+        echo -e "${BOLD}Protocol Distribution:${NORMAL}"
+        cat $TMP_FILE | awk '{print $2}' | sort | uniq -c | sort -nr | head -10 | while read line; do
+            COUNT=$(echo "$line" | awk '{print $1}')
+            PROTO=$(echo "$line" | awk '{print $2}')
+            echo -e "   $PROTO: $COUNT packets"
+        done
+        
+        # Find top destinations
+        echo -e "\n${BOLD}Top Destinations:${NORMAL}"
+        cat $TMP_FILE | grep ">" | awk '{print $4}' | cut -d. -f1-4 | sort | uniq -c | sort -nr | head -10 | while read line; do
+            COUNT=$(echo "$line" | awk '{print $1}')
+            DEST=$(echo "$line" | awk '{print $2}')
+            echo -e "   $DEST: $COUNT packets"
+        done
+        
+        # Find top ports
+        echo -e "\n${BOLD}Top Destination Ports:${NORMAL}"
+        cat $TMP_FILE | grep ">" | awk '{print $5}' | cut -d. -f5 | sort | uniq -c | sort -nr | head -10 | while read line; do
+            COUNT=$(echo "$line" | awk '{print $1}')
+            PORT=$(echo "$line" | awk '{print $2}')
+            
+            # Identify common services# Identify common services
+            SERVICE="Unknown"
+            case "$PORT" in
+                "80")
+                    SERVICE="HTTP"
+                    ;;
+                "443")
+                    SERVICE="HTTPS"
+                    ;;
+                "22")
+                    SERVICE="SSH"
+                    ;;
+                "21")
+                    SERVICE="FTP"
+                    ;;
+                "53")
+                    SERVICE="DNS"
+                    ;;
+                "25"|"587"|"465")
+                    SERVICE="SMTP"
+                    ;;
+                "110"|"995")
+                    SERVICE="POP3"
+                    ;;
+                "143"|"993")
+                    SERVICE="IMAP"
+                    ;;
+            esac
+            
+            echo -e "   Port $PORT ($SERVICE): $COUNT packets"
+        done
+        
+        # Check for port scan activity
+        echo -e "\n${BOLD}Port Scan Detection:${NORMAL}"
+        PORT_SCAN=$(cat $TMP_FILE | grep ">" | awk '{print $4}' | sort | uniq -c | sort -nr | head -1)
+        PORT_SCAN_COUNT=$(echo "$PORT_SCAN" | awk '{print $1}')
+        PORT_SCAN_IP=$(echo "$PORT_SCAN" | awk '{print $2}')
+        
+        if [ $PORT_SCAN_COUNT -gt 20 ]; then
+            echo -e "${RED}Possible port scan from $PORT_SCAN_IP ($PORT_SCAN_COUNT connections)${NORMAL}"
+        else
+            echo -e "${GREEN}No port scan activity detected${NORMAL}"
+        fi
+        
+        # Check for suspicious traffic
+        echo -e "\n${BOLD}Suspicious Traffic:${NORMAL}"
+        SUSPICIOUS=$(cat $TMP_FILE | grep -E "1337|4444|31337")
+        if [ -n "$SUSPICIOUS" ]; then
+            echo -e "${RED}Suspicious traffic detected:${NORMAL}"
+            echo "$SUSPICIOUS" | head -5
+        else
+            echo -e "${GREEN}No suspicious traffic patterns detected${NORMAL}"
+        fi
+        
+        # Clean up
+        rm $TMP_FILE
+    else
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Cannot analyze traffic without tcpdump"
+    fi
+}
+
+# Function to generate traffic statistics
+generate_stats() {
+    local interface=$1
+    
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Generating traffic statistics for $interface..."
+    
+    # Get interface statistics
+    if [ -f "/sys/class/net/$interface/statistics/rx_bytes" ]; then
+        RX_BYTES=$(cat /sys/class/net/$interface/statistics/rx_bytes)
+        TX_BYTES=$(cat /sys/class/net/$interface/statistics/tx_bytes)
+        RX_PACKETS=$(cat /sys/class/net/$interface/statistics/rx_packets)
+        TX_PACKETS=$(cat /sys/class/net/$interface/statistics/tx_packets)
+        
+        # Convert to human-readable format
+        RX_MB=$(echo "scale=2; $RX_BYTES / 1048576" | bc)
+        TX_MB=$(echo "scale=2; $TX_BYTES / 1048576" | bc)
+        
+        echo -e "${BOLD}Interface Statistics:${NORMAL}"
+        echo -e "   Interface: $interface"
+        echo -e "   Received: $RX_MB MB ($RX_PACKETS packets)"
+        echo -e "   Transmitted: $TX_MB MB ($TX_PACKETS packets)"
+        echo -e "   Total: $(echo "scale=2; $RX_MB + $TX_MB" | bc) MB"
+        
+        # Save statistics for comparison
+        STATS_FILE=~/.lanimals/logs/traffic/stats_$(date +%Y%m%d_%H%M%S).log
+        echo "Timestamp: $(date)" > $STATS_FILE
+        echo "Interface: $interface" >> $STATS_FILE
+        echo "RX Bytes: $RX_BYTES" >> $STATS_FILE
+        echo "TX Bytes: $TX_BYTES" >> $STATS_FILE
+        echo "RX Packets: $RX_PACKETS" >> $STATS_FILE
+        echo "TX Packets: $TX_PACKETS" >> $STATS_FILE
+        
+        # Compare with previous stats if available
+        PREV_STATS=$(ls -t ~/.lanimals/logs/traffic/stats_*.log 2>/dev/null | sed -n '2p')
+        if [ -n "$PREV_STATS" ]; then
+            PREV_RX_BYTES=$(grep "RX Bytes:" $PREV_STATS | awk '{print $3}')
+            PREV_TX_BYTES=$(grep "TX Bytes:" $PREV_STATS | awk '{print $3}')
+            PREV_TIMESTAMP=$(grep "Timestamp:" $PREV_STATS | cut -d: -f2- | sed 's/^ //')
+            
+            RX_DIFF=$(($RX_BYTES - $PREV_RX_BYTES))
+            TX_DIFF=$(($TX_BYTES - $PREV_TX_BYTES))
+            
+            RX_DIFF_MB=$(echo "scale=2; $RX_DIFF / 1048576" | bc)
+            TX_DIFF_MB=$(echo "scale=2; $TX_DIFF / 1048576" | bc)
+            
+            echo -e "\n${BOLD}Traffic Since Last Check:${NORMAL}"
+            echo -e "   Last Check: $PREV_TIMESTAMP"
+            echo -e "   Received: $RX_DIFF_MB MB"
+            echo -e "   Transmitted: $TX_DIFF_MB MB"
+            echo -e "   Total: $(echo "scale=2; $RX_DIFF_MB + $TX_DIFF_MB" | bc) MB"
+        fi
+    else
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Could not access interface statistics"
+    fi
+    
+    # Current connections
+    echo -e "\n${BOLD}Current Connections:${NORMAL}"
+    CONN_TOTAL=$(ss -tan | wc -l)
+    CONN_ESTAB=$(ss -tan state established | wc -l)
+    CONN_WAIT=$(ss -tan state syn-sent | wc -l)
+    
+    echo -e "   Total: $CONN_TOTAL"
+    echo -e "   Established: $CONN_ESTAB"
+    echo -e "   Waiting: $CONN_WAIT"
+    
+    # Connection count by destination port
+    echo -e "\n${BOLD}Connection Count by Port:${NORMAL}"
+    ss -tan | awk '{print $5}' | cut -d: -f2 | sort | uniq -c | sort -nr | head -5 | while read line; do
+        COUNT=$(echo "$line" | awk '{print $1}')
+        PORT=$(echo "$line" | awk '{print $2}')
+        
+        if [ -n "$PORT" ] && [ "$PORT" != "Address" ]; then
+            # Identify common services
+            SERVICE="Unknown"
+            case "$PORT" in
+                "80")
+                    SERVICE="HTTP"
+                    ;;
+                "443")
+                    SERVICE="HTTPS"
+                    ;;
+                "22")
+                    SERVICE="SSH"
+                    ;;
+                "53")
+                    SERVICE="DNS"
+                    ;;
+            esac
+            
+            echo -e "   Port $PORT ($SERVICE): $COUNT connections"
+        fi
+    done
+}
+
+# Function to capture traffic to pcap file
+capture_traffic() {
+    local interface=$1
+    local duration=$2
+    local filter=$3
+    local output_file=~/.lanimals/logs/traffic/capture_$(date +%Y%m%d_%H%M%S).pcap
+    
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Capturing traffic on $interface for $duration seconds..."
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Filter: $filter"
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Output: $output_file"
+    
+    if [ $TCPDUMP_AVAILABLE -eq 1 ]; then
+        # Create capture command
+        CAPTURE_CMD="sudo tcpdump -i $interface -nn"
+        
+        # Add filter if specified
+        if [ -n "$filter" ]; then
+            CAPTURE_CMD="$CAPTURE_CMD $filter"
+        fi
+        
+        # Add output file
+        CAPTURE_CMD="$CAPTURE_CMD -w $output_file"
+        
+        # Execute capture
+        echo -e "${BOLD}${MAROON}[ CAPTURE ]${NORMAL} Starting capture... (Ctrl+C to stop early)"
+        timeout $duration $CAPTURE_CMD
+        
+        # Check if capture was successful
+        if [ -f "$output_file" ]; then
+            PACKET_COUNT=$(sudo tcpdump -r $output_file -nn | wc -l)
+            echo -e "${BOLD}${GREEN}[ SUCCESS ]${NORMAL} Captured $PACKET_COUNT packets to $output_file"
+        else
+            echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Failed to create packet capture"
+        fi
+    else
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Cannot capture traffic without tcpdump"
+    fi
+}
+
+# Function to analyze packet capture file
+analyze_capture() {
+    local capture_file=$1
+    
+    echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Analyzing capture file: $capture_file..."
+    
+    if [ $TCPDUMP_AVAILABLE -eq 1 ]; then
+        if [ -f "$capture_file" ]; then
+            # Get packet count
+            PACKET_COUNT=$(sudo tcpdump -r $capture_file -nn | wc -l)
+            echo -e "${BOLD}${GREEN}[ INFO ]${NORMAL} Capture contains $PACKET_COUNT packets"
+            
+            # Protocol distribution
+            echo -e "\n${BOLD}Protocol Distribution:${NORMAL}"
+            sudo tcpdump -r $capture_file -nn | head -1000 | awk '{print $2}' | sort | uniq -c | sort -nr | head -10
+            
+            # Source IP distribution
+            echo -e "\n${BOLD}Top Source IPs:${NORMAL}"
+            sudo tcpdump -r $capture_file -nn | grep ">" | awk '{print $3}' | cut -d. -f1-4 | sort | uniq -c | sort -nr | head -10
+            
+            # Destination IP distribution
+            echo -e "\n${BOLD}Top Destination IPs:${NORMAL}"
+            sudo tcpdump -r $capture_file -nn | grep ">" | awk '{print $5}' | cut -d. -f1-4 | sort | uniq -c | sort -nr | head -10
+            
+            # Top ports
+            echo -e "\n${BOLD}Top Destination Ports:${NORMAL}"
+            sudo tcpdump -r $capture_file -nn | grep ">" | awk '{print $5}' | cut -d. -f5 | sort | uniq -c | sort -nr | head -10
+            
+            # Look for suspicious patterns
+            echo -e "\n${BOLD}Suspicious Patterns:${NORMAL}"
+            
+            # Check for port scans
+            PORT_SCAN=$(sudo tcpdump -r $capture_file -nn | grep ">" | awk '{print $3 " " $5}' | sort | uniq -c | sort -nr | head -1)
+            PORT_SCAN_COUNT=$(echo "$PORT_SCAN" | awk '{print $1}')
+            PORT_SCAN_SRC=$(echo "$PORT_SCAN" | awk '{print $2}')
+            
+            if [ $PORT_SCAN_COUNT -gt 20 ]; then
+                echo -e "${RED}Possible port scan from $PORT_SCAN_SRC ($PORT_SCAN_COUNT connections)${NORMAL}"
+            else
+                echo -e "${GREEN}No port scan activity detected${NORMAL}"
+            fi
+            
+            # Check for suspicious ports
+            SUSPICIOUS=$(sudo tcpdump -r $capture_file -nn | grep -E "1337|4444|31337")
+            if [ -n "$SUSPICIOUS" ]; then
+                echo -e "${RED}Suspicious traffic detected:${NORMAL}"
+                echo "$SUSPICIOUS" | head -5
+            else
+                echo -e "${GREEN}No suspicious port activity detected${NORMAL}"
+            fi
+        else
+            echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Capture file not found: $capture_file"
+        fi
+    else
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Cannot analyze capture without tcpdump"
+    fi
+}
+
+# Function to show help
+show_help() {
+    echo "Usage: lanimals_traffic [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --live [INTERFACE] [DURATION]      Analyze live traffic (default: auto-detect, 30s)"
+    echo "  --stats [INTERFACE]                Show traffic statistics (default: auto-detect)"
+    echo "  --capture [INTERFACE] [DURATION]   Capture traffic to file (default: auto-detect, 60s)"
+    echo "  --filter \"FILTER\"                 Apply filter to capture (e.g. \"port 80\")"
+    echo "  --analyze FILE                     Analyze pcap file"
+    echo "  --help                             Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  lanimals_traffic --live wlan0 60             # Live analysis for 60 seconds"
+    echo "  lanimals_traffic --capture eth0 300          # Capture for 5 minutes"
+    echo "  lanimals_traffic --capture eth0 60 \"port 80\" # Capture HTTP traffic"
+    echo "  lanimals_traffic --analyze capture_file.pcap # Analyze existing capture"
+}
+
+# Parse command line arguments
+if [ $# -eq 0 ] || [ "$1" = "--help" ]; then
+    show_help
+    exit 0
+fi
+
+MODE="live"
+INTERFACE=$PRIMARY_INTERFACE
+DURATION=30
+FILTER=""
+FILE=""
+
+case "$1" in
+    --live)
+        MODE="live"
+        [ -n "$2" ] && [ "${2:0:1}" != "-" ] && INTERFACE=$2
+        [ -n "$3" ] && [ "${3:0:1}" != "-" ] && DURATION=$3
+        analyze_live_traffic $INTERFACE $DURATION
+        ;;
+    --stats)
+        MODE="stats"
+        [ -n "$2" ] && [ "${2:0:1}" != "-" ] && INTERFACE=$2
+        generate_stats $INTERFACE
+        ;;
+    --capture)
+        MODE="capture"
+        [ -n "$2" ] && [ "${2:0:1}" != "-" ] && INTERFACE=$2
+        [ -n "$3" ] && [ "${3:0:1}" != "-" ] && DURATION=$3
+        [ -n "$4" ] && FILTER=$4
+        capture_traffic $INTERFACE $DURATION "$FILTER"
+        ;;
+    --analyze)
+        MODE="analyze"
+        [ -n "$2" ] && FILE=$2
+        [ -f "$FILE" ] && analyze_capture $FILE || echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} File not found: $FILE"
+        ;;
+    *)
+        show_help
+        ;;
+esac
