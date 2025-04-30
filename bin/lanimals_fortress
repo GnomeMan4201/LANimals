@@ -1,0 +1,428 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+# Banner
+echo -e "${BOLD}${MAROON}"
+cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+               SECURITY FORTRESS
+BANNER
+echo -e "${NORMAL}"
+
+echo -e "${BOLD}${MAROON}[ INIT ]${NORMAL} Security Fortress Initializing..."
+sleep 0.3
+
+# Log file
+FORTRESS_LOG=~/.lanimals/logs/fortress_$(date +%Y%m%d_%H%M%S).log
+mkdir -p ~/.lanimals/logs
+
+# Function to log messages
+log_message() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "[$timestamp] [$level] $message" >> $FORTRESS_LOG
+    
+    case $level in
+        INFO)
+            echo -e "${BOLD}${BLUE}[ INFO ]${NORMAL} $message"
+            ;;
+        WARN)
+            echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} $message"
+            ;;
+        ERROR)
+            echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} $message"
+            ;;
+        SUCCESS)
+            echo -e "${BOLD}${GREEN}[ SUCCESS ]${NORMAL} $message"
+            ;;
+        *)
+            echo -e "${BOLD}[ $level ]${NORMAL} $message"
+            ;;
+    esac
+}
+
+# Function to check firewall status
+check_firewall() {
+    log_message "SCAN" "Checking firewall status..."
+    
+    if command -v ufw &> /dev/null; then
+        UFW_STATUS=$(sudo ufw status 2>/dev/null | grep Status | awk '{print $2}')
+        if [ "$UFW_STATUS" = "active" ]; then
+            log_message "SUCCESS" "UFW Firewall is active"
+            
+            # List the UFW rules
+            sudo ufw status verbose | tail -n +4 | while read line; do
+                log_message "INFO" "UFW Rule: $line"
+            done
+        else
+            log_message "WARN" "UFW Firewall is installed but not active"
+            
+            if [ "$1" = "--fix" ]; then
+                log_message "FIX" "Enabling UFW Firewall with default rules..."
+                sudo ufw default deny incoming
+                sudo ufw default allow outgoing
+                sudo ufw allow ssh
+                sudo ufw --force enable
+                log_message "SUCCESS" "UFW Firewall enabled with default rules"
+            else
+                log_message "INFO" "Run with --fix to enable UFW Firewall"
+            fi
+        fi
+    elif command -v iptables &> /dev/null; then
+        IPTABLES_RULES=$(sudo iptables -L 2>/dev/null | grep -v "Chain" | grep -v "target" | wc -l)
+        if [ $IPTABLES_RULES -gt 0 ]; then
+            log_message "SUCCESS" "IPTables has $IPTABLES_RULES active rules"
+        else
+            log_message "WARN" "IPTables has no active rules"
+        fi
+    else
+        log_message "ERROR" "No firewall detected"
+        
+        if [ "$1" = "--fix" ]; then
+            log_message "FIX" "Installing UFW Firewall..."
+            sudo apt-get update && sudo apt-get install -y ufw
+            sudo ufw default deny incoming
+            sudo ufw default allow outgoing
+            sudo ufw allow ssh
+            sudo ufw --force enable
+            log_message "SUCCESS" "UFW Firewall installed and enabled"
+        else
+            log_message "INFO" "Run with --fix to install UFW Firewall"
+        fi
+    fi
+}
+
+# Function to secure SSH
+secure_ssh() {
+    log_message "SCAN" "Checking SSH configuration..."
+    
+    if [ -f /etc/ssh/sshd_config ]; then
+        # Check if password authentication is disabled
+        PASS_AUTH=$(grep "PasswordAuthentication" /etc/ssh/sshd_config | grep -v "#" | awk '{print $2}')
+        if [ "$PASS_AUTH" = "no" ]; then
+            log_message "SUCCESS" "SSH Password Authentication is disabled"
+        else
+            log_message "WARN" "SSH Password Authentication is enabled"
+            
+            if [ "$1" = "--fix" ]; then
+                log_message "FIX" "Creating backup of sshd_config..."
+                sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak.$(date +%Y%m%d)
+                
+                log_message "FIX" "Disabling SSH Password Authentication..."
+                sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+                sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+                
+                log_message "FIX" "Restarting SSH service..."
+                sudo systemctl restart sshd
+                
+                log_message "SUCCESS" "SSH Password Authentication disabled"
+            else
+                log_message "INFO" "Run with --fix to secure SSH configuration"
+            fi
+        fi
+        
+        # Check root login
+        ROOT_LOGIN=$(grep "PermitRootLogin" /etc/ssh/sshd_config | grep -v "#" | awk '{print $2}')
+        if [ "$ROOT_LOGIN" = "no" ]; then
+            log_message "SUCCESS" "SSH Root Login is disabled"
+        else
+            log_message "WARN" "SSH Root Login is enabled"
+            
+            if [ "$1" = "--fix" ]; then
+                log_message "FIX" "Disabling SSH Root Login..."
+                sudo sed -i 's/#PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+                sudo sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+                sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
+                
+                log_message "FIX" "Restarting SSH service..."
+                sudo systemctl restart sshd
+                
+                log_message "SUCCESS" "SSH Root Login disabled"
+            fi
+        fi
+    else
+        log_message "INFO" "SSH server not installed"
+    fi
+}
+
+# Function to create a secure tunnel
+create_tunnel() {
+    local target_host=$1
+    local target_port=$2
+    local local_port=$3
+    
+    if [ -z "$target_host" ] || [ -z "$target_port" ] || [ -z "$local_port" ]; then
+        log_message "ERROR" "Missing parameters for tunnel creation"
+        echo "Usage: lanimals_fortress --tunnel targethost targetport localport"
+        return 1
+    fi
+    
+    log_message "SCAN" "Creating secure SSH tunnel to $target_host:$target_port via local port $local_port"
+    
+    # Check if SSH is available
+    if ! command -v ssh &> /dev/null; then
+        log_message "ERROR" "SSH client not installed"
+        return 1
+    fi
+    
+    # Create the tunnel in background
+    ssh -f -N -L $local_port:$target_host:$target_port $target_host
+    
+    if [ $? -eq 0 ]; then
+        log_message "SUCCESS" "Secure tunnel established"
+        log_message "INFO" "Connect to localhost:$local_port to reach $target_host:$target_port securely"
+    else
+        log_message "ERROR" "Failed to create tunnel"
+    fi
+}
+
+# Function to run a security audit
+security_audit() {
+    log_message "SCAN" "Starting comprehensive security audit..."
+    
+    # Check for root privileges
+    if [ "$EUID" -ne 0 ]; then
+        log_message "WARN" "Not running as root. Some checks may be limited."
+    fi
+    
+    # Check system updates
+    log_message "SCAN" "Checking system updates..."
+    if command -v apt &> /dev/null; then
+        UPDATES=$(apt list --upgradable 2>/dev/null | grep -v "Listing..." | wc -l)
+        if [ $UPDATES -gt 0 ]; then
+            log_message "WARN" "$UPDATES package updates available"
+        else
+            log_message "SUCCESS" "System is up to date"
+        fi
+    fi
+    
+    # Check firewall status
+    check_firewall
+    
+    # Check SSH configuration
+    secure_ssh
+    
+    # Check for world-writable files
+    log_message "SCAN" "Checking for world-writable files in /etc..."
+    WRITABLE=$(find /etc -type f -perm -o+w 2>/dev/null)
+    if [ -n "$WRITABLE" ]; then
+        log_message "WARN" "Found world-writable files in /etc"
+        echo "$WRITABLE" | while read file; do
+            log_message "WARN" "World-writable: $file"
+        done
+    else
+        log_message "SUCCESS" "No world-writable files found in /etc"
+    fi
+    
+    # Check for SUID/SGID binaries
+    log_message "SCAN" "Checking for unusual SUID/SGID binaries..."
+    SUID_FILES=$(find /usr/bin /usr/sbin /bin /sbin -perm -4000 2>/dev/null)
+    log_message "INFO" "Found $(echo "$SUID_FILES" | wc -l) SUID binaries"
+    
+    # Check kernel parameters for security
+    log_message "SCAN" "Checking kernel security parameters..."
+    
+    # Check for ASLR
+    ASLR=$(cat /proc/sys/kernel/randomize_va_space 2>/dev/null)
+    if [ "$ASLR" = "2" ]; then
+        log_message "SUCCESS" "Address Space Layout Randomization (ASLR) is fully enabled"
+    elif [ "$ASLR" = "1" ]; then
+        log_message "WARN" "ASLR is only partially enabled"
+    else
+        log_message "WARN" "ASLR is disabled"
+    fi
+    
+    # Check for TCP SYN cookies
+    SYN_COOKIES=$(cat /proc/sys/net/ipv4/tcp_syncookies 2>/dev/null)
+    if [ "$SYN_COOKIES" = "1" ]; then
+        log_message "SUCCESS" "TCP SYN cookies are enabled"
+    else
+        log_message "WARN" "TCP SYN cookies are disabled"
+    fi
+    
+    # Check open ports
+    log_message "SCAN" "Checking for open ports..."
+    OPEN_PORTS=$(ss -tuln | grep LISTEN)
+    log_message "INFO" "Found $(echo "$OPEN_PORTS" | wc -l) open ports"
+    
+    # Check for common security tools
+    log_message "SCAN" "Checking for security tools..."
+    TOOLS=("clamav" "rkhunter" "chkrootkit" "lynis" "fail2ban")
+    for tool in "${TOOLS[@]}"; do
+        if command -v $tool &> /dev/null; then
+            log_message "SUCCESS" "$tool is installed"
+        else
+            log_message "INFO" "$tool is not installed"
+        fi
+    done
+    
+    log_message "INFO" "Security audit complete. Results saved to $FORTRESS_LOG"
+}
+
+# Function to create a security report
+create_report() {
+    local report_file=~/.lanimals/logs/security_report_$(date +%Y%m%d_%H%M%S).txt
+    
+    log_message "INFO" "Generating security report..."
+    
+    {
+        echo "==============================================="
+        echo "  LANimals Security Fortress - System Report"
+        echo "==============================================="
+        echo "Date: $(date)"
+        echo "Hostname: $(hostname)"
+        echo ""
+        
+        echo "==============================================="
+        echo "  SYSTEM INFORMATION"
+        echo "==============================================="
+        echo "OS: $(cat /etc/os-release 2>/dev/null | grep "PRETTY_NAME" | cut -d= -f2 | tr -d '"')"
+        echo "Kernel: $(uname -r)"
+        echo "Architecture: $(uname -m)"
+        echo ""
+        
+        echo "==============================================="
+        echo "  NETWORK SECURITY"
+        echo "==============================================="
+        echo "Firewall Status:"
+        if command -v ufw &> /dev/null; then
+            sudo ufw status 2>/dev/null
+        elif command -v iptables &> /dev/null; then
+            echo "IPTables Rules:"
+            sudo iptables -L 2>/dev/null | head -20
+        else
+            echo "No firewall detected"
+        fi
+        echo ""
+        
+        echo "Open Ports:"
+        ss -tuln | grep LISTEN
+        echo ""
+        
+        echo "Active Network Connections:"
+        ss -tun state established | head -10
+        echo ""
+        
+        echo "==============================================="
+        echo "  SSH SECURITY"
+        echo "==============================================="
+        if [ -f /etc/ssh/sshd_config ]; then
+            echo "SSH Configuration:"
+            grep -v "^#" /etc/ssh/sshd_config | grep -v "^$"
+        else
+            echo "SSH server not installed"
+        fi
+        echo ""
+        
+        echo "==============================================="
+        echo "  SYSTEM SECURITY"
+        echo "==============================================="
+        echo "Kernel Security Parameters:"
+        echo "ASLR: $(cat /proc/sys/kernel/randomize_va_space 2>/dev/null || echo "N/A")"
+        echo "TCP SYN Cookies: $(cat /proc/sys/net/ipv4/tcp_syncookies 2>/dev/null || echo "N/A")"
+        echo ""
+        
+        echo "SUID Binaries:"
+        find /usr/bin /usr/sbin /bin /sbin -perm -4000 2>/dev/null | head -20
+        echo ""
+        
+        echo "World-Writable Files in /etc:"
+        find /etc -type f -perm -o+w 2>/dev/null
+        echo ""
+        
+        echo "==============================================="
+        echo "  SECURITY RECOMMENDATIONS"
+        echo "==============================================="
+        # Add recommendations based on findings
+        if ! command -v ufw &> /dev/null || [ "$(sudo ufw status 2>/dev/null | grep "Status: active" | wc -l)" -eq 0 ]; then
+            echo "- Install and enable a firewall (ufw recommended)"
+        fi
+        
+        if [ -f /etc/ssh/sshd_config ]; then
+            PASS_AUTH=$(grep "PasswordAuthentication" /etc/ssh/sshd_config | grep -v "#" | awk '{print $2}')
+            ROOT_LOGIN=$(grep "PermitRootLogin" /etc/ssh/sshd_config | grep -v "#" | awk '{print $2}')
+            
+            if [ "$PASS_AUTH" != "no" ]; then
+                echo "- Disable SSH password authentication (use key-based authentication)"
+            fi
+            
+            if [ "$ROOT_LOGIN" != "no" ]; then
+                echo "- Disable SSH root login"
+            fi
+        fi
+        
+        ASLR=$(cat /proc/sys/kernel/randomize_va_space 2>/dev/null)
+        if [ "$ASLR" != "2" ]; then
+            echo "- Enable full ASLR: echo 2 > /proc/sys/kernel/randomize_va_space"
+        fi
+        
+        SYN_COOKIES=$(cat /proc/sys/net/ipv4/tcp_syncookies 2>/dev/null)
+        if [ "$SYN_COOKIES" != "1" ]; then
+            echo "- Enable TCP SYN cookies: echo 1 > /proc/sys/net/ipv4/tcp_syncookies"
+        fi
+        
+        echo ""
+        echo "==============================================="
+        echo "  END OF REPORT"
+        echo "==============================================="
+    } > "$report_file"
+    
+    log_message "SUCCESS" "Security report generated: $report_file"
+    log_message "INFO" "Run 'cat $report_file' to view the report"
+}
+
+# Function to show help
+show_help() {
+    echo "Usage: lanimals_fortress [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --audit           Run a comprehensive security audit"
+    echo "  --firewall [--fix] Check and optionally configure firewall"
+    echo "  --ssh [--fix]     Check and optionally secure SSH configuration"
+    echo "  --tunnel HOST PORT LOCAL  Create a secure SSH tunnel"
+    echo "  --report          Generate a security report"
+    echo "  --help            Show this help message"
+    echo ""
+}
+
+# Handle command line arguments
+if [ $# -eq 0 ] || [ "$1" = "--help" ]; then
+    show_help
+    exit 0
+fi
+
+case "$1" in
+    --audit)
+        security_audit
+        ;;
+    --firewall)
+        check_firewall $2
+        ;;
+    --ssh)
+        secure_ssh $2
+        ;;
+    --tunnel)
+        create_tunnel $2 $3 $4
+        ;;
+    --report)
+        create_report
+        ;;
+    *)
+        show_help
+        ;;
+esac
