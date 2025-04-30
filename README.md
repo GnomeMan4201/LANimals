@@ -1,4 +1,11 @@
-![LANIMALS Logo](assets/lanimals-logo.jpg)
+<div align="center">
+  <img src="path/to/your/lanimals-logo.png" alt="LANimals Logo" width="300"/>
+  
+  <details>
+    <summary>Click the monkey's face to reveal a secret</summary>
+    <p>🔥 SECRET: The LANimals are watching your network! 🔥</p>
+  </details>
+</div>
 
 README.md
 # LANimals
