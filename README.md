@@ -1,6 +1,8 @@
-<div align="center">
+
+                                                                                                        <p align="center">
   <img src="path/to/your/lanimals-logo.png" alt="LANimals Logo" width="300"/>
-</div>
+</p>
+
 
 # LANimals
 
