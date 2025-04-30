@@ -1,0 +1,500 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+# Banner
+echo -e "${BOLD}${MAROON}"
+cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+                SYSTEM ANALYZER
+BANNER
+echo -e "${NORMAL}"
+
+echo -e "${BOLD}${MAROON}[ INIT ]${NORMAL} System Analysis Initializing..."
+sleep 0.3
+
+# Create output directory
+mkdir -p ~/.lanimals/data/system
+
+# Function for each system component
+analyze_cpu() {
+    echo -e "${BOLD}${MAROON}╔════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║        CPU ANALYSIS            ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚════════════════════════════════╝${NORMAL}"
+    
+    # CPU Model
+    CPU_MODEL=$(grep "model name" /proc/cpuinfo | head -1 | cut -d ":" -f2 | sed 's/^[ \t]*//')
+    CPU_CORES=$(grep -c "processor" /proc/cpuinfo)
+    
+    echo -e "${BOLD}CPU:${NORMAL} $CPU_MODEL"
+    echo -e "${BOLD}Cores:${NORMAL} $CPU_CORES"
+    
+    # CPU Load
+    CPU_LOAD=$(uptime | awk -F'load average:' '{print $2}' | cut -d, -f1 | sed 's/^[ \t]*//')
+    CPU_LOAD_PERCENT=$(echo "$CPU_LOAD * 100 / $CPU_CORES" | bc 2>/dev/null || echo "N/A")
+    
+    if [ "$CPU_LOAD_PERCENT" != "N/A" ]; then
+        if [ $CPU_LOAD_PERCENT -gt 80 ]; then
+            echo -e "${BOLD}Load:${NORMAL} ${RED}$CPU_LOAD_PERCENT%${NORMAL} (High)"
+        elif [ $CPU_LOAD_PERCENT -gt 50 ]; then
+            echo -e "${BOLD}Load:${NORMAL} ${YELLOW}$CPU_LOAD_PERCENT%${NORMAL} (Moderate)"
+        else
+            echo -e "${BOLD}Load:${NORMAL} ${GREEN}$CPU_LOAD_PERCENT%${NORMAL} (Low)"
+        fi
+    else
+        echo -e "${BOLD}Load:${NORMAL} $CPU_LOAD"
+    fi
+    
+    # CPU Temperature (if available)
+    if command -v sensors &> /dev/null; then
+        CPU_TEMP=$(sensors | grep "Core 0" | awk '{print $3}' | sed 's/+//' | sed 's/°C//')
+        if [ -n "$CPU_TEMP" ]; then
+            CPU_TEMP_VALUE=$(echo "$CPU_TEMP" | sed 's/\..*$//')
+            if [ $CPU_TEMP_VALUE -gt 80 ]; then
+                echo -e "${BOLD}Temperature:${NORMAL} ${RED}$CPU_TEMP°C${NORMAL} (Critical)"
+            elif [ $CPU_TEMP_VALUE -gt 70 ]; then
+                echo -e "${BOLD}Temperature:${NORMAL} ${YELLOW}$CPU_TEMP°C${NORMAL} (High)"
+            else
+                echo -e "${BOLD}Temperature:${NORMAL} ${GREEN}$CPU_TEMP°C${NORMAL} (Normal)"
+            fi
+        fi
+    fi
+    
+    # CPU frequency
+    CPU_FREQ=$(grep "cpu MHz" /proc/cpuinfo | head -1 | cut -d ":" -f2 | sed 's/^[ \t]*//')
+    if [ -n "$CPU_FREQ" ]; then
+        echo -e "${BOLD}Frequency:${NORMAL} $CPU_FREQ MHz"
+    fi
+    
+    # CPU cache
+    CPU_CACHE=$(grep "cache size" /proc/cpuinfo | head -1 | cut -d ":" -f2 | sed 's/^[ \t]*//')
+    if [ -n "$CPU_CACHE" ]; then
+        echo -e "${BOLD}Cache:${NORMAL} $CPU_CACHE"
+    fi
+    
+    # Top CPU consumers
+    echo -e "\n${BOLD}Top CPU Consumers:${NORMAL}"
+    ps -eo pid,ppid,cmd,%cpu --sort=-%cpu | head -6
+    
+    echo ""
+}
+
+analyze_memory() {
+    echo -e "${BOLD}${MAROON}╔════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║       MEMORY ANALYSIS          ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚════════════════════════════════╝${NORMAL}"
+    
+    # Get memory information
+    MEM_TOTAL=$(free -m | grep "Mem:" | awk '{print $2}')
+    MEM_USED=$(free -m | grep "Mem:" | awk '{print $3}')
+    MEM_FREE=$(free -m | grep "Mem:" | awk '{print $4}')
+    MEM_PERCENT=$((MEM_USED * 100 / MEM_TOTAL))
+    
+    SWAP_TOTAL=$(free -m | grep "Swap:" | awk '{print $2}')
+    SWAP_USED=$(free -m | grep "Swap:" | awk '{print $3}')
+    
+    # Display memory status with bar graph
+    echo -e "${BOLD}Memory Usage:${NORMAL}"
+    
+    # Create a bar graph
+    BAR_WIDTH=40
+    FILLED_WIDTH=$((BAR_WIDTH * MEM_PERCENT / 100))
+    EMPTY_WIDTH=$((BAR_WIDTH - FILLED_WIDTH))
+    
+    if [ $MEM_PERCENT -gt 90 ]; then
+        COLOR=$RED
+    elif [ $MEM_PERCENT -gt 70 ]; then
+        COLOR=$YELLOW
+    else
+        COLOR=$GREEN
+    fi
+    
+    # Display total and percentage
+    echo -e "   ${BOLD}Total:${NORMAL} $MEM_TOTAL MB | ${BOLD}Used:${NORMAL} $MEM_USED MB | ${BOLD}Free:${NORMAL} $MEM_FREE MB"
+    
+    # Display bar
+    BAR="["
+    for ((i=0; i<FILLED_WIDTH; i++)); do
+        BAR+="${COLOR}#${NORMAL}"
+    done
+    for ((i=0; i<EMPTY_WIDTH; i++)); do
+        BAR+=" "
+    done
+    BAR+="] $MEM_PERCENT%"
+    echo -e "$BAR"
+    
+    # Display swap status
+    if [ $SWAP_TOTAL -gt 0 ]; then
+        SWAP_PERCENT=$((SWAP_USED * 100 / SWAP_TOTAL))
+        
+        echo -e "\n${BOLD}Swap Usage:${NORMAL}"
+        echo -e "   ${BOLD}Total:${NORMAL} $SWAP_TOTAL MB | ${BOLD}Used:${NORMAL} $SWAP_USED MB"
+        
+        # Create swap bar
+        SWAP_FILLED_WIDTH=$((BAR_WIDTH * SWAP_PERCENT / 100))
+        SWAP_EMPTY_WIDTH=$((BAR_WIDTH - SWAP_FILLED_WIDTH))
+        
+        if [ $SWAP_PERCENT -gt 50 ]; then
+            SWAP_COLOR=$RED
+        elif [ $SWAP_PERCENT -gt 20 ]; then
+            SWAP_COLOR=$YELLOW
+        else
+            SWAP_COLOR=$GREEN
+        fi
+        
+        # Display swap bar
+        SWAP_BAR="["
+        for ((i=0; i<SWAP_FILLED_WIDTH; i++)); do
+            SWAP_BAR+="${SWAP_COLOR}#${NORMAL}"
+        done
+        for ((i=0; i<SWAP_EMPTY_WIDTH; i++)); do
+            SWAP_BAR+=" "
+        done
+        SWAP_BAR+="] $SWAP_PERCENT%"
+        echo -e "$SWAP_BAR"
+    else
+        echo -e "\n${BOLD}Swap:${NORMAL} Not configured"
+    fi
+    
+    # Top memory consumers
+    echo -e "\n${BOLD}Top Memory Consumers:${NORMAL}"
+    ps -eo pid,ppid,cmd,%mem --sort=-%mem | head -6
+    
+    echo ""
+}
+
+analyze_disk() {
+    echo -e "${BOLD}${MAROON}╔════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║        DISK ANALYSIS           ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚════════════════════════════════╝${NORMAL}"
+    
+    # Show disk usage for all mounted filesystems
+    echo -e "${BOLD}Filesystem Usage:${NORMAL}"
+    df -h | grep -v "tmpfs" | grep -v "udev" | tail -n +2 | while read line; do
+        FS=$(echo "$line" | awk '{print $1}')
+        SIZE=$(echo "$line" | awk '{print $2}')
+        USED=$(echo "$line" | awk '{print $3}')
+        AVAIL=$(echo "$line" | awk '{print $4}')
+        USE_PERCENT=$(echo "$line" | awk '{print $5}' | sed 's/%//')
+        MOUNT=$(echo "$line" | awk '{print $6}')
+        
+        # Bar width
+        BAR_WIDTH=30
+        FILLED_WIDTH=$((BAR_WIDTH * USE_PERCENT / 100))
+        EMPTY_WIDTH=$((BAR_WIDTH - FILLED_WIDTH))
+        
+        # Color based on usage
+        if [ $USE_PERCENT -gt 90 ]; then
+            COLOR=$RED
+        elif [ $USE_PERCENT -gt 75 ]; then
+            COLOR=$YELLOW
+        else
+            COLOR=$GREEN
+        fi
+        
+        # Display filesystem with bar
+        echo -e "${BOLD}$MOUNT${NORMAL} ($FS): $USED / $SIZE"
+        
+        # Display bar
+        BAR="["
+        for ((i=0; i<FILLED_WIDTH; i++)); do
+            BAR+="${COLOR}#${NORMAL}"
+        done
+        for ((i=0; i<EMPTY_WIDTH; i++)); do
+            BAR+=" "
+        done
+        BAR+="] $USE_PERCENT%"
+        echo -e "$BAR"
+    done
+    
+    # Check disk health (if smartctl is available)
+    if command -v smartctl &> /dev/null; then
+        echo -e "\n${BOLD}Disk Health:${NORMAL}"
+        for disk in $(lsblk -d -o NAME | grep -v "NAME" | grep -v "loop"); do
+            echo -e "${BOLD}$disk:${NORMAL}"
+            HEALTH=$(sudo smartctl -H /dev/$disk 2>/dev/null | grep "overall-health" || echo "Unable to check health")
+            echo "   $HEALTH"
+        done
+    fi
+    
+    # Show largest directories
+    echo -e "\n${BOLD}Largest Directories in $HOME:${NORMAL}"
+    du -h --max-depth=1 $HOME 2>/dev/null | sort -rh | head -5 | while read line; do
+        SIZE=$(echo "$line" | awk '{print $1}')
+        DIR=$(echo "$line" | awk '{print $2}')
+        echo "   $SIZE -> $DIR"
+    done
+    
+    # Disk I/O if available
+    if command -v iostat &> /dev/null; then
+        echo -e "\n${BOLD}Disk I/O:${NORMAL}"
+        iostat -d -x | grep -v "Linux" | grep -v "Device" | head -5
+    fi
+    
+    echo ""
+}
+
+analyze_network() {
+    echo -e "${BOLD}${MAROON}╔════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║       NETWORK ANALYSIS         ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚════════════════════════════════╝${NORMAL}"
+    
+    # Get primary interface and IP
+    PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}')
+    LOCAL_IP=$(ip -o -4 addr show $PRIMARY_INTERFACE | awk '{print $4}' | cut -d/ -f1)
+    GATEWAY=$(ip route | grep default | awk '{print $3}')
+    
+    echo -e "${BOLD}Primary Interface:${NORMAL} $PRIMARY_INTERFACE"
+    echo -e "${BOLD}IP Address:${NORMAL} $LOCAL_IP"
+    echo -e "${BOLD}Gateway:${NORMAL} $GATEWAY"
+    
+    # Interface stats
+    if [ -f "/sys/class/net/$PRIMARY_INTERFACE/statistics/rx_bytes" ]; then
+        RX_BYTES=$(cat /sys/class/net/$PRIMARY_INTERFACE/statistics/rx_bytes)
+        TX_BYTES=$(cat /sys/class/net/$PRIMARY_INTERFACE/statistics/tx_bytes)
+        
+        # Convert to MB
+        RX_MB=$(echo "scale=2; $RX_BYTES / 1048576" | bc)
+        TX_MB=$(echo "scale=2; $TX_BYTES / 1048576" | bc)
+        
+        echo -e "${BOLD}Data Received:${NORMAL} $RX_MB MB"
+        echo -e "${BOLD}Data Sent:${NORMAL} $TX_MB MB"
+    fi
+    
+    # Check connection to gateway
+    echo -e "\n${BOLD}Gateway Connection:${NORMAL}"
+    ping -c 1 $GATEWAY > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Gateway is reachable${NORMAL}"
+    else
+        echo -e "${RED}Gateway is unreachable${NORMAL}"
+    fi
+    
+    # Check internet connection
+    echo -e "\n${BOLD}Internet Connection:${NORMAL}"
+    ping -c 1 8.8.8.8 > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Internet is reachable${NORMAL}"
+    else
+        echo -e "${RED}Internet is unreachable${NORMAL}"
+    fi
+    
+    # Check DNS resolution
+    echo -e "\n${BOLD}DNS Resolution:${NORMAL}"
+    nslookup google.com > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}DNS resolution is working${NORMAL}"
+    else
+        echo -e "${RED}DNS resolution is not working${NORMAL}"
+    fi
+    
+    # Show active connections
+    echo -e "\n${BOLD}Active Connections:${NORMAL}"
+    CONNECTIONS=$(ss -tu | wc -l)
+    LISTEN=$(ss -tln | grep LISTEN | wc -l)
+    ESTABLISHED=$(ss -tn state established | wc -l)
+    
+    echo -e "Total Connections: $CONNECTIONS"
+    echo -e "Listening Ports: $LISTEN"
+    echo -e "Established Connections: $ESTABLISHED"
+    
+    echo -e "\n${BOLD}Top 5 Listening Ports:${NORMAL}"
+    ss -tuln | grep LISTEN | head -5
+    
+    echo -e "\n${BOLD}Top 5 Connections:${NORMAL}"
+    ss -tu state established | head -5
+    
+    echo ""
+}
+
+analyze_processes() {
+    echo -e "${BOLD}${MAROON}╔════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║      PROCESS ANALYSIS          ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚════════════════════════════════╝${NORMAL}"
+    
+    # Count total processes
+    TOTAL_PROCESSES=$(ps -e | wc -l)
+    RUNNING_PROCESSES=$(ps -e | grep -v "Z" | wc -l)
+    ZOMBIE_PROCESSES=$(ps aux | awk '{if ($8=="Z") print $0}' | wc -l)
+    
+    echo -e "${BOLD}Total Processes:${NORMAL} $TOTAL_PROCESSES"
+    echo -e "${BOLD}Running Processes:${NORMAL} $RUNNING_PROCESSES"
+    echo -e "${BOLD}Zombie Processes:${NORMAL} $ZOMBIE_PROCESSES"
+    
+    # Show system process stats
+    echo -e "\n${BOLD}Process States:${NORMAL}"
+    RUNNING=$(ps aux | awk '{print $8}' | grep "R" | wc -l)
+    SLEEPING=$(ps aux | awk '{print $8}' | grep "S" | wc -l)
+    STOPPED=$(ps aux | awk '{print $8}' | grep "T" | wc -l)
+    ZOMBIE=$(ps aux | awk '{print $8}' | grep "Z" | wc -l)
+    
+    echo -e "   Running: $RUNNING"
+    echo -e "   Sleeping: $SLEEPING"
+    echo -e "   Stopped: $STOPPED"
+    echo -e "   Zombie: $ZOMBIE"
+    
+    # Show zombie processes if any
+    if [ $ZOMBIE -gt 0 ]; then
+        echo -e "\n${BOLD}Zombie Processes:${NORMAL}"
+        ps aux | awk '{if ($8=="Z") print $0}'
+    fi
+    
+    # Show processes consuming >50% CPU
+    HIGH_CPU=$(ps aux | awk '{if ($3>50.0) print $0}')
+    if [ -n "$HIGH_CPU" ]; then
+        echo -e "\n${BOLD}High CPU Processes:${NORMAL}"
+        echo "$HIGH_CPU"
+    fi
+    
+    # Check for suspicious processes
+    echo -e "\n${BOLD}Suspicious Process Check:${NORMAL}"
+    ps aux | grep -iE "nc -l|netcat -l|ncat -l" | grep -v "grep" > /dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "${RED}Netcat listeners detected${NORMAL}"
+    else
+        echo -e "${GREEN}No suspicious listeners detected${NORMAL}"
+    fi
+    
+    # Show top processes by resource usage
+    echo -e "\n${BOLD}Top 5 Processes by CPU:${NORMAL}"
+    ps -eo pid,ppid,cmd,%cpu --sort=-%cpu | head -6
+    
+    echo -e "\n${BOLD}Top 5 Processes by Memory:${NORMAL}"
+    ps -eo pid,ppid,cmd,%mem --sort=-%mem | head -6
+    
+    echo ""
+}
+
+analyze_services() {
+    echo -e "${BOLD}${MAROON}╔════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${MAROON}║      SERVICES ANALYSIS         ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}╚════════════════════════════════╝${NORMAL}"
+    
+    # Check if systemd is used
+    if ! command -v systemctl &> /dev/null; then
+        echo -e "${YELLOW}systemd not detected. Service analysis limited.${NORMAL}"
+        return
+    fi
+    
+    # Show service statistics
+    TOTAL_SERVICES=$(systemctl list-unit-files --type=service | wc -l)
+    RUNNING_SERVICES=$(systemctl list-units --type=service --state=running | grep ".service" | wc -l)
+    FAILED_SERVICES=$(systemctl list-units --type=service --state=failed | grep ".service" | wc -l)
+    
+    echo -e "${BOLD}Service Statistics:${NORMAL}"
+    echo -e "   Total Services: $TOTAL_SERVICES"
+    echo -e "   Running Services: $RUNNING_SERVICES"
+    echo -e "   Failed Services: $FAILED_SERVICES"
+    
+    # Show running services
+    echo -e "\n${BOLD}Running Services:${NORMAL}"
+    systemctl list-units --type=service --state=running | grep ".service" | head -10 | awk '{print "   " $1 " - " $4 " " $5}'
+    
+    if [ $RUNNING_SERVICES -gt 10 ]; then
+        echo -e "   ... and $(($RUNNING_SERVICES - 10)) more"
+    fi
+    
+    # Show failed services
+    if [ $FAILED_SERVICES -gt 0 ]; then
+        echo -e "\n${BOLD}Failed Services:${NORMAL}"
+        systemctl list-units --type=service --state=failed | grep ".service" | awk '{print "   " $1 " - " $4 " " $5}'
+    fi
+    
+    # Show listening ports
+    echo -e "\n${BOLD}Listening Ports:${NORMAL}"
+    ss -tuln | grep LISTEN | head -10 | while read line; do
+        PROTO=$(echo "$line" | awk '{print $1}')
+        PORT=$(echo "$line" | awk '{print $5}' | cut -d: -f2)
+        
+        # Try to identify the service
+        SERVICE="Unknown"
+        case "$PORT" in
+            22)
+                SERVICE="SSH"
+                ;;
+            80|8080)
+                SERVICE="HTTP"
+                ;;
+            443)
+                SERVICE="HTTPS"
+                ;;
+            53)
+                SERVICE="DNS"
+                ;;
+            21)
+                SERVICE="FTP"
+                ;;
+        esac
+        
+        echo -e "   $PORT ($PROTO) - $SERVICE"
+    done
+    
+    echo ""
+}
+
+# Function to show help
+show_help() {
+    echo "Usage: lanimals_sysinfo [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --all              Run all system analysis modules"
+    echo "  --cpu              Analyze CPU usage and performance"
+    echo "  --memory           Analyze memory usage"
+    echo "  --disk             Analyze disk usage and health"
+    echo "  --network          Analyze network connectivity"
+    echo "  --processes        Analyze running processes"
+    echo "  --services         Analyze running services"
+    echo "  --help             Show this help message"
+    echo ""
+}
+
+# Handle command line arguments
+if [ $# -eq 0 ] || [ "$1" = "--help" ]; then
+    show_help
+    exit 0
+fi
+
+case "$1" in
+    --all)
+        analyze_cpu
+        analyze_memory
+        analyze_disk
+        analyze_network
+        analyze_processes
+        analyze_services
+        ;;
+    --cpu)
+        analyze_cpu
+        ;;
+    --memory)
+        analyze_memory
+        ;;
+    --disk)
+        analyze_disk
+        ;;
+    --network)
+        analyze_network
+        ;;
+    --processes)
+        analyze_processes
+        ;;
+    --services)
+        analyze_services
+        ;;
+    *)
+        show_help
+        ;;
+esac
