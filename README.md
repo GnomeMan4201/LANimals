@@ -1,8 +1,7 @@
                                                                                                                                                                                                                                                 
                                                                                                                                                                                                                                                 ![LANimals Logo](LANimals_LOGO.png)
 
-                                                                                                                                                                                                                                                
-                                                                                                                                                                                                                                                # LANimals
+ # LANimals
 
 ### 
 ![Threat Hunter](docs/screenshots/originals/threat1.png)
