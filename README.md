@@ -1,12 +1,17 @@
 <div align="center">
-  <a href="secret.md">
-    <img src="path/to/your/lanimals-logo.png" alt="LANimals Logo" width="300"/>
-  </a>
-  
-  <p><i>Click the logo to reveal a secret</i></p>
+  <img src="path/to/your/lanimals-logo.png" alt="LANimals Logo" width="300"/>
 </div>
 
 # LANimals
+
+<details>
+  <summary>🔒 Secret Area - Click to Reveal</summary>
+  
+  ## 🔥 SECRET REVEALED 🔥
+  The LANimals are watching your network traffic...
+  
+  ![Secret Image](path/to/secret-image.png)
+</details>
 # LANimals
 
 ### 
