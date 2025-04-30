@@ -1,3 +1,5 @@
+![LANIMALS Logo](assets/lanimals-logo.jpg)
+
 README.md
 # LANimals
 
