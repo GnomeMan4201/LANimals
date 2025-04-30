@@ -1,0 +1,197 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+# Create threat log directory and file
+mkdir -p ~/.lanimals/logs
+THREAT_LOG=~/.lanimals/logs/threats.log
+LAST_SCAN=~/.lanimals/logs/last_scan.tmp
+touch $THREAT_LOG
+
+# Banner
+echo -e "${BOLD}${MAROON}"
+cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+                THREAT ALERTING
+BANNER
+echo -e "${NORMAL}"
+
+echo -e "${BOLD}${MAROON}[ INIT ]${NORMAL} Initializing Threat Alerting System..."
+sleep 0.3
+
+# Function to log threats
+log_threat() {
+    local threat_type="$1"
+    local threat_details="$2"
+    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "[$timestamp] $threat_type: $threat_details" >> $THREAT_LOG
+    echo -e "${BOLD}${RED}[ ALERT ]${NORMAL} $threat_type detected: $threat_details"
+    
+    # Send desktop notification if possible
+    if command -v notify-send &> /dev/null; then
+        notify-send -u critical "LANimals Alert" "$threat_type detected: $threat_details"
+    fi
+}
+
+# Capture current state
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Capturing network baseline..."
+sleep 0.2
+
+# Capture current VPN state
+if ip addr | grep -q "tun0"; then
+    VPN_STATE="Connected"
+else
+    VPN_STATE="Disconnected"
+    log_threat "VPN STATUS" "VPN is currently disconnected"
+fi
+
+# Capture current WiFi APs
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Scanning wireless environment..."
+if command -v iwlist &> /dev/null; then
+    CURRENT_APS=$(iwlist scan 2>/dev/null | grep -i "essid" | awk -F':' '{print $2}' | sed 's/"//g' | sort | uniq)
+    echo "$CURRENT_APS" > $LAST_SCAN.wifi
+    echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Found $(echo "$CURRENT_APS" | wc -l) wireless networks"
+else
+    echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} WiFi scanning tool not available"
+fi
+
+# Capture current LAN devices
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Mapping LAN devices..."
+CURRENT_LAN=$(ip neigh | grep -v "FAILED" | sort)
+echo "$CURRENT_LAN" > $LAST_SCAN.lan
+LAN_COUNT=$(echo "$CURRENT_LAN" | wc -l)
+echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Found $LAN_COUNT devices on LAN"
+
+# Capture current open ports
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking open ports..."
+CURRENT_PORTS=$(ss -tuln | grep LISTEN | awk '{print $5}' | sed 's/.*://' | sort -n | uniq)
+echo "$CURRENT_PORTS" > $LAST_SCAN.ports
+PORT_COUNT=$(echo "$CURRENT_PORTS" | wc -l)
+echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Found $PORT_COUNT open ports"
+
+# Check for ARP poisoning
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking ARP tables..."
+DUPLICATE_MACS=$(arp -a | awk '{print $4}' | sort | uniq -d | grep -v "<incomplete>")
+if [ -n "$DUPLICATE_MACS" ]; then
+    log_threat "ARP POISONING" "Duplicate MAC addresses detected in ARP table"
+else
+    echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} No ARP poisoning detected"
+fi
+
+# Check for suspicious open ports
+for port in $CURRENT_PORTS; do
+    if [ "$port" -eq 4444 ] || [ "$port" -eq 4242 ] || [ "$port" -eq 1337 ] || [ "$port" -eq 31337 ]; then
+        log_threat "SUSPICIOUS PORT" "Port $port is open - commonly used for backdoors"
+    fi
+done
+
+# Check for rogue services
+echo -e "${BOLD}${MAROON}[ SCAN ]${NORMAL} Checking for rogue services..."
+ps aux | grep -i "nc -l\|netcat -l\|ncat -l" | grep -v "grep" > /dev/null
+if [ $? -eq 0 ]; then
+    log_threat "ROGUE LISTENER" "Netcat listener detected on system"
+fi
+
+# Display completion message
+echo ""
+echo -e "${BOLD}${MAROON}Security Scan Complete${NORMAL}"
+echo -e "${BOLD}Detected:${NORMAL} $LAN_COUNT LAN devices, $PORT_COUNT open ports"
+echo -e "${BOLD}VPN Status:${NORMAL} $VPN_STATE"
+echo -e "${BOLD}Threat Log:${NORMAL} $THREAT_LOG"
+echo ""
+
+# Function to continuously monitor network
+monitor_network() {
+    echo -e "${BOLD}${MAROON}[ MONITOR ]${NORMAL} Starting continuous network monitoring..."
+    echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Press Ctrl+C to stop monitoring"
+    echo ""
+    
+    while true; do
+        # Check for new WiFi networks
+        if command -v iwlist &> /dev/null; then
+            NEW_APS=$(iwlist scan 2>/dev/null | grep -i "essid" | awk -F':' '{print $2}' | sed 's/"//g' | sort | uniq)
+            DIFF_APS=$(comm -13 <(echo "$CURRENT_APS") <(echo "$NEW_APS") 2>/dev/null)
+            if [ -n "$DIFF_APS" ]; then
+                log_threat "NEW WIFI AP" "New wireless networks detected: $DIFF_APS"
+                CURRENT_APS="$NEW_APS"
+            fi
+        fi
+        
+        # Check for new LAN devices
+        NEW_LAN=$(ip neigh | grep -v "FAILED" | sort)
+        DIFF_LAN=$(comm -13 <(echo "$CURRENT_LAN") <(echo "$NEW_LAN") 2>/dev/null)
+        if [ -n "$DIFF_LAN" ]; then
+            log_threat "NEW LAN DEVICE" "New device on network: $DIFF_LAN"
+            CURRENT_LAN="$NEW_LAN"
+        fi
+        
+        # Check for VPN changes
+        if [ "$VPN_STATE" = "Connected" ]; then
+            if ! ip addr | grep -q "tun0"; then
+                log_threat "VPN DISCONNECT" "VPN connection lost"
+                VPN_STATE="Disconnected"
+            fi
+        else
+            if ip addr | grep -q "tun0"; then
+                echo -e "${BOLD}${GREEN}[ INFO ]${NORMAL} VPN connection established"
+                VPN_STATE="Connected"
+            fi
+        fi
+        
+        # Check for new open ports
+        NEW_PORTS=$(ss -tuln | grep LISTEN | awk '{print $5}' | sed 's/.*://' | sort -n | uniq)
+        DIFF_PORTS=$(comm -13 <(echo "$CURRENT_PORTS") <(echo "$NEW_PORTS") 2>/dev/null)
+        if [ -n "$DIFF_PORTS" ]; then
+            log_threat "NEW PORT" "New port(s) opened: $DIFF_PORTS"
+            CURRENT_PORTS="$NEW_PORTS"
+            
+            # Check if the new port is suspicious
+            for port in $DIFF_PORTS; do
+                if [ "$port" -eq 4444 ] || [ "$port" -eq 4242 ] || [ "$port" -eq 1337 ] || [ "$port" -eq 31337 ]; then
+                    log_threat "SUSPICIOUS PORT" "Port $port is open - commonly used for backdoors"
+                fi
+            done
+        fi
+        
+        # Check for suspicious processes
+        ps aux | grep -i "nc -l\|netcat -l\|ncat -l\|reverse_shell\|exploit\|meterpreter" | grep -v "grep" > /dev/null
+        if [ $? -eq 0 ]; then
+            log_threat "SUSPICIOUS PROCESS" "Potentially malicious process detected"
+        fi
+        
+        # Check for ARP poisoning
+        DUPLICATE_MACS=$(arp -a | awk '{print $4}' | sort | uniq -d | grep -v "<incomplete>")
+        if [ -n "$DUPLICATE_MACS" ]; then
+            log_threat "ARP POISONING" "Duplicate MAC addresses detected in ARP table"
+        fi
+        
+        sleep 10
+    done
+}
+
+# Handle command line args
+if [ "$1" = "--monitor" ]; then
+    monitor_network
+else
+    # Ask if user wants to start continuous monitoring
+    echo -e "${BOLD}${MAROON}Start continuous monitoring? (y/n)${NORMAL}"
+    read -r response
+    if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        monitor_network
+    else
+        echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Run 'lanimals alert --monitor' to start continuous monitoring"
+    fi
+fi
