@@ -1,3 +1,9 @@
+
+<p align="center">
+  <img src="docs/assets/LANIMALS_LOGO.png" alt="LANimals Logo" width="300"/>
+</p>
+
+ 
  # LANimals
 
 ### 
