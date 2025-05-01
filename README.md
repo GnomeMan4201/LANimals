@@ -1,9 +1,10 @@
- # LANimals   
+                                                                                                                                                                                  
  <p align="center">
   <img src="docs/assets/LANIMALS_LOGO.png" alt="LANimals Logo" width="300"/>
 </p>
 
-
+ # LANimals   
+ 
 ### 
 ![Threat Hunter](docs/screenshots/originals/threat1.png)
 
