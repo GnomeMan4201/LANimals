@@ -1,4 +1,18 @@
-                                                                                                                                                                                  
+ <div align="center">
+  <br>
+  <h1>🌐 LANimals 🛡️</h1>
+  <strong>Advanced Network Security & Monitoring Toolkit</strong>
+  <br><br>
+
+  <!-- Badges will go here once set up -->
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](./VERSION)
+  [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/GnomeMan4201/LANimals/graphs/commit-activity)
+</div>
+
+## 🚀 Overview
+
+LANimals is a comprehensive network security and monitoring toolkit designed for security professionals, system administrators, and network enthusiasts. It provides a powerful set of tools for analyzing, visualizing, and securing local networks with an intuitive command-line interface.                                                                                                                                                                                 
  <p align="center">
   <img src="docs/assets/LANIMALS_LOGO.png" alt="LANimals Logo" width="300"/>
 </p>
