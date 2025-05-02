@@ -27,6 +27,7 @@ show_help() {
     echo -e "  ${BOLD}monitor${NORMAL}   Start continuous monitoring"
     echo -e "  ${BOLD}traffic${NORMAL}   Analyze network traffic"
     echo -e "  ${BOLD}netmap${NORMAL}    Map network devices visually"
+    echo -e "  ${BOLD}viznet${NORMAL}    Interactive network visualization"
     echo ""
     echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
     echo -e "${BOLD}${MAROON}║               SECURITY COMMANDS               ║${NORMAL}"
@@ -34,6 +35,7 @@ show_help() {
     echo -e "  ${BOLD}fortress${NORMAL}  Security hardening toolkit" 
     echo -e "  ${BOLD}hunter${NORMAL}    Threat hunting and detection"
     echo -e "  ${BOLD}threats${NORMAL}   Show recent threats"
+    echo -e "  ${BOLD}vulnscan${NORMAL}  Network vulnerability scanner"
     echo ""
     echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
     echo -e "${BOLD}${MAROON}║               GENERAL COMMANDS                ║${NORMAL}"
@@ -43,37 +45,6 @@ show_help() {
     echo -e "  ${BOLD}update${NORMAL}    Check for updates"
     echo ""
     echo -e "For command-specific help, use: ${BOLD}lanimals [command] --help${NORMAL}"
-}
-
-show_version() {
-    echo -e "${BOLD}${MAROON}"
-    cat <<BANNER
-██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
-██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
-██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
-██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
-███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
-╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
-                       NEXUS
-BANNER
-    echo -e "${NORMAL}"
-    echo -e "${BOLD}LANimals Nexus${NORMAL} - ${BOLD}${MAROON}Version 1.0.0${NORMAL}"
-    echo -e "Security Command & Control System"
-    echo -e "Created: April 28, 2025"
-    echo ""
-    echo -e "${BOLD}Components:${NORMAL}"
-    ls -1 ~/.local/bin/lanimals_* | while read component; do
-        NAME=$(basename $component | cut -d_ -f2-)
-        echo -e "  • $NAME"
-    done
-    echo ""
-    echo -e "Type '${BOLD}lanimals help${NORMAL}' for available commands"
-}
-
-# Check for updates
-check_update() {
-    echo -e "${BOLD}${MAROON}[ UPDATE ]${NORMAL} Checking for updates..."
-    echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} LANimals Nexus is up to date (Version 1.0.0)"
 }
 
 # Create needed directories
@@ -103,6 +74,10 @@ case "$1" in
         shift
         lanimals_netmap "$@"
         ;;
+    viznet)
+        shift
+        lanimals_viznet "$@"
+        ;;
     fortress)
         shift
         lanimals_fortress "$@"
@@ -115,6 +90,10 @@ case "$1" in
         shift
         lanimals_hunter "$@"
         ;;
+    vulnscan)
+        shift
+        lanimals_vulnscan "$@"
+        ;;
     threats)
         if [ -f ~/.lanimals/logs/threats.log ]; then
             echo -e "${BOLD}${MAROON}Recent Threats:${NORMAL}"
@@ -124,10 +103,13 @@ case "$1" in
         fi
         ;;
     version)
-        show_version
+        echo -e "${BOLD}${MAROON}LANimals${NORMAL} - Version 1.1.0"
+        echo -e "Network Security Toolkit"
+        echo -e "Released: May 2025"
         ;;
     update)
-        check_update
+        echo -e "${BOLD}${MAROON}[ UPDATE ]${NORMAL} Checking for updates..."
+        echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} LANimals is up to date (Version 1.1.0)"
         ;;
     *|help)
         show_help
