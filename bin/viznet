@@ -1,0 +1,264 @@
+#!/bin/bash
+
+# Formatting
+BOLD=$(tput bold)
+NORMAL=$(tput sgr0)
+MAROON='\033[38;5;1m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+
+# Banner
+echo -e "${BOLD}${MAROON}"
+cat <<BANNER
+██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
+██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
+██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
+██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
+███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+              NETWORK VISUALIZER
+BANNER
+echo -e "${NORMAL}"
+
+echo -e "${BOLD}${MAROON}[ INIT ]${NORMAL} Network Visualizer Initializing..."
+sleep 0.3
+
+# Create log directory
+mkdir -p ~/.lanimals/logs
+
+# Check dependencies
+if ! command -v tput &> /dev/null; then
+    echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} ncurses not found. Install with 'sudo apt install ncurses-bin'"
+    exit 1
+fi
+
+# Get terminal size
+TERM_WIDTH=$(tput cols)
+TERM_HEIGHT=$(tput lines)
+
+# Get network information
+PRIMARY_INTERFACE=$(ip route | grep default | awk '{print $5}')
+LOCAL_IP=$(ip -o -4 addr show $PRIMARY_INTERFACE | awk '{print $4}' | cut -d/ -f1)
+GATEWAY=$(ip route | grep default | awk '{print $3}')
+NETWORK_BASE=$(echo $LOCAL_IP | cut -d. -f1-3)
+
+# Function to create visual map
+create_visual_map() {
+    # Get current devices on network
+    DEVICES=$(ip neigh | grep -v FAILED)
+    DEVICE_COUNT=$(echo "$DEVICES" | wc -l)
+    
+    # Clear screen
+    clear
+    
+    # Draw header
+    echo -e "${BOLD}${MAROON}LANimals Network Visualizer${NORMAL} - Real-time network status"
+    echo -e "${BOLD}Local IP:${NORMAL} $LOCAL_IP | ${BOLD}Gateway:${NORMAL} $GATEWAY | ${BOLD}Interface:${NORMAL} $PRIMARY_INTERFACE"
+    echo -e "${BOLD}Devices:${NORMAL} $DEVICE_COUNT detected on network"
+    echo
+    
+    # Draw network grid
+    # This grid represents the last octet of IP addresses in the local subnet
+    echo -e "${BOLD}${MAROON}Network Map ($NETWORK_BASE.0/24):${NORMAL}"
+    echo
+    
+    # Create a grid of IP addresses in the subnet
+    for i in {0..15}; do
+        ROW=""
+        for j in {0..15}; do
+            NUM=$((i*16 + j))
+            IP="$NETWORK_BASE.$NUM"
+            
+            if [ "$IP" = "$LOCAL_IP" ]; then
+                # Your IP
+                ROW+="${BOLD}${GREEN}X${NORMAL} "
+            elif [ "$IP" = "$GATEWAY" ]; then
+                # Gateway
+                ROW+="${BOLD}${BLUE}G${NORMAL} "
+            elif echo "$DEVICES" | grep -q "$IP"; then
+                # Other device on network
+                ROW+="${BOLD}${YELLOW}O${NORMAL} "
+            else
+                # Empty IP
+                ROW+=". "
+            fi
+        done
+        echo -e "$ROW"
+    done
+    
+    echo
+    echo -e "${BOLD}${GREEN}X${NORMAL} - Your Host | ${BOLD}${BLUE}G${NORMAL} - Gateway | ${BOLD}${YELLOW}O${NORMAL} - Other Devices | . - Empty"
+    echo
+}
+
+# Function to display device details
+display_device_details() {
+    echo -e "${BOLD}${MAROON}Connected Devices:${NORMAL}"
+    echo
+    
+    echo -e "${BOLD}IP Address         MAC Address         Status      Hostname${NORMAL}"
+    echo -e "--------------------------------------------------------------------"
+    
+    ip neigh | grep -v FAILED | while read -r line; do
+        IP=$(echo "$line" | awk '{print $1}')
+        MAC=$(echo "$line" | awk '{print $5}')
+        STATE=$(echo "$line" | awk '{print $6}')
+        
+        # Try to get hostname using nslookup
+        HOSTNAME=$(nslookup $IP 2>/dev/null | grep "name =" | awk '{print $4}' | sed 's/\.$//')
+        if [ -z "$HOSTNAME" ]; then
+            HOSTNAME="-"
+        fi
+        
+        # Add color based on device type
+        if [ "$IP" = "$LOCAL_IP" ]; then
+            echo -e "${GREEN}$IP     $MAC    $STATE    $HOSTNAME${NORMAL}"
+        elif [ "$IP" = "$GATEWAY" ]; then
+            echo -e "${BLUE}$IP     $MAC    $STATE    $HOSTNAME${NORMAL}"
+        else
+            echo -e "${YELLOW}$IP     $MAC    $STATE    $HOSTNAME${NORMAL}"
+        fi
+    done
+}
+
+# Function to display traffic information
+display_traffic_info() {
+    echo -e "${BOLD}${MAROON}Network Traffic Summary:${NORMAL}"
+    echo
+    
+    # Check if bc is installed
+    if ! command -v bc &> /dev/null; then
+        echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} 'bc' command not available. Install with 'sudo apt install bc'"
+        # Fallback to simple display
+        RX_BYTES=$(cat /sys/class/net/$PRIMARY_INTERFACE/statistics/rx_bytes 2>/dev/null || echo "0")
+        TX_BYTES=$(cat /sys/class/net/$PRIMARY_INTERFACE/statistics/tx_bytes 2>/dev/null || echo "0")
+        echo -e "${BOLD}Total Received:${NORMAL} $RX_BYTES bytes"
+        echo -e "${BOLD}Total Sent:${NORMAL} $TX_BYTES bytes"
+    else
+        # Get interface statistics
+        RX_BYTES=$(cat /sys/class/net/$PRIMARY_INTERFACE/statistics/rx_bytes 2>/dev/null || echo "0")
+        TX_BYTES=$(cat /sys/class/net/$PRIMARY_INTERFACE/statistics/tx_bytes 2>/dev/null || echo "0")
+        
+        # Convert to human-readable format
+        RX_MB=$(echo "scale=2; $RX_BYTES / 1048576" | bc 2>/dev/null || echo "0")
+        TX_MB=$(echo "scale=2; $TX_BYTES / 1048576" | bc 2>/dev/null || echo "0")
+        
+        echo -e "${BOLD}Total Received:${NORMAL} $RX_MB MB"
+        echo -e "${BOLD}Total Sent:${NORMAL} $TX_MB MB"
+    fi
+    
+    # Get active connections
+    CONNECTIONS=$(ss -tn state established 2>/dev/null | wc -l)
+    echo -e "${BOLD}Active Connections:${NORMAL} $CONNECTIONS"
+    
+    # Top 5 connections by destination
+    echo
+    echo -e "${BOLD}Top Destinations:${NORMAL}"
+    ss -tn state established 2>/dev/null | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -5 | while read count dest; do
+        # Skip empty or malformed lines
+        if [ -n "$dest" ] && [ "$dest" != "Address" ]; then
+            echo -e "   $dest: $count connections"
+        fi
+    done
+}
+
+# Function to monitor in real-time
+monitor_network() {
+    local duration=$1
+    local refresh=5  # refresh interval in seconds
+    local end_time=$(($(date +%s) + $duration))
+    
+    while [ $(date +%s) -lt $end_time ]; do
+        # Clear screen and show network map
+        create_visual_map
+        
+        # Show connection details
+        display_device_details
+        
+        echo
+        
+        # Show traffic info
+        display_traffic_info
+        
+        # Time left and refresh info
+        time_left=$((end_time - $(date +%s)))
+        echo
+        echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Refreshing every $refresh seconds. Monitoring ends in $time_left seconds."
+        echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Press Ctrl+C to stop monitoring."
+        
+        # Wait before refreshing
+        sleep $refresh
+    done
+}
+
+# Command line arguments and modes
+MODE="map"
+DURATION=300  # default monitoring duration: 5 minutes
+
+# Parse command line arguments
+for arg in "$@"; do
+    case $arg in
+        --monitor)
+            MODE="monitor"
+            shift
+            ;;
+        --duration=*)
+            DURATION="${arg#*=}"
+            shift
+            ;;
+        --devices)
+            MODE="devices"
+            shift
+            ;;
+        --traffic)
+            MODE="traffic"
+            shift
+            ;;
+        --help)
+            echo "Usage: lanimals_viznet [OPTIONS]"
+            echo
+            echo "Options:"
+            echo "  --monitor              Start real-time network monitoring"
+            echo "  --duration=SECONDS     Set monitoring duration (default: 300)"
+            echo "  --devices              Display only device details"
+            echo "  --traffic              Display only traffic information"
+            echo "  --help                 Show this help message"
+            exit 0
+            ;;
+        *)
+            echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Unknown option: $arg"
+            exit 1
+            ;;
+    esac
+done
+
+# Execute based on mode
+case $MODE in
+    map)
+        create_visual_map
+        display_device_details
+        echo
+        display_traffic_info
+        ;;
+    monitor)
+        echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Starting real-time network monitoring for $DURATION seconds..."
+        sleep 1
+        monitor_network $DURATION
+        ;;
+    devices)
+        display_device_details
+        ;;
+    traffic)
+        display_traffic_info
+        ;;
+    *)
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Unknown mode: $MODE"
+        exit 1
+        ;;
+esac
+
+echo
+echo -e "${BOLD}${MAROON}[ OK ]${NORMAL} Network visualization complete."
