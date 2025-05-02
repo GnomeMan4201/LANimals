@@ -9,8 +9,6 @@
   [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/GnomeMan4201/LANimals/graphs/commit-activity)
 </div>
 
-##Overview
-
 LANimals is a comprehensive network security and monitoring toolkit designed for security professionals, system administrators, and network enthusiasts. It provides a powerful set of tools for analyzing, visualizing, and securing local networks with an intuitive command-line interface.                                                                                                                                                                            
 
  # LANimals   
