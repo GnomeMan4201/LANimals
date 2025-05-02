@@ -1,8 +1,6 @@
  <p align="center">
   <img src="docs/assets/LANIMALS_LOGO.png" alt="LANimals Logo" width="300"/>
-</p>
-
-<strong>Advanced Network Security & Monitoring Toolkit</strong>
+</p>    <strong>Advanced Network Security & Monitoring Toolkit</strong>
   <br><br>
 
   <!-- Badges will go here once set up -->
