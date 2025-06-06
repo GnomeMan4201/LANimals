@@ -1,73 +1,41 @@
-<p align="center">
-  <img src="assets/LANimals_logo.png" alt="LANimals Hacker Monkey" width="600">
-</p>
+# LANimals
 
----
+A next-gen network situational awareness and LAN threat hunting framework.  
+Modular. Scriptable. Battle-tested. All killer, no filler.
 
+## Features
 
-### System Info
-![SysInfo](assets/sysinfo.png)
+- Autonomous LAN recon & mapping
+- Advanced ARP, port, and service fingerprinting
+- Real-time traffic tap & analysis
+- Threat surface & rogue device detection
+- Loot logging, summary, and analytics
+- GhostScan: Outbound infrastructure detection
+- Anomaly detection & live threat enrichment
+- Session logging, reporting, and export
+- WLAN beacon hunting
+- (And a hell of a lot more...)
 
-### Threat Intel
-![Threat](assets/threat1.png)
+## Core Modules
 
-### Traffic Capture
-![Traffic](assets/traffic1.png)
+| Module Name             | Description                                |
+|-------------------------|--------------------------------------------|
+$(ls modules/*.py | xargs -n1 basename | sed 's/\.py//' | awk '{printf "| %-23s | - |\n", $1}')
+| ...more coming soon...  |                                            |
 
-### Network Mapping
-![NetMap](assets/netmap1.png)
+## CLI Usage
 
+Each module can be called directly, e.g.:
 
----
+```sh
+lanimals recon
+lanimals netmap
+lanimals ghostscan
+lanimals lootsummary
+lanimals anomalydetector
+lanimals threatenrich
+lanimals sessionlogger
+lanimals wlanbeacon
+lanimals darkwebhost
+# ...etc
 
-## [ PHILOSOPHY ]
-<p align="center">
-LANimals transforms the operator into a predator of the local network — silently observing, tagging, probing, and documenting prey systems in real time with zero setup.  
-Everything from interface scans, MAC spoofing, ARP hunts, and stealth probes — in a clean, stylized suite.
-</p>
-
----
-
-## [ FEATURES ]
-<p align="center">
-
-- Interface & ARP Scanning  
-- Intelligent Loot Logging  
-- Fast Ping Sweeps + Alive Reports  
-- Mass Port Scanner  
-- Drop Decoy Artifacts  
-- HTTP Header Probe  
-- Self-Diagnostic System  
-- Python-based CLI, no external setup  
-- LAN-aware modular UX  
-
-</p>
-
----
-
-## [ MODULES ]
-<p align="center">
-
-| Module                 | Description                                         |
-|------------------------|-----------------------------------------------------|
-| `interface_scan.py`    | Scans interfaces & shows MAC/IP info                |
-| `arp_hunter.py`        | Probes the LAN with raw ARP requests                |
-| `ping_sweep.py`        | Fast subnet ping to find alive hosts                |
-| `alive_report.py`      | Generates timestamped alive-host reports            |
-| `mass_scan.py`         | Nmap scanner across all live targets                |
-| `loot_log.py`          | Operator notes & findings logged with timestamp     |
-| `loot_viewer.py`       | View stored loot collected in ops                   |
-| `http_probe.py`        | Retrieves HTTP response headers from a target URL   |
-| `lanimals-launcher.py` | CLI control center for all modules                  |
-| `lanimals-check.py`    | Self-diagnostic script to verify tool integrity     |
-
-</p>
-
----
-
-## [ QUICKSTART ]
-
-```bash
-git clone https://github.com/GnomeMan4201/LANimals.git
-cd LANimals
-python3 main.py
