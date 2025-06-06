@@ -27,7 +27,7 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2  # DO NOT use v1.0.8 — invalid
+        uses: actions/upload-pages-artifact@v3  # DO NOT use v1.0.8 — invalid
         with:
           path: docs
 
