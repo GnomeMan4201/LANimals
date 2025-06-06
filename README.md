@@ -13,21 +13,22 @@ Modular. Scriptable. Battle-tested. All killer, no filler.
 
 <h2 align="center"><span style="color:#d32f2f;">FEATURES</span></h2>
 
-<div align="center">
+<h2 align="center" style="color:red;">FEATURES</h2>
 
-  Autonomous LAN recon & mapping  
-  Advanced ARP, port, and service fingerprinting  
-  Real-time traffic tap & analysis  
-  Threat surface & rogue device detection  
-  Loot logging, summary, and analytics  
-  GhostScan: Outbound infrastructure detection  
-  Anomaly detection & live threat enrichment  
-  Session logging, reporting, and export  
-  WLAN beacon hunting  
-  Dark web host detection  
-  (And a hell of a lot more...)
+<p align="center">
+  • Autonomous LAN recon & mapping<br>
+  • Advanced ARP, port, and service fingerprinting<br>
+  • Real-time traffic tap & analysis<br>
+  • Threat surface & rogue device detection<br>
+  • Loot logging, summary, and analytics<br>
+  • GhostScan: Outbound infrastructure detection<br>
+  • Anomaly detection & live threat enrichment<br>
+  • Session logging, reporting, and export<br>
+  • WLAN beacon hunting<br>
+  • Dark web host detection<br>
+  • (And a lot more...)
+</p>
 
-</div>
 
 <br>
 
@@ -68,14 +69,15 @@ Modular. Scriptable. Battle-tested. All killer, no filler.
 
 <br>
 
-<h2 align="center"><span style="color:#d32f2f;">INSTALL & USAGE</span></h2>
-
 <p align="center">
-<b>Clone , Install </b>
+  <b style="color:red; font-size:1.1em;">Clone & Install in Seconds</b>
 </p>
 
+<p align="center">
+  
 ```sh
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
 pip install -r requirements.txt
 ./install.sh
+
