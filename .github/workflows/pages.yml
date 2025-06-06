@@ -27,7 +27,7 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Upload static content
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v1
         with:
           path: docs
 
