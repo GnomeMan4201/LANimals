@@ -72,3 +72,10 @@ python3 main.py
 
 
 ## [ QUICKSTART ]
+
+## [ MOCKUPS ]
+
+> Preview terminal-style walkthroughs of LANimals in action:
+
+- [LANimalsOS Terminal UI](docs/mockups/LANimalsOS_terminal_mockup.txt)
+- [Threatmap Visualizer](docs/mockups/LANimalsOS_threatmap_mockup.txt)
