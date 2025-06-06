@@ -1,3 +1,4 @@
+
 <p align="center">
   <img src="assets/LANimals_logo.png" alt="LANimals Logo" width="375">
 </p>
