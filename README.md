@@ -1,79 +1,81 @@
+<p align="center">
+  <img src="assets/LANimals_logo.png" alt="LANimals Logo" width="375">
+</p>
 
-# LANimals
+<h1 align="center"><span style="color:#d32f2f;">LANimals</span></h1>
 
-A next-gen network situational awareness and LAN threat hunting framework.  
+<p align="center"><b>
+A next-gen network situational awareness and LAN threat hunting framework.<br>
 Modular. Scriptable. Battle-tested. All killer, no filler.
+</b></p>
 
----
+<br>
 
-## Features
+<h2 align="center"><span style="color:#d32f2f;">FEATURES</span></h2>
 
-- Autonomous LAN recon & mapping  
-- Advanced ARP, port, and service fingerprinting  
-- Real-time traffic tap & analysis  
-- Threat surface & rogue device detection  
-- Loot logging, summary, and analytics  
-- GhostScan: Outbound infrastructure detection  
-- Anomaly detection & live threat enrichment  
-- Session logging, reporting, and export  
-- WLAN beacon hunting  
-- Dark web host detection  
-- (And a hell of a lot more...)
+<div align="center">
 
----
+  Autonomous LAN recon & mapping  
+  Advanced ARP, port, and service fingerprinting  
+  Real-time traffic tap & analysis  
+  Threat surface & rogue device detection  
+  Loot logging, summary, and analytics  
+  GhostScan: Outbound infrastructure detection  
+  Anomaly detection & live threat enrichment  
+  Session logging, reporting, and export  
+  WLAN beacon hunting  
+  Dark web host detection  
+  (And a hell of a lot more...)
 
-## CLI Commands
+</div>
 
-| Command                   | Description                           |
-|---------------------------|---------------------------------------|
-| lanimals_sysinfo          | Analyze system components             |
-| lanimals_traffic          | Analyze network traffic               |
-| lanimals_lootlog          | View loot log entries                 |
-| lanimals_lootsummary      | Loot analytics / summarizer           |
-| lanimals_tripwire         | Monitor tripwire events               |
-| lanimals_roguescan        | Scan for rogue devices                |
-| lanimals_asciiroll        | Show rotating ASCII banners           |
-| lanimals_ghostscan        | Outbound infra detection              |
-| lanimals_anomalydetector  | Network anomaly detector              |
-| lanimals_threatenrich     | Live threat intel enrichment          |
-| lanimals_sessionlogger    | Session logger / report generator     |
-| lanimals_darkwebhost      | Dark web host detector                |
-| lanimals_wlanbeacon       | WLAN beacon hunter                    |
-| lanimals_fortress         | Security hardening toolkit            |
-| lanimals_alert            | Run threat alert system               |
-| lanimals_viznet           | Interactive network visualization     |
-| lanimals_vulscan          | Network vulnerability scanner         |
-| lanimals_netmap           | Map network devices visually          |
-| lanimals_recon            | Autonomous recon                      |
-| lanimals_dash             | Show dashboard                        |
+<br>
 
----
+<h2 align="center"><span style="color:#d32f2f;">CLI COMMANDS</span></h2>
 
-## Usage
+<p align="center">
+<table align="center">
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>lanimals_sysinfo</td><td>Analyze system components</td></tr>
+<tr><td>lanimals_traffic</td><td>Analyze network traffic</td></tr>
+<tr><td>lanimals_lootlog</td><td>View loot log entries</td></tr>
+<tr><td>lanimals_lootsummary</td><td>Loot analytics / summarizer</td></tr>
+<tr><td>lanimals_tripwire</td><td>Monitor tripwire events</td></tr>
+<tr><td>lanimals_roguescan</td><td>Scan for rogue devices</td></tr>
+<tr><td>lanimals_asciiroll</td><td>Show rotating ASCII banners</td></tr>
+<tr><td>lanimals_ghostscan</td><td>Outbound infra detection</td></tr>
+<tr><td>lanimals_anomalydetector</td><td>Network anomaly detector</td></tr>
+<tr><td>lanimals_threatenrich</td><td>Live threat intel enrichment</td></tr>
+<tr><td>lanimals_sessionlogger</td><td>Session logger / report generator</td></tr>
+<tr><td>lanimals_darkwebhost</td><td>Dark web host detector</td></tr>
+<tr><td>lanimals_wlanbeacon</td><td>WLAN beacon hunter</td></tr>
+<tr><td>lanimals_fortress</td><td>Security hardening toolkit</td></tr>
+<tr><td>lanimals_alert</td><td>Run threat alert system</td></tr>
+<tr><td>lanimals_viznet</td><td>Interactive network visualization</td></tr>
+<tr><td>lanimals_vulscan</td><td>Network vulnerability scanner</td></tr>
+<tr><td>lanimals_netmap</td><td>Map network devices visually</td></tr>
+<tr><td>lanimals_recon</td><td>Autonomous recon</td></tr>
+<tr><td>lanimals_dash</td><td>Show dashboard</td></tr>
+</tbody>
+</table>
+</p>
 
-Call any module from anywhere in your PATH:
+<br>
 
-```sh
-lanimals_sysinfo
-lanimals_traffic
-lanimals_lootsummary
-lanimals_ghostscan
-lanimals_anomalydetector
-lanimals_threatenrich
-lanimals_sessionlogger
-lanimals_darkwebhost
-lanimals_wlanbeacon
-# ...etc
+<h2 align="center"><span style="color:#d32f2f;">INSTALL & USAGE</span></h2>
 
-# QUICK INSTALL
+<p align="center">
+<b>Clone, install, and go—no nonsense:</b>
+</p>
 
 ```sh
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
-bash install.sh
-# Open a new terminal, or:
-export PATH="$PWD/bin:$PATH"
-
--------------------------------------------------------------Created by:bad_BANANA 
-
-----------------THANK YOU FOR CHECKING OUT THIS TOOL. FEEDBACK IS ALWAYS WELCOMED.
+pip install -r requirements.txt
+./install.sh
