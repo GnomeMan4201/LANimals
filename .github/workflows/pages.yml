@@ -20,17 +20,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload static content
-        uses: actions/upload-pages-artifact@v1.0.8
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1  # DO NOT use v1.0.8 — invalid
         with:
           path: docs
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
