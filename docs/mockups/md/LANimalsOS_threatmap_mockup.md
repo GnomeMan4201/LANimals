@@ -1,0 +1,23 @@
+# LANimalsOS threatmap mockup
+
+```shell
+> 3
+
+[+] Generating live threat map...
+[+] Aggregating broadcast ARP, DNS, mDNS traffic...
+
+╔════════════════════════════════════════════════════╗
+║              LAN THREATMAP – VISUAL MODE          ║
+╠════════════════════════════════════════════════════╣
+║ Legend: ● Host  ○ Passive Device  ✖ Suspicious     ║
+╠════════════════════════════════════════════════════╣
+║ 192.168.0.1   ● gateway.local     ↔ 10+ broadcasts  ║
+║ 192.168.0.5   ● tv_box            ↔ DLNA spamming   ║
+║ 192.168.0.9   ✖ laptop-user       ↔ Nmap scan ping  ║
+║ 192.168.0.15  ○ unknown device    ↔ Quiet presence  ║
+╚════════════════════════════════════════════════════╝
+
+[+] Potential rogue scanning device detected: 192.168.0.9
+[+] Recommend initiating packet capture
+
+```

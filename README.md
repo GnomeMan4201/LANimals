@@ -86,3 +86,10 @@ python3 main.py
 
 - [LANimalsOS Terminal UI](docs/mockups/LANimalsOS_terminal_mockup.txt)
 - [Threatmap Visualizer](docs/mockups/LANimalsOS_threatmap_mockup.txt)
+
+## [ MOCKUP VIEWER – GitHub Pages ]
+
+Browse formatted mockups directly on GitHub Pages:
+
+- [LANimalsOS Terminal UI](https://gnomeman4201.github.io/LANimals/mockups/md/LANimalsOS_terminal_mockup)
+- [Threatmap Visualizer](https://gnomeman4201.github.io/LANimals/mockups/md/LANimalsOS_threatmap_mockup)
