@@ -1,4 +1,6 @@
-![LANimals Logo](assets/lanimals_logo.png)
+<p align="center">
+  <img src="assets/LANimals_logo.png" alt="LANimals Hacker Monkey" width="600">
+</p>
 
 ---
 
