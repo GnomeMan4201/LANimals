@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from pathlib import Path
+import psutil, socket
 from rich.console import Console
 from rich.panel import Panel
 
@@ -11,20 +11,27 @@ def show_banner():
 ██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     
 ███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗
 ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝
-                   LOOT VIEWER
+                 ROGUE SCANNER
 '''
 
 def main():
     console = Console()
     console.print(Panel(show_banner(), style="cyan"))
-    loot_path = Path.home() / ".lanimals" / "data" / "loot.log"
-    if loot_path.exists():
-        console.print(f"[bold green][ OK ][/bold green] Showing recent loot from [white]{loot_path}[/white]:\n")
-        for line in loot_path.read_text().splitlines()[-20:]:
-            console.print(line)
-    else:
-        console.print("[bold red][ WARN ][/bold red] No loot log found.")
-    console.print("\n[bold green][ OK ][/bold green] Loot viewing complete.\n")
+    interfaces = psutil.net_if_addrs()
+    console.print("[bold green][ INIT ][/bold green] Scanning local interfaces for rogue devices...\n")
+    found = False
+    for iface, addrs in interfaces.items():
+        for addr in addrs:
+            if addr.family.name == "AF_INET" and not addr.address.startswith("127."):
+                try:
+                    hostname = socket.gethostbyaddr(addr.address)[0]
+                except Exception:
+                    hostname = "Unknown"
+                if "rogue" in hostname.lower():
+                    console.print(f"[bold red][ ALERT ][/bold red] Rogue device detected: {addr.address} ({hostname})")
+                    found = True
+    if not found:
+        console.print("[bold green][ OK ][/bold green] No rogue devices found.\n")
 
 if __name__ == "__main__":
     main()

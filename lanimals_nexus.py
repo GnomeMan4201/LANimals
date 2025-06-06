@@ -14,7 +14,7 @@ def clear_screen():
 def draw_header():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     panel = Panel(
-        f"[bold green]LANIMALS[/bold green]   [white]Session: {timestamp}[/white]",
+        f"[bold green]LANIMALS :: NEXUS[/bold green]\n[white]Session Time: {timestamp}[/white]",
         style="green",
         border_style="bright_green",
         padding=(1, 2),
@@ -28,37 +28,39 @@ def build_main_menu():
     table.add_column("Action", style="white")
 
     menu_items = [
-        ("1", "Recon",        "Full Recon & Subnet Discovery"),
-        ("2", "Netmap",       "Host & Service Network Map"),
-        ("3", "Lootlog",      "View Recon/Loot Cache"),
-        ("4", "Traffic",      "Passive Traffic Analysis"),
-        ("5", "Tripwire",     "Monitor for Suspicious Activity"),
-        ("6", "Roguescan",    "Detect Rogue Devices"),
-        ("7", "Asciiroll",    "ASCII Banner Rotation"),
-        ("8", "Sysinfo",      "System Diagnostics"),
-        ("0", "Exit",         "Exit LANimals"),
+        ("1", "LAN Sweep", "Interface & Subnet Discovery"),
+        ("2", "Rogue Scan", "Detect Foreign Hosts"),
+        ("3", "Traffic Flow", "Passive Traffic Intel"),
+        ("4", "ARP Monitor", "Watch ARP Shifts in Real Time"),
+        ("5", "Threat Grid", "Simulated Threat Heatmap"),
+        ("6", "Loot Viewer", "Open Recon Cache"),
+        ("7", "System Intel", "Node Diagnostics"),
+        ("8", "Darkviz Mode", "ASCII HUD Rotation"),
+        ("0", "Exit", "Terminate Node Session")
     ]
+
     for item in menu_items:
         table.add_row(*item)
     return table
 
 def route_module(choice):
     routes = {
-        "1": "lanimals recon",
-        "2": "lanimals netmap",
-        "3": "lanimals lootlog",
-        "4": "lanimals traffic",
-        "5": "lanimals tripwire",
-        "6": "lanimals roguescan",
-        "7": "lanimals asciiroll",
-        "8": "lanimals sysinfo"
+        "1": "lanimals autopilot",
+        "2": "lanimals roguescan",
+        "3": "lanimals traffic",
+        "4": "lanimals arpwatcher",
+        "5": "lanimals threatmap",
+        "6": "lanimals lootview",
+        "7": "lanimals sysinfo",
+        "8": "lanimals asciiroll"
     }
+
     command = routes.get(choice.strip())
     if command:
-        console.print(f"[cyan]Launching:[/cyan] [bold]{command}[/bold]")
+        console.print(f"[cyan]Launching module:[/cyan] [bold]{command}[/bold]")
         os.system(command)
     elif choice.strip() == "0":
-        console.print("[bold red]Exiting LANimals...[/bold red]")
+        console.print("[bold red]Exiting LANIMALS Nexus...[/bold red]")
         exit()
     else:
         console.print("[bold red]Invalid choice. Try again.[/bold red]")
