@@ -1,8 +1,9 @@
-name: pages build and deployment
+name: GitHub Pages Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -11,24 +12,22 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          submodules: false
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      - name: Upload site content
         uses: actions/upload-pages-artifact@v2
         with:
-          path: docs/
+          path: docs
 
   deploy:
     needs: build
