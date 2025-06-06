@@ -1,41 +1,133 @@
- <p align="center">
-  <img src="docs/assets/LANIMALS_LOGO.png" alt="LANimals Logo" width="300"/>
-</p>    <strong>Advanced Network Security & Monitoring Toolkit</strong>
-  <br><br>
+<p align="center">
+  <img src="assets/lanimals-logo.png" width="500"/>
+</p>
 
-  <!-- Badges will go here once set up -->
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](./VERSION)
-  [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/GnomeMan4201/LANimals/graphs/commit-activity)
-</div>
+---
 
-LANimals is a comprehensive network security and monitoring toolkit designed for security professionals, system administrators, and network enthusiasts. It provides a powerful set of tools for analyzing, visualizing, and securing local networks with an intuitive command-line interface.                                                                                                                                                                            
+<h3 align="center"><code>LANimals</code></h3>
+<h4 align="center">🐾 LAN Surveillance & Red Team Ops Toolkit</h4>
+<p align="center"> 
+  Tracks devices like prey. Maps networks like terrain. Operates with total LAN dominance.
+</p>
 
- # LANimals   
- 
-### 
-![Threat Hunter](docs/screenshots/originals/threat1.png)
+---
 
-LANimals is a network reconnaissance, security auditing, and monitoring toolkit built to automate LAN mapping, traffic analysis, system hardening, and threat detection from a unified command center. Designed for Kali Linux and other security-focused distributions.
+## [ PHILOSOPHY ]
+<p align="center">
+LANimals transforms the operator into a predator of the local network — silently observing, tagging, probing, and documenting prey systems in real time with zero setup.  
+Everything from interface scans, MAC spoofing, ARP hunts, and stealth probes — in a clean, stylized suite.
+</p>
 
-### 
-![Network Map](docs/screenshots/originals/netmap1.png)
+---
 
-## Features
+## [ FEATURES ]
+<p align="center">
 
-- Network reconnaissance and device discovery
-- System and service analysis
-- Continuous LAN monitoring and threat alerts
-- Traffic capture and protocol analysis
-- Security auditing with recommendations
-- Visual network mapping with ASCII art
+- 🔍 Interface & ARP Scanning  
+- 🧠 Intelligent Loot Logging  
+- ⚡ Fast Ping Sweeps + Alive Reports  
+- 📡 Mass Port Scanner  
+- 🪤 Drop Decoy Artifacts  
+- 🧰 HTTP Header Probe  
+- 🛠️ Self-Diagnostic System  
+- 🐍 Python-based CLI, no external setup  
+- 🖥️ LAN-aware modular UX  
 
-## Installation
+</p>
 
-### From Source
+---
+
+## [ MODULES ]
+<p align="center">
+
+| Module               | Description                                         |
+|----------------------|-----------------------------------------------------|
+| `interface_scan.py`  | Scans interfaces & shows MAC/IP info                |
+| `arp_hunter.py`      | Probes the LAN with raw ARP requests                |
+| `ping_sweep.py`      | Fast subnet ping to find alive hosts                |
+| `alive_report.py`    | Generates timestamped alive-host reports            |
+| `mass_scan.py`       | Nmap scanner across all live targets                |
+| `loot_log.py`        | Operator notes & findings logged with timestamp     |
+| `loot_viewer.py`     | View stored loot collected in ops                   |
+| `http_probe.py`      | Retrieves HTTP response headers from a target URL   |
+| `lanimals-launcher.py` | CLI control center for all modules                |
+| `lanimals-check.py`  | Self-diagnostic script to verify tool integrity     |
+
+</p>
+
+---
+
+## [ QUICKSTART ]
+
 ```bash
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
-sudo apt install dos2unix    # One-time install (required!)
-dos2unix bin/*               # Fix line endings if needed
-sudo make install
+python3 main.py
+
+cat << 'EOF' > README.md
+<p align="center">
+  <img src="assets/lanimals-logo.png" width="500"/>
+</p>
+
+---
+
+<h3 align="center"><code>LANimals</code></h3>
+<h4 align="center">🐾 LAN Surveillance & Red Team Ops Toolkit</h4>
+<p align="center"> 
+  Tracks devices like prey. Maps networks like terrain. Operates with total LAN dominance.
+</p>
+
+---
+
+## [ PHILOSOPHY ]
+<p align="center">
+LANimals transforms the operator into a predator of the local network — silently observing, tagging, probing, and documenting prey systems in real time with zero setup.  
+Everything from interface scans, MAC spoofing, ARP hunts, and stealth probes — in a clean, stylized suite.
+</p>
+
+---
+
+## [ FEATURES ]
+<p align="center">
+
+- 🔍 Interface & ARP Scanning  
+- 🧠 Intelligent Loot Logging  
+- ⚡ Fast Ping Sweeps + Alive Reports  
+- 📡 Mass Port Scanner  
+- 🪤 Drop Decoy Artifacts  
+- 🧰 HTTP Header Probe  
+- 🛠️ Self-Diagnostic System  
+- 🐍 Python-based CLI, no external setup  
+- 🖥️ LAN-aware modular UX  
+
+</p>
+
+---
+
+## [ MODULES ]
+<p align="center">
+
+| Module               | Description                                         |
+|----------------------|-----------------------------------------------------|
+| `interface_scan.py`  | Scans interfaces & shows MAC/IP info                |
+| `arp_hunter.py`      | Probes the LAN with raw ARP requests                |
+| `ping_sweep.py`      | Fast subnet ping to find alive hosts                |
+| `alive_report.py`    | Generates timestamped alive-host reports            |
+| `mass_scan.py`       | Nmap scanner across all live targets                |
+| `loot_log.py`        | Operator notes & findings logged with timestamp     |
+| `loot_viewer.py`     | View stored loot collected in ops                   |
+| `http_probe.py`      | Retrieves HTTP response headers from a target URL   |
+| `lanimals-launcher.py` | CLI control center for all modules                |
+| `lanimals-check.py`  | Self-diagnostic script to verify tool integrity     |
+
+</p>
+
+---
+
+## [ QUICKSTART ]
+
+```bash
+git clone https://github.com/GnomeMan4201/LANimals.git
+cd LANimals
+python3 main.py
+

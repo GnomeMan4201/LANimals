@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: lanimals
+Version: 1.0.0
+License-File: LICENSE
+Requires-Dist: requests
+Requires-Dist: flask
+Requires-Dist: scapy
+Dynamic: license-file
+Dynamic: requires-dist
