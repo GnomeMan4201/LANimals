@@ -1,7 +1,7 @@
 ![LANimals Logo](assets/lanimals_logo.png)
 
-### Recon
-![Recon](assets/recon2.png)
+---
+
 
 ### System Info
 ![SysInfo](assets/sysinfo.png)
