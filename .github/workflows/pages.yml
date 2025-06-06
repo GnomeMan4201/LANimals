@@ -1,3 +1,4 @@
+# .github/workflows/pages.yml
 name: Deploy GitHub Pages
 
 on:
@@ -19,19 +20,20 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url }}
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Pages
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload site
+      - name: Upload static content
         uses: actions/upload-pages-artifact@v1
         with:
-          path: docs  # Make sure this folder exists and includes index.html
+          path: docs
 
-      - name: Deploy
-        id: deployment
+      - name: Deploy to GitHub Pages
+        id: deploy
         uses: actions/deploy-pages@v2
