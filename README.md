@@ -1,20 +1,20 @@
-<p align="center">
-  <img src="assets/lanimals_logo.png" width="500"/>
-</p>
+![LANimals Logo](assets/lanimals_logo.png)
 
----
+### Recon
+![Recon](assets/recon2.png)
 
-<h3 align="center"><code>LANimals</code></h3>
-<h4 align="center">🐾 LAN Surveillance & Red Team Ops Toolkit</h4>
-<p align="center"> 
-  Tracks devices like prey. Maps networks like terrain. Operates with total LAN dominance.
-</p>
+### System Info
+![SysInfo](assets/sysinfo.png)
 
----
+### Threat Intel
+![Threat](assets/threat1.png)
 
-<p align="center">
-  <img src="assets/lanimals_screenshot1.png" width="700"/>
-</p>
+### Traffic Capture
+![Traffic](assets/traffic1.png)
+
+### Network Mapping
+![NetMap](assets/netmap1.png)
+
 
 ---
 
