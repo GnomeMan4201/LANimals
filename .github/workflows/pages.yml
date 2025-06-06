@@ -1,4 +1,4 @@
-name: GitHub Pages Deploy
+name: Deploy GitHub Pages
 
 on:
   push:
@@ -19,19 +19,19 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload docs folder
+      - name: Upload site
         uses: actions/upload-pages-artifact@v1
         with:
-          path: docs
+          path: docs  # Make sure this folder exists and includes index.html
 
-      - name: Deploy to GitHub Pages
-        id: deploy
+      - name: Deploy
+        id: deployment
         uses: actions/deploy-pages@v2
