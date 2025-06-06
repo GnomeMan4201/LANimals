@@ -1,4 +1,4 @@
-name: GitHub Pages Deploy
+name: Deploy GitHub Pages
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload static site
+      - name: Upload static content
         uses: actions/upload-pages-artifact@v4
         with:
           path: docs
