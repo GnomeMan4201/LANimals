@@ -69,27 +69,3 @@ Everything from interface scans, MAC spoofing, ARP hunts, and stealth probes —
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
 python3 main.py
-
-
-## [ QUICKSTART ]
-
-## [ MOCKUPS ]
-
-> Preview terminal-style walkthroughs of LANimals in action:
-
-- [LANimalsOS Terminal UI](docs/mockups/LANimalsOS_terminal_mockup.txt)
-- [Threatmap Visualizer](docs/mockups/LANimalsOS_threatmap_mockup.txt)
-
-## [ MOCKUPS ]
-
-> Preview terminal-style walkthroughs of LANimals in action:
-
-- [LANimalsOS Terminal UI](docs/mockups/LANimalsOS_terminal_mockup.txt)
-- [Threatmap Visualizer](docs/mockups/LANimalsOS_threatmap_mockup.txt)
-
-## [ MOCKUP VIEWER – GitHub Pages ]
-
-Browse formatted mockups directly on GitHub Pages:
-
-- [LANimalsOS Terminal UI](https://gnomeman4201.github.io/LANimals/mockups/md/LANimalsOS_terminal_mockup)
-- [Threatmap Visualizer](https://gnomeman4201.github.io/LANimals/mockups/md/LANimalsOS_threatmap_mockup)
