@@ -71,7 +71,7 @@ Modular. Scriptable. Battle-tested. All killer, no filler.
 <h2 align="center"><span style="color:#d32f2f;">INSTALL & USAGE</span></h2>
 
 <p align="center">
-<b>Clone, install, and ENJOY:</b>
+<b>Clone, Install, Have fun </b>
 </p>
 
 ```sh
