@@ -12,7 +12,7 @@ Modular. Scriptable. Battle-tested. All killer, no filler.
 
 <br>
 
-<h2 align="center"><span style="color:#d32f2f;">FEATURES</span></h2>
+<h2 align="center"><span style="color:#d32f2f;"></span></h2>
 
 <h2 align="center" style="color:red;">FEATURES</h2>
 
