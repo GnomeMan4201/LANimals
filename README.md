@@ -27,7 +27,7 @@ Modular. Scriptable. Battle-tested. All killer, no filler.
   • Session logging, reporting, and export<br>
   • WLAN beacon hunting<br>
   • Dark web host detection<br>
-  • (And a lot more...)
+  • And a lot more.........
 </p>
 
 
