@@ -1,79 +1,34 @@
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.text import Text
+def main():
+    import sys
+    args = sys.argv[1:]
 
-console = Console()
+    if not args:
+        print("Usage: lanimals <command>")
+        print("Available commands: recon, scan, loot")
+        return
 
-def show_nexus_menu():
-    # Banner
-    banner = Text("""
-██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     ███████╗
-██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     ██╔════╝
-██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     ███████╗
-██║     ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║██║     ╚════██║
-███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗███████║
-╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
-""", style="bold red")
-    console.print(banner)
+    command = args[0]
 
-    # System
-    system = Table(title="[red]SYSTEM COMMANDS[/red]", show_lines=True, box=None)
-    system.add_column("Command", style="bold cyan")
-    system.add_column("Description", style="white")
-    system.add_row("lanimals_dash", "Show LANimals dashboard")
-    system.add_row("lanimals_sysinfo", "Analyze system components")
-    system.add_row("lanimals_sessionlogger", "Session logger/report generator")
-
-    # Network
-    network = Table(title="[red]NETWORK COMMANDS[/red]", show_lines=True, box=None)
-    network.add_column("Command", style="bold cyan")
-    network.add_column("Description", style="white")
-    network.add_row("lanimals_recon", "Autonomous recon")
-    network.add_row("lanimals_traffic", "Analyze network traffic")
-    network.add_row("lanimals_netmap", "Map network devices visually")
-    network.add_row("lanimals_viznet", "Interactive network visualization")
-    network.add_row("lanimals_wlanbeacon", "WLAN beacon hunter")
-
-    # Security
-    security = Table(title="[red]SECURITY COMMANDS[/red]", show_lines=True, box=None)
-    security.add_column("Command", style="bold cyan")
-    security.add_column("Description", style="white")
-    security.add_row("lanimals_fortress", "Security hardening toolkit")
-    security.add_row("lanimals_alert", "Run threat alert system")
-    security.add_row("lanimals_vulscan", "Network vulnerability scanner")
-    security.add_row("lanimals_roguescan", "Scan for rogue devices")
-    security.add_row("lanimals_ghostscan", "Outbound infra detection")
-    security.add_row("lanimals_darkwebhost", "Dark web host detector")
-    security.add_row("lanimals_threatenrich", "Live threat intel enrichment")
-    security.add_row("lanimals_anomalydetector", "Network anomaly detector")
-
-    # Loot & Analytics
-    loot = Table(title="[red]LOOT & ANALYTICS COMMANDS[/red]", show_lines=True, box=None)
-    loot.add_column("Command", style="bold cyan")
-    loot.add_column("Description", style="white")
-    loot.add_row("lanimals_lootlog", "View loot log entries")
-    loot.add_row("lanimals_lootsummary", "Loot analytics/summarizer")
-    loot.add_row("lanimals_tripwire", "Monitor tripwire events")
-
-    # Visuals & Fun
-    visuals = Table(title="[red]VISUALS & UTILITIES[/red]", show_lines=True, box=None)
-    visuals.add_column("Command", style="bold cyan")
-    visuals.add_column("Description", style="white")
-    visuals.add_row("lanimals_asciiroll", "Show rotating ASCII banners")
-    visuals.add_row("lanimals_dash", "Show LANimals dashboard")
-
-    # General
-    general = Table(title="[red]GENERAL[/red]", show_lines=True, box=None)
-    general.add_column("Command", style="bold cyan")
-    general.add_column("Description", style="white")
-    general.add_row("help", "Show this help message")
-    general.add_row("version", "Show LANimals version")
-    general.add_row("update", "Check for updates")
-
-    # Output menu sections
-    for section in [system, network, security, loot, visuals, general]:
-        console.print(Panel(section, border_style="red", expand=False))
-
-if __name__ == "__main__":
-    show_nexus_menu()
+    if command == "recon":
+        print("[*] Running ARP recon...")
+        try:
+            from modules.arp_recon import run
+            run()
+        except ImportError:
+            print("[!] Module arp_recon not found or missing 'run()' method.")
+    elif command == "scan":
+        print("[*] Running network scan...")
+        try:
+            from modules.net_scan import run
+            run()
+        except ImportError:
+            print("[!] Module net_scan not found or missing 'run()' method.")
+    elif command == "loot":
+        print("[*] Opening loot viewer...")
+        try:
+            from modules.loot_viewer import run
+            run()
+        except ImportError:
+            print("[!] Module loot_viewer not found or missing 'run()' method.")
+    else:
+        print(f"[!] Unknown command: {command}")
