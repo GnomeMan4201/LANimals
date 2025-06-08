@@ -5,3 +5,6 @@ def main():
     os.system("arp -a")
 if __name__ == "__main__":
     main()
+
+def run():
+    print("Running arp_recon")

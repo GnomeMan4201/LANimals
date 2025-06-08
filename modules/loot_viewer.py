@@ -27,3 +27,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def run():
+    print("Running loot_viewer")
