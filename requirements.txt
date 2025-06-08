@@ -1,0 +1,5 @@
+psutil
+faker
+colorama
+requests
+rich
