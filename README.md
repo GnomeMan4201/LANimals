@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 <p align="center">
   <img src="assets/LANimals_logo.png" alt="LANimals Logo" width="375">
@@ -81,4 +82,30 @@ git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
 pip install -r requirements.txt
 ./install.sh
+=======
+# LANimals
+
+## Description
+A set of automated tools for reconnaissance, lateral movement, and post-exploitation on Windows and Linux environments.
+
+## Features
+- Network scanning and enumeration automation
+- Credential dumping and persistence scripting
+- Multi-platform support with Termux integration
+- Automated report generation and logging
+
+## Assets Preview
+![Demo](./assets/LANimals_demo.png)
+
+## Installation
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+Follow the included scripts for setup and launch. Utilize provided README.md and comments within each script for configuration details.
+
+## Legal Disclaimer
+Intended strictly for research and ethical use only. Ensure authorization before deployment.
+>>>>>>> 7ebc87d (Initial commit)
 
