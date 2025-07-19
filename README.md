@@ -1,69 +1,79 @@
 <p align="center">
-  <img src="assets/lanimals_banner.png" alt="<span style='color:red'><b>LANimals</b></span> Banner" width="400">
+  <img src="assets/LANimals_logo.png" alt="LANimals Logo" width="375">
 </p>
 
-# <span style="color:red"><b>LANimals</b></span>
-
-**The next-gen, interactive LAN situational awareness & threat hunting toolkit for hackers, blue teams, and security pros.**
-
----
-
-## Features at a Glance
-
-- ASCII CLI dashboards and mapping
-- Real-time network/host recon, alerting, and anomaly detection
-- Modular command suite—see below!
-- Unique, gritty style with serious capabilities
-
----
-
-## Command Overview
+<h1 align="center"><b>LANimals</b></h1>
 
 <p align="center">
-  <img src="assets/lanimals_ascii_commands.png" alt="<span style='color:red'><b>LANimals</b></span> Commands Overview" width="600">
+  <b>
+    A next-gen network situational awareness and LAN threat hunting framework.<br>
+    Modular. Scriptable. Battle-tested. All killer, no filler.
+  </b>
 </p>
 
 ---
 
-## Screenshots
+<h2 align="center">FEATURES</h2>
 
-### **Threat Alerting in Action**
 <p align="center">
-  <img src="assets/lanimals_alerting.png" alt="<span style='color:red'><b>LANimals</b></span> Live Threat Alerting" width="600"><br>
-  <i><span style="color:red"><b>LANimals</b></span>: Threat alert pop-up and real-time analysis in a live Kali session</i>
+  • Autonomous LAN recon & mapping<br>
+  • Advanced ARP, port, and service fingerprinting<br>
+  • Real-time traffic tap & analysis<br>
+  • Threat surface & rogue device detection<br>
+  • Loot logging, summary, and analytics<br>
+  • GhostScan: Outbound infrastructure detection<br>
+  • Anomaly detection & live threat enrichment<br>
+  • Session logging, reporting, and export<br>
+  • WLAN beacon hunting<br>
+  • Dark web host detection<br>
+  • And a lot more...
 </p>
 
 ---
 
-### **Classic ASCII Subnet Mapping**
+<h2 align="center">CLI COMMANDS</h2>
+
 <p align="center">
-  <img src="assets/lanimals_mapping.png" alt="<span style='color:red'><b>LANimals</b></span> Subnet Map CLI" width="600"><br>
-  <i><span style="color:red"><b>LANimals</b></span>: Native-style network mapper with visual ASCII subnet layout</i>
+<table align="center">
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>lanimals_sysinfo</td><td>Analyze system components</td></tr>
+<tr><td>lanimals_traffic</td><td>Analyze network traffic</td></tr>
+<tr><td>lanimals_lootlog</td><td>View loot log entries</td></tr>
+<tr><td>lanimals_lootsummary</td><td>Loot analytics / summarizer</td></tr>
+<tr><td>lanimals_tripwire</td><td>Monitor tripwire events</td></tr>
+<tr><td>lanimals_roguescan</td><td>Scan for rogue devices</td></tr>
+<tr><td>lanimals_asciiroll</td><td>Show rotating ASCII banners</td></tr>
+<tr><td>lanimals_ghostscan</td><td>Outbound infra detection</td></tr>
+<tr><td>lanimals_anomalydetector</td><td>Network anomaly detector</td></tr>
+<tr><td>lanimals_threatenrich</td><td>Live threat intel enrichment</td></tr>
+<tr><td>lanimals_sessionlogger</td><td>Session logger / report generator</td></tr>
+<tr><td>lanimals_darkwebhost</td><td>Dark web host detector</td></tr>
+<tr><td>lanimals_wlanbeacon</td><td>WLAN beacon hunter</td></tr>
+<tr><td>lanimals_fortress</td><td>Security hardening toolkit</td></tr>
+<tr><td>lanimals_alert</td><td>Run threat alert system</td></tr>
+<tr><td>lanimals_viznet</td><td>Interactive network visualization</td></tr>
+<tr><td>lanimals_vulscan</td><td>Network vulnerability scanner</td></tr>
+<tr><td>lanimals_netmap</td><td>Map network devices visually</td></tr>
+<tr><td>lanimals_recon</td><td>Autonomous recon</td></tr>
+<tr><td>lanimals_dash</td><td>Show dashboard</td></tr>
+</tbody>
+</table>
 </p>
 
 ---
 
-### **Threat Hunter Utility**
 <p align="center">
-  <img src="assets/lanimals_hunter.png" alt="<span style='color:red'><b>LANimals</b></span> Threat Hunter Output" width="600"><br>
-  <i><span style="color:red"><b>LANimals</b></span>: Threat hunting module scanning for suspicious processes and files</i>
+  <b>Clone & Install in Seconds</b>
 </p>
 
----
-
-## Why <span style="color:red"><b>LANimals</b></span> is Unique
-
-- Native ASCII dashboards—bring back classic hacker feel
-- Menu-driven and modular (pick your tool or run them all)
-- Designed for real-world recon, threat hunting, and blue/red team ops
-- Works on Kali, Linux, Termux
-
----
-
-## Quick Start
-
-```bash
+```sh
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
 pip install -r requirements.txt
-./lanimals_dash
+./install.sh
