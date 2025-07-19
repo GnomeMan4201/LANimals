@@ -1,9 +1,10 @@
 <p align="center">
-  <img src="assets/LANimals_logo.png" alt="LANimals Logo" width="375">
+  <img src="assets/lanimals_demo1.png" alt="LANimals Banner" width="400">
 </p>
 
 <h1 align="center"><b>LANimals</b></h1>
 
+<<<<<<< HEAD
 <p align="center">
   <b>
     A next-gen network situational awareness and LAN threat hunting framework.<br>
@@ -14,8 +15,28 @@
 ---
 
 <h2 align="center">FEATURES</h2>
+=======
+<p align="center"><i>
+The next-gen, interactive LAN situational awareness & threat hunting toolkit for hackers, blue teams, and security pros.
+</i></p>
 
+---
+
+## 🚩 Features at a Glance
+
+- ASCII CLI dashboards and subnet mapping
+- Real-time network/host recon, alerting, and anomaly detection
+- Modular command suite—see below!
+- Unique, gritty style with serious capabilities
+>>>>>>> b4f0c30 (Polished DEF CON-style README with new assets)
+
+---
+
+## 📟 Command Overview
+
+<!-- (Replace this image with a real one when you have it) -->
 <p align="center">
+<<<<<<< HEAD
   • Autonomous LAN recon & mapping<br>
   • Advanced ARP, port, and service fingerprinting<br>
   • Real-time traffic tap & analysis<br>
@@ -27,47 +48,32 @@
   • WLAN beacon hunting<br>
   • Dark web host detection<br>
   • And a lot more...
+=======
+  <img src="assets/lanimals_demo2.png" alt="LANimals Command Overview" width="600">
+>>>>>>> b4f0c30 (Polished DEF CON-style README with new assets)
 </p>
 
 ---
 
+<<<<<<< HEAD
 <h2 align="center">CLI COMMANDS</h2>
+=======
+## 📸 Screenshots
+>>>>>>> b4f0c30 (Polished DEF CON-style README with new assets)
 
 <p align="center">
-<table align="center">
-<thead>
-<tr>
-<th>Command</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr><td>lanimals_sysinfo</td><td>Analyze system components</td></tr>
-<tr><td>lanimals_traffic</td><td>Analyze network traffic</td></tr>
-<tr><td>lanimals_lootlog</td><td>View loot log entries</td></tr>
-<tr><td>lanimals_lootsummary</td><td>Loot analytics / summarizer</td></tr>
-<tr><td>lanimals_tripwire</td><td>Monitor tripwire events</td></tr>
-<tr><td>lanimals_roguescan</td><td>Scan for rogue devices</td></tr>
-<tr><td>lanimals_asciiroll</td><td>Show rotating ASCII banners</td></tr>
-<tr><td>lanimals_ghostscan</td><td>Outbound infra detection</td></tr>
-<tr><td>lanimals_anomalydetector</td><td>Network anomaly detector</td></tr>
-<tr><td>lanimals_threatenrich</td><td>Live threat intel enrichment</td></tr>
-<tr><td>lanimals_sessionlogger</td><td>Session logger / report generator</td></tr>
-<tr><td>lanimals_darkwebhost</td><td>Dark web host detector</td></tr>
-<tr><td>lanimals_wlanbeacon</td><td>WLAN beacon hunter</td></tr>
-<tr><td>lanimals_fortress</td><td>Security hardening toolkit</td></tr>
-<tr><td>lanimals_alert</td><td>Run threat alert system</td></tr>
-<tr><td>lanimals_viznet</td><td>Interactive network visualization</td></tr>
-<tr><td>lanimals_vulscan</td><td>Network vulnerability scanner</td></tr>
-<tr><td>lanimals_netmap</td><td>Map network devices visually</td></tr>
-<tr><td>lanimals_recon</td><td>Autonomous recon</td></tr>
-<tr><td>lanimals_dash</td><td>Show dashboard</td></tr>
-</tbody>
-</table>
+  <img src="assets/lanimals_demo3.png" alt="LANimals Screenshot 3" width="600">
+</p>
+<p align="center">
+  <img src="assets/lanimals_demo4.png" alt="LANimals Screenshot 4" width="600">
+</p>
+<p align="center">
+  <img src="assets/lanimals_termux_demo.png" alt="LANimals Termux Demo" width="600">
 </p>
 
 ---
 
+<<<<<<< HEAD
 <p align="center">
   <b>Clone & Install in Seconds</b>
 </p>
@@ -77,3 +83,70 @@ git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
 pip install -r requirements.txt
 ./install.sh
+=======
+## 🎬 Demo Video
+
+- [LANimals Demo 1 (mp4)](assets/lanimals_demo1.mp4)
+
+---
+
+## 💎 Why Use LANimals?
+
+- **Native ASCII dashboards:** Classic hacker visual feel
+- **Menu-driven & modular:** Pick your tool or run them all
+- **Real-world recon & hunting:** Built for blue/red team ops
+- **Cross-platform:** Works on Kali, Linux, Termux
+
+---
+
+## ⚡ Quick Start
+
+```bash
+git clone https://github.com/GnomeMan4201/LANimals.git
+cd LANimals
+pip install -r requirements.txt
+./lanimals_dash
+
+
+---
+
+📖 Documentation
+
+For full module help, run:
+
+./lanimals --help
+
+
+---
+
+🧰 Requirements
+
+Python 3.7+
+
+pip install -r requirements.txt
+
+
+
+---
+
+🤝 Contributing
+
+PRs, bug reports, and feature suggestions are welcome!
+See CONTRIBUTING.md for details.
+
+
+---
+
+⚠️ Disclaimer
+
+This tool is for educational and authorized use only.
+The author assumes no responsibility for any misuse.
+
+
+---
+
+<p align="center"><sub>
+LANimals is © GnomeMan4201 — Inspired by classic hacker culture.<br>
+Art & branding by GnomeMan4201.
+</sub></p>
+>>>>>>> b4f0c30 (Polished DEF CON-style README with new assets)
