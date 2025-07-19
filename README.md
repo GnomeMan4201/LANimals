@@ -1,53 +1,77 @@
 <p align="center">
-  <img src="assets/lanimals_banner.png" alt="LANimals Banner" width="600">
+  <img src="assets/LANimals.png" alt="LANimals Banner" width="600">
 </p>
 
 # LANimals
 
-**A next-gen, interactive LAN situational awareness & threat hunting toolkit for hackers, blue teams, and security pros.**
+A next-gen, interactive LAN situational awareness & threat hunting toolkit for hackers, blue teams, and security pros.
 
 ---
 
 ## Features at a Glance
 
-- ASCII CLI dashboards and mapping
-- Real-time network/host recon, alerting, and anomaly detection
-- Modular command suite—see below!
-- Unique, gritty style with serious capabilities
+- **Native ASCII CLI dashboards and mapping**
+- **Real-time network/host recon, alerting, and anomaly detection**
+- **Modular command suite—see below!**
+- **Unique, gritty style with serious capabilities**
 
 ---
 
 ## Command Overview
 
 <p align="center">
-  <img src="assets/lanimals_ascii_commands.png" alt="LANimals Commands Overview" width="600">
+  <img src="assets/lanimals_demo1.png" alt="LANimals Command Overview" width="700">
 </p>
+
+| Command                       | Description                               |
+|-------------------------------|-------------------------------------------|
+| `lanimals_dash`               | Show LANimals dashboard                   |
+| `lanimals_sysinfo`            | Analyze system components                 |
+| `lanimals_sessionLogger`      | Session logger/report generator           |
+| `lanimals_recon`              | Autonomous recon                          |
+| `lanimals_traffic`            | Analyze network traffic                   |
+| `lanimals_netmap`             | Map network devices visually              |
+| `lanimals_viznet`             | Interactive network visualization         |
+| `lanimals_wlanbeacon`         | WLAN beacon hunter                        |
+| `lanimals_fortress`           | Security hardening toolkit                |
+| `lanimals_alert`              | Run threat alert system                   |
+| `lanimals_vulscan`            | Network vulnerability scanner             |
+| `lanimals_roguescan`          | Scan for rogue devices                    |
+| `lanimals_ghostscan`          | Outbound infra detection                  |
+| `lanimals_darkwebhost`        | Dark web host detector                    |
+| `lanimals_threatenrich`       | Live threat intel enrichment              |
+| `lanimals_anomalydetector`    | Network anomaly detector                  |
+| `lanimals_Lootlog`            | View loot log entries                     |
+| `lanimals_lootsummary`        | Loot analytics/summarizer                 |
+| `lanimals_tripwire`           | Monitor tripwire events                   |
+| `lanimals_asciiroll`          | Show rotating ASCII banners               |
+| `help`                        | Show this help message                    |
+| `version`                     | Show LANimals version                     |
+| `update`                      | Check for updates                         |
+
+*LANimals: Running inside Termux for Android*
 
 ---
 
 ## Screenshots
 
-### **Threat Alerting in Action**
+### Threat Alerting in Action
 <p align="center">
-  <img src="assets/lanimals_demo1.png" alt="LANimals Live Threat Alerting" width="600"><br>
-  <i>LANimals: Threat alert pop-up and real-time analysis in a live Kali session</i>
+  <img src="assets/lanimals_demo2.png" alt="LANimals Threat Alert Demo" width="700">
 </p>
+<p align="center"><i>LANimals: Real-time threat alert pop-up in action</i></p>
 
----
-
-### **Classic ASCII Subnet Mapping**
+### ASCII Subnet Mapping
 <p align="center">
-  <img src="assets/lanimals_demo2.png" alt="LANimals Subnet Map CLI" width="600"><br>
-  <i>LANimals: Native-style network mapper with visual ASCII subnet layout</i>
+  <img src="assets/lanimals_demo3.png" alt="LANimals Subnet Mapping Demo" width="700">
 </p>
+<p align="center"><i>LANimals: Native-style network mapper with ASCII subnet layout</i></p>
 
----
-
-### **Threat Hunter Utility**
+### Termux CLI in Action
 <p align="center">
-  <img src="assets/lanimals_demo3.png" alt="LANimals Threat Hunter Output" width="600"><br>
-  <i>LANimals: Threat hunting module scanning for suspicious processes and files</i>
+  <img src="assets/lanimals_termux_demo.png" alt="LANimals Termux Demo" width="700">
 </p>
+<p align="center"><i>LANimals: Running on Android/Termux with full dashboard</i></p>
 
 ---
 
@@ -55,8 +79,8 @@
 
 - Native ASCII dashboards—classic hacker feel
 - Menu-driven and modular (pick your tool or run them all)
-- Designed for real-world recon, threat hunting, and blue/red team ops
-- Works on Kali, Linux, Termux
+- Designed for real-world recon, threat hunting, blue/red team ops
+- Works seamlessly on Kali, Linux, and Termux for Android
 
 ---
 
