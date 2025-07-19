@@ -4,14 +4,14 @@
 
 # LANimals
 
-A next-gen, interactive LAN situational awareness & threat hunting toolkit for hackers, blue teams, and security pros.
+A interactive LAN situational awareness & threat hunting toolkit for hackers, blue teams, and security pros.
 
 ---
 
-## Features at a Glance
+## Features
 
 - **Native ASCII CLI dashboards and mapping**
-- **Real-time network/host recon, alerting, and anomaly detection**
+- **Real time network/host recon, alerting, and anomaly detection**
 - **Modular command suite—see below!**
 - **Unique, gritty style with serious capabilities**
 
@@ -56,7 +56,7 @@ A next-gen, interactive LAN situational awareness & threat hunting toolkit for h
 <p align="center">
   <img src="assets/lanimals_demo2.png" alt="LANimals Threat Alert Demo" width="700">
 </p>
-<p align="center"><i>LANimals: Real-time threat alert pop-up in action</i></p>
+<p align="center"><i>LANimals: Real time threat alert pop-up in action</i></p>
 
 ### ASCII Subnet Mapping
 <p align="center">
@@ -75,7 +75,7 @@ A next-gen, interactive LAN situational awareness & threat hunting toolkit for h
 ## Why LANimals is Unique
 
 - Native ASCII dashboards—classic hacker feel
-- Menu-driven and modular (pick your tool or run them all)
+- Menu driven and modular (pick your tool or run them all)
 - Designed for real-world recon, threat hunting, blue/red team ops
 - Works seamlessly on Kali, Linux, and Termux for Android
 
