@@ -19,9 +19,6 @@ A next-gen, interactive LAN situational awareness & threat hunting toolkit for h
 
 ## Command Overview
 
-<p align="center">
-  <img src="assets/lanimals_demo1.png" alt="LANimals Command Overview" width="700">
-</p>
 
 | Command                       | Description                               |
 |-------------------------------|-------------------------------------------|
