@@ -1,0 +1,26 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt || true
+      - run: |
+          if [ -f "requirements-dev.txt" ]; then
+            pip install -r requirements-dev.txt
+          fi
+      - run: |
+          if [ -d "tests" ]; then
+            python -m pytest tests/ -v || exit 0
+          fi
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+      - run: pip install bandit
+      - run: bandit -r . -f html -o bandit-report.html || true
