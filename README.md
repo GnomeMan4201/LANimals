@@ -1,20 +1,9 @@
 ![LANimals Logo](.github/branding/logo.png)
 
-## Demo
 
 ![LANimals Demo](.github/branding/demo.png)
 
-![LANimals Logo](.github/branding/logo.png)
 
-## Demo
-
-![LANimals Demo](.github/branding/demo.png)
-
-![LANimals Logo](.github/branding/logo.png)
-
-## Demo
-
-![LANimals Demo](.github/branding/demo.png)
 
 # LANimals - Security Tooling
 
