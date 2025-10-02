@@ -10,6 +10,12 @@
 
 ![LANimals Demo](.github/branding/demo.png)
 
+![LANimals Logo](.github/branding/logo.png)
+
+## Demo
+
+![LANimals Demo](.github/branding/demo.png)
+
 # LANimals - Security Tooling
 
 > **Legal Notice**: For authorized security testing, education, and research only. Users must comply with all applicable laws.
