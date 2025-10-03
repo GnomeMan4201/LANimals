@@ -22,24 +22,21 @@ cd LANimals
 
 ## Overview
 
-Professional security tool for red team operations and security research.
+LANimals is a Python based network reconnaissance toolkit that helps identify and categorize devices on a local network. Admins and curious developers who want lightweight discovery without heavy dependecies.
 
 ## Features
 
-- Enterprise-grade security testing
-- Modular architecture
-- Comprehensive documentation
-- Active maintenance
+- Scans local network ranges and identifies active hosts
+- Categorize devices (e.g.,printers,IoT devices, workstations)
+- Provides basic OS and service fingerprinting
+- Outputs clean, readable reports
 
 ## Installation
 
 ```bash
-# Docker
-docker-compose up -d
-
-# Manual
+git clone https://github.com/Gnomeman4201/LANimals.git
+cd LANimals
 pip install -r requirements.txt
-```
 
 ## Documentation
 
