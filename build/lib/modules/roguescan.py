@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-import psutil, socket
+import socket
+
+import psutil
 from rich.console import Console
 from rich.panel import Panel
 
+
 def show_banner():
-    return '''
+    return """
 ██╗      █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ██╗     
 ██║     ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗██║     
 ██║     ███████║██╔██╗ ██║██║██╔████╔██║███████║██║     
@@ -12,13 +15,16 @@ def show_banner():
 ███████╗██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║███████╗
 ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝
                  ROGUE SCANNER
-'''
+"""
+
 
 def main():
     console = Console()
     console.print(Panel(show_banner(), style="cyan"))
     interfaces = psutil.net_if_addrs()
-    console.print("[bold green][ INIT ][/bold green] Scanning local interfaces for rogue devices...\n")
+    console.print(
+        "[bold green][ INIT ][/bold green] Scanning local interfaces for rogue devices...\n"
+    )
     found = False
     for iface, addrs in interfaces.items():
         for addr in addrs:
@@ -28,10 +34,13 @@ def main():
                 except Exception:
                     hostname = "Unknown"
                 if "rogue" in hostname.lower():
-                    console.print(f"[bold red][ ALERT ][/bold red] Rogue device detected: {addr.address} ({hostname})")
+                    console.print(
+                        f"[bold red][ ALERT ][/bold red] Rogue device detected: {addr.address} ({hostname})"
+                    )
                     found = True
     if not found:
         console.print("[bold green][ OK ][/bold green] No rogue devices found.\n")
+
 
 if __name__ == "__main__":
     main()

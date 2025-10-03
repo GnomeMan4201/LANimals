@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from xml.etree import ElementTree as ET
 from collections import defaultdict
+from xml.etree import ElementTree as ET
+
 
 def parse_nmap(xml_path):
     tree = ET.parse(xml_path)
@@ -24,6 +25,7 @@ def parse_nmap(xml_path):
 
     return network
 
+
 def draw_ascii_map(network):
     print("\n🐾 LANimals Network Map 🧭")
     print("=" * 40)
@@ -33,21 +35,25 @@ def draw_ascii_map(network):
             print(f"  └─ {d}")
         print("-" * 40)
 
+
 def main(xml_path):
     net = parse_nmap(xml_path)
     draw_ascii_map(net)
 
+
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) != 2:
         print("Usage: python3 lanimals_netmap.py <nmap_scan.xml>")
         sys.exit(1)
     main(sys.argv[1])
 
+
 def resolve_mac_vendor(mac):
     mac = mac.upper().replace(":", "")[:6]
     oui_db = {
-        "D8CF61": "Sagemcom", 
+        "D8CF61": "Sagemcom",
         "DC7223": "Hui Zhou Gaoshengda",
         "C83DD4": "CyberTAN",
         "B46921": "Apple",
@@ -56,9 +62,11 @@ def resolve_mac_vendor(mac):
     }
     return oui_db.get(mac, "Unknown Vendor")
 
+
 def parse_nmap(xml_path):
-    from xml.etree import ElementTree as ET
     from collections import defaultdict
+    from xml.etree import ElementTree as ET
+
     tree = ET.parse(xml_path)
     root = tree.getroot()
     network = defaultdict(list)

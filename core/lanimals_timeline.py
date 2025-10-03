@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-import json, time, os
-from scapy.all import sniff, ARP
+import json
+import os
+import time
+
+from scapy.all import ARP, sniff
 
 TIMELINE_FILE = "lanimals_timeline.json"
+
 
 def load_timeline():
     if os.path.exists(TIMELINE_FILE):
@@ -10,13 +14,16 @@ def load_timeline():
             return json.load(f)
     return {}
 
+
 def save_timeline(timeline):
     with open(TIMELINE_FILE, "w") as f:
         json.dump(timeline, f, indent=4)
 
+
 def log_event(ip, mac, event_type):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{now}] {event_type.upper()}: {ip} -> {mac}")
+
 
 def arp_monitor(pkt):
     if pkt.haslayer(ARP) and pkt[ARP].op == 2:
@@ -37,7 +44,10 @@ def arp_monitor(pkt):
 
         save_timeline(timeline)
 
+
 if __name__ == "__main__":
-    print("[*] LANimals Timeline Tracker running. Watching ARP changes...\nPress Ctrl+C to stop.")
+    print(
+        "[*] LANimals Timeline Tracker running. Watching ARP changes...\nPress Ctrl+C to stop."
+    )
     timeline = load_timeline()
     sniff(filter="arp", store=0, prn=arp_monitor)

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import os
+
 import requests
-from rich import print, box
+from rich import box, print
 from rich.table import Table
 
 VIRUSTOTAL_API = os.environ.get("VT_API_KEY", "")
+
 
 def vt_lookup(ip):
     if not VIRUSTOTAL_API:
@@ -22,11 +24,13 @@ def vt_lookup(ip):
         return None, None
     return None, None
 
+
 def main():
     print("[bold red]\nLANimals Live Threat Intel Enrichment\n[/bold red]")
     ips = []
     import psutil
-    conns = psutil.net_connections(kind='inet')
+
+    conns = psutil.net_connections(kind="inet")
     for c in conns:
         if c.raddr:
             ips.append(c.raddr[0])
@@ -41,11 +45,14 @@ def main():
     for ip in ips:
         stats, rep = vt_lookup(ip)
         if stats:
-            table.add_row(ip, f"{stats['malicious']}/ {stats['harmless']} benign", str(rep))
+            table.add_row(
+                ip, f"{stats['malicious']}/ {stats['harmless']} benign", str(rep)
+            )
         else:
             table.add_row(ip, "?", "?")
     print(table)
     print("\n[green][ OK ] Live enrichment complete.\n[/green]")
+
 
 if __name__ == "__main__":
     main()

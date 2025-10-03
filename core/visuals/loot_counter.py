@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from rich import print
+
+
 def loot_summary():
     try:
         with open("loot.log", "r") as f:
@@ -10,5 +12,7 @@ def loot_summary():
         print(f"[bold red]! Suspicious:[/bold red] {risks}")
     except:
         print("[✗] Loot file not found.")
+
+
 if __name__ == "__main__":
     loot_summary()

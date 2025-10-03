@@ -3,9 +3,11 @@
 # Author: NMAPKin
 
 import os
-from lanimals_utils import banner, print_status, log_event
+
+from lanimals_utils import banner, log_event, print_status
 
 LOOT_DIR = "loot"
+
 
 def list_loot():
     if not os.path.exists(LOOT_DIR):
@@ -21,12 +23,15 @@ def list_loot():
     for file in files:
         log_event(f"📦 {file}")
 
+
 def main():
     banner("LANimals :: Loot Viewer")
     list_loot()
 
+
 if __name__ == "__main__":
     main()
+
 
 def run():
     print("Running loot_viewer")

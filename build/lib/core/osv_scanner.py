@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 import requests
 
+
 def query_osv(package_name, ecosystem):
     if ecosystem == "Unknown":
         return "No ecosystem match; skipping."
     url = "https://api.osv.dev/v1/query"
-    data = {
-        "package": {
-            "name": package_name,
-            "ecosystem": ecosystem
-        }
-    }
+    data = {"package": {"name": package_name, "ecosystem": ecosystem}}
     try:
         res = requests.post(url, json=data)
         res.raise_for_status()

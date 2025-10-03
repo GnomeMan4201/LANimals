@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from rich.console import Console
-from time import sleep
 import random
+from time import sleep
+
+from rich.console import Console
 
 ascii_arts = [
     r"   |\_/|     ",
@@ -11,6 +12,7 @@ ascii_arts = [
     r"  HACK MODE  ",
 ]
 
+
 def main():
     console = Console()
     console.clear()
@@ -19,6 +21,7 @@ def main():
         art = random.choice(ascii_arts)
         console.print(f"[bold green]{art}[/bold green]")
         sleep(1)
+
 
 if __name__ == "__main__":
     main()

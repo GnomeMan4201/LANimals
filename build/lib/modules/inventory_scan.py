@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import os
 from pathlib import Path
+
 from rich.console import Console
-from rich.tree import Tree
 from rich.text import Text
+from rich.tree import Tree
 
 console = Console()
 root_path = Path(__file__).resolve().parent
+
 
 def build_tree(path: Path, tree: Tree):
     try:
@@ -31,10 +33,11 @@ def build_tree(path: Path, tree: Tree):
             label.stylize("white")
             tree.add(label)
 
+
 tree = Tree(f":package: [bold green]LANimals Inventory – {root_path.name}")
 build_tree(root_path, tree)
 console.print(tree)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

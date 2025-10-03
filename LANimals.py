@@ -1,5 +1,6 @@
 def main():
     import sys
+
     args = sys.argv[1:]
 
     if not args:
@@ -13,6 +14,7 @@ def main():
         print("[*] Running ARP recon...")
         try:
             from modules.arp_recon import run
+
             run()
         except ImportError:
             print("[!] Module arp_recon not found or missing 'run()' method.")
@@ -20,6 +22,7 @@ def main():
         print("[*] Running network scan...")
         try:
             from modules.net_scan import run
+
             run()
         except ImportError:
             print("[!] Module net_scan not found or missing 'run()' method.")
@@ -27,6 +30,7 @@ def main():
         print("[*] Opening loot viewer...")
         try:
             from modules.loot_viewer import run
+
             run()
         except ImportError:
             print("[!] Module loot_viewer not found or missing 'run()' method.")

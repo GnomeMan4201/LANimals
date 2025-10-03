@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-from rich.console import Console
-from rich.prompt import Prompt
-from rich.panel import Panel
 import os
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Prompt
 
 console = Console()
 
+
 def show_fortress():
     os.system("clear")
-    console.print(Panel("[bold red]LANIMALS FORTRESS[/bold red]\n\n[01] Rogue Scanner\n[02] ARP Watcher\n[03] Stealth Scanner\n[00] Back", border_style="red"))
+    console.print(
+        Panel(
+            "[bold red]LANIMALS FORTRESS[/bold red]\n\n[01] Rogue Scanner\n[02] ARP Watcher\n[03] Stealth Scanner\n[00] Back",
+            border_style="red",
+        )
+    )
+
 
 def launch_fortress(choice):
     match choice:
@@ -24,12 +32,14 @@ def launch_fortress(choice):
             console.print("[bold red][!] Invalid selection[/bold red]\n")
     return False
 
+
 def main():
     while True:
         show_fortress()
         choice = Prompt.ask("\n[bold orange3]> SELECT DEFENSE MODULE[/bold orange3]")
         if launch_fortress(choice.strip()):
             break
+
 
 if __name__ == "__main__":
     main()

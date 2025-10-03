@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import subprocess
+
 from rich import print
+
 
 def main():
     print("[✓] CVE Hunt starting via `nmap --script vulners`...\n")
@@ -11,6 +13,7 @@ def main():
         print(result[:500] + "\n...\n[✓] Results truncated.")
     except Exception as e:
         print("[✗] Failed to perform CVE hunt:", e)
+
 
 if __name__ == "__main__":
     main()

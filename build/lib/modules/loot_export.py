@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-import shutil, time, os
+import os
+import shutil
+import time
+
+
 def main():
     print("\n[✓] Exporting Loot...")
     export_dir = f"/tmp/lanimals_loot_{int(time.time())}"
@@ -12,5 +16,7 @@ def main():
         else:
             print(f"  [!] Missing file: {f}")
     print(f"\n[✓] Export complete. Loot stored in {export_dir}/")
+
+
 if __name__ == "__main__":
     main()
