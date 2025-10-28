@@ -7,7 +7,6 @@
 
 # LANimals — Real-time Network Intelligence Suite
 
-[![CI](https://github.com/GnomeMan4201/LANimals/actions/workflows/ci.yml/badge.svg)](https://github.com/GnomeMan4201/LANimals/actions)
 [![Security](https://img.shields.io/badge/Security-Audited-green.svg)](SECURITY.md)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey?style=flat)](LICENSE)
 [![Language](https://img.shields.io/github/languages/top/GnomeMan4201/LANimals?style=flat)](https://github.com/GnomeMan4201/LANimals)
