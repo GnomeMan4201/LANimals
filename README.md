@@ -1,5 +1,8 @@
 ![LANimals Logo](.github/branding/logo.png)
 
+![Tests](https://github.com/GnomeMan4201/LANimals/workflows/Tests/badge.svg) ![Python](https://img.shields.io/badge/python-3.8+-blue.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Stars](https://img.shields.io/github/stars/GnomeMan4201/LANimals?style=social)
+
+
 ![LANimals Demo](.github/branding/demo.png)
 
 # LANimals — Real-time Network Intelligence Suite
