@@ -1,3 +1,4 @@
+import os
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -77,3 +78,43 @@ def show_nexus_menu():
 
 if __name__ == "__main__":
     show_nexus_menu()
+
+import sys
+
+def lanimals_dash():
+    print("[*] Launching dashboard...")
+
+def lanimals_vulscan():
+    print("[*] Running vulnerability scanner...")
+
+def lanimals_lootlog():
+    print("[*] Accessing loot log...")
+
+def show_main_menu():
+    print("\n[1] LAN Sweep\n[2] ARP Recon\n[3] Loot Viewer\n[4] Exit")
+    choice = input("Select an option: ").strip()
+    if choice == "1":
+        lanimals_dash()
+    elif choice == "2":
+        lanimals_vulscan()
+    elif choice == "3":
+        lanimals_lootlog()
+    elif choice == "4":
+        print("[✓] Exiting.")
+    else:
+        print("[!] Invalid selection.")
+
+if __name__ == "__main__":
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        if cmd == "dash":
+            lanimals_dash()
+        elif cmd == "vulscan":
+            lanimals_vulscan()
+        elif cmd == "lootlog":
+            lanimals_lootlog()
+        else:
+            print("[!] Unknown command.")
+    else:
+        show_main_menu()

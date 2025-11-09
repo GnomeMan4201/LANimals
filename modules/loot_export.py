@@ -1,8 +1,12 @@
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 #!/usr/bin/env python3
 import shutil, time, os
 def main():
     print("\n[✓] Exporting Loot...")
-    export_dir = f"/tmp/lanimals_loot_{int(time.time())}"
+    export_dir = f"/data/data/com.termux/files/usr/tmp/lanimals_loot_{int(time.time())}"
     os.makedirs(export_dir, exist_ok=True)
     files = ["loot.log"]
     for f in files:
