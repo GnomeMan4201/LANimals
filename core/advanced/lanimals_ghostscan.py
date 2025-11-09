@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-import os, time
+import os
+import time
+
 from rich import print
 from rich.panel import Panel
+
 
 def main():
     print(Panel("Running Ghostscan: Passive Outbound Profiler", style="bold magenta"))
@@ -11,6 +14,7 @@ def main():
         with open("/tmp/loot.log", "r") as f:
             for line in f:
                 print("[event] " + line.strip())
+
 
 if __name__ == "__main__":
     main()

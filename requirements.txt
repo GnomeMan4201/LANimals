@@ -1,0 +1,7 @@
+psutil
+faker
+colorama
+requests
+rich
+flask
+scapy

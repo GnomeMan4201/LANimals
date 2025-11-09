@@ -6,8 +6,9 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 # LANimals :: ARP Hunter
 # Author: NMAPKin
 
+from lanimals_utils import banner, log_event, print_status
 from scapy.all import ARP, Ether, srp
-from lanimals_utils import banner, print_status, log_event
+
 
 def arp_scan(target="192.168.1.0/24"):
     print_status(f"Scanning ARP on {target}...")
@@ -21,9 +22,11 @@ def arp_scan(target="192.168.1.0/24"):
     for sent, received in result:
         log_event(f"{received.psrc} → {received.hwsrc}")
 
+
 def main():
     banner("LANimals :: ARP Hunter")
     arp_scan()
+
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import os
+
 from rich.console import Console
+
 console = Console()
+
 
 def main():
     console.print("[✓] Autopilot Initiated...\n", style="bold green")
@@ -12,6 +15,7 @@ def main():
     console.print("→ Ghostscan passive recon...", style="yellow")
     os.system("python3 ~/LANimals/core/advanced/lanimals_ghostscan.py")
     console.print("\n[✓] Autopilot completed.", style="green")
+
 
 if __name__ == "__main__":
     main()

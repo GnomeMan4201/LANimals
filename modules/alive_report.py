@@ -8,9 +8,11 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 
 import os
 from datetime import datetime
-from lanimals_utils import banner, print_status, log_event
+
+from lanimals_utils import banner, log_event, print_status
 
 LOG_FILE = "scan_output/alive_hosts.log"
+
 
 def load_active_hosts():
     if not os.path.exists(LOG_FILE):
@@ -18,6 +20,7 @@ def load_active_hosts():
         return []
     with open(LOG_FILE, "r") as f:
         return [line.strip() for line in f.readlines()]
+
 
 def generate_report():
     active = load_active_hosts()
@@ -31,10 +34,12 @@ def generate_report():
     print_status(f"Report saved → {out_path}", "✓")
     log_event(f"Report created with {len(active)} live host(s)")
 
+
 def main():
     banner("LANimals :: Alive Report Generator")
     print_status("Parsing alive host log...")
     generate_report()
+
 
 if __name__ == "__main__":
     main()

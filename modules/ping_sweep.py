@@ -10,20 +10,24 @@ import ipaddress
 import subprocess
 import threading
 from queue import Queue
-from lanimals_utils import banner, print_status, log_event
+
+from lanimals_utils import banner, log_event, print_status
 
 THREADS = 100
 ACTIVE = []
 
+
 def ping_host(ip):
     try:
-        result = subprocess.run(["ping", "-c", "1", "-W", "1", str(ip)],
-                                stdout=subprocess.DEVNULL)
+        result = subprocess.run(
+            ["ping", "-c", "1", "-W", "1", str(ip)], stdout=subprocess.DEVNULL
+        )
         if result.returncode == 0:
             ACTIVE.append(str(ip))
             log_event(f"[ALIVE] {ip}")
     except Exception as e:
         print_status(f"Error pinging {ip}: {e}", "-")
+
 
 def main():
     banner("LANimals :: Ping Sweep")
@@ -51,6 +55,7 @@ def main():
 
     q.join()
     print_status(f"Scan complete. {len(ACTIVE)} host(s) up.", "✓")
+
 
 if __name__ == "__main__":
     main()

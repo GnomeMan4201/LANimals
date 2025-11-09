@@ -3,9 +3,10 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 #!/usr/bin/env python3
-import os
 import json
+import os
 from collections import Counter, defaultdict
+
 from rich import print
 from rich.table import Table
 
@@ -17,15 +18,17 @@ LOOT_PATHS = [
     os.path.expanduser("~/.lanimals/data/loot.json"),
 ]
 
+
 def find_loot_file():
     for path in LOOT_PATHS:
         if os.path.isfile(path):
             return path
     return None
 
+
 def parse_loot(path):
     try:
-        if path.endswith('.json'):
+        if path.endswith(".json"):
             with open(path, "r") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
@@ -44,6 +47,7 @@ def parse_loot(path):
         print(f"[red]Failed to parse loot log: {e}[/red]")
         return []
 
+
 def summarize_loot(devices):
     ips = []
     vendors = []
@@ -56,9 +60,12 @@ def summarize_loot(devices):
         ips.append(ip)
         vendors.append(vendor)
         ports += host_ports
-        if any(x in ip for x in ["."]) and (vendor == "Unknown" or len(host_ports) > 10):
+        if any(x in ip for x in ["."]) and (
+            vendor == "Unknown" or len(host_ports) > 10
+        ):
             odd_hosts.append(ip)
     return ips, vendors, ports, odd_hosts
+
 
 def main():
     print("[bold red]\nLANimals Loot Analytics / Summarizer\n[/bold red]")
@@ -85,14 +92,20 @@ def main():
     print(table)
 
     print(f"\n[cyan]Total devices:[/cyan] {len(set(ips))}")
-    print(f"[cyan]Vendors detected:[/cyan] {len(set(vendors))} - {', '.join(set(vendors))}")
+    print(
+        f"[cyan]Vendors detected:[/cyan] {len(set(vendors))} - {', '.join(set(vendors))}"
+    )
     if ports:
         port_counts = Counter(ports)
-        print(f"[cyan]Most common open ports:[/cyan] " + ", ".join(f"{p}({c})" for p, c in port_counts.most_common(5)))
+        print(
+            f"[cyan]Most common open ports:[/cyan] "
+            + ", ".join(f"{p}({c})" for p, c in port_counts.most_common(5))
+        )
     if odd_hosts:
         print(f"\n[red][!] Odd hosts flagged:[/red] {', '.join(odd_hosts)}")
 
     print("\n[green][ OK ] Loot summary complete.\n[/green]")
+
 
 if __name__ == "__main__":
     main()

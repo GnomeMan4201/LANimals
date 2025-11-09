@@ -4,14 +4,16 @@
 
 import os
 import subprocess
+
 from lanimals_utils import banner, print_status, prompt_menu
 
 LEGACY = {
     "LAN Sweep": "modules/lan_sweep.py",
     "ARP Recon": "modules/arp_recon.py",
     "Net Scan": "modules/net_scan.py",
-    "Loot Viewer": "modules/loot_viewer.py"
+    "Loot Viewer": "modules/loot_viewer.py",
 }
+
 
 def launch(script):
     if os.path.exists(script):
@@ -19,6 +21,7 @@ def launch(script):
         subprocess.run(["python3", script])
     else:
         print_status(f"Missing: {script}", "✗")
+
 
 def main():
     banner("LANimals :: UI")
@@ -31,6 +34,7 @@ def main():
             launch(LEGACY[list(LEGACY.keys())[opt - 1]])
         else:
             print_status("Invalid selection", "!")
+
 
 if __name__ == "__main__":
     main()
