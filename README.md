@@ -19,8 +19,38 @@ LANimals is a lightweight, production-oriented network reconnaissance suite for 
 
 ---
 
-## Quick Start 
+## Quick Start
 > Run LANimals only on networks you own or have explicit permission to test.
+
+### Option 1: Global Installation (Recommended)
+
+Install LANimals as a global command to use it anywhere in your terminal:
+
+```bash
+# Clone the repository
+git clone https://github.com/GnomeMan4201/LANimals.git
+cd LANimals
+
+# Install globally (system-wide)
+sudo pip install -e .
+
+# Or install for current user only
+pip install --user -e .
+```
+
+Now you can use LANimals from anywhere:
+
+```bash
+# All of these commands work from any directory
+LANimals help
+LANimals recon
+lanimals scan
+LANIMALS loot
+```
+
+### Option 2: Quick Start Script
+
+For a quick demo without global installation:
 
 ```bash
 # Clone the repo
@@ -29,11 +59,43 @@ cd LANimals
 
 # Run the automated quickstart
 ./quickstart.sh
+```
 
 > The quickstart.sh script will create a virtual environment, install dependencies, and run a demo scan on a safe local subnet.
 
+---
 
+## Command-Line Interface
 
+Once installed globally, LANimals provides a comprehensive CLI with multiple commands:
+
+```bash
+# View all available commands
+LANimals help
+
+# Common commands
+LANimals recon              # Run ARP reconnaissance
+LANimals ping-sweep         # Perform ping sweep across subnet
+LANimals scan               # Run network port scan
+LANimals loot               # View collected data
+LANimals watchdog           # Monitor network for changes
+LANimals ui                 # Launch web interface
+
+# The command name is case-insensitive
+lanimals recon              # Works the same
+LANIMALS recon              # Also works
+```
+
+### Available Command Categories
+
+- **Reconnaissance**: recon, arp-recon, arp-hunter, ping-sweep, lan-sweep
+- **Scanning**: scan, net-scan, mass-scan, inventory-scan, interface-scan, ghostscan, roguescan
+- **Analysis**: host-mapper, netmap, http-probe, service-fingerprint, sysinfo
+- **Reporting**: loot, loot-viewer, loot-log, loot-export, loot-summary, alive-report
+- **Monitoring**: watchdog, tripwire, traffic-tap, anomaly-detector, session-logger
+- **Advanced**: autopilot, fortress, timeline, threat-enrich
+- **Wireless**: wlan-beacon
+- **Visualization**: ui, ascii
 
 ---
 
@@ -66,24 +128,71 @@ Defensive testing to tune IDS/endpoint detection rules
 
 ---
 
-Example Commands
+## Example Workflows
 
-Run a standard discovery and print a brief summary:
+### Basic Network Reconnaissance
 
-python -m lanimals.scan --net 192.168.1.0/24 --summary
+```bash
+# Quick ARP scan of local network
+LANimals recon
 
-Run a verbose scan and save full JSON report:
+# Comprehensive ping sweep
+LANimals ping-sweep
 
-python -m lanimals.scan --net 10.0.0.0/24 --verbose --output reports/local_scan.json
+# Full network scan
+LANimals scan
 
-Start the local visualization dashboard:
+# View discovered devices and data
+LANimals loot
+```
 
-python -m lanimals.ui --data reports/local_scan.json --host 127.0.0.1 --port 8080
+### Advanced Scanning
 
-Run a headless agent on a constrained host:
+```bash
+# Stealthy scanning
+LANimals ghostscan
 
-python -m lanimals.agent --mode collect --out agent_upload.tar
+# Mass network scanning
+LANimals mass-scan
 
+# Service fingerprinting
+LANimals service-fingerprint
+
+# Generate network map
+LANimals netmap
+```
+
+### Monitoring and Defense
+
+```bash
+# Monitor network for changes
+LANimals watchdog
+
+# Detect anomalies
+LANimals anomaly-detector
+
+# Set up tripwire monitoring
+LANimals tripwire
+
+# Monitor traffic
+LANimals traffic-tap
+```
+
+### Reporting and Visualization
+
+```bash
+# View loot summary
+LANimals loot-summary
+
+# Export data
+LANimals loot-export
+
+# Launch web UI
+LANimals ui
+
+# Generate alive hosts report
+LANimals alive-report
+```
 
 ---
 
@@ -133,34 +242,65 @@ Place custom configs in configs/ or pass --config path/to/config.yml.
 
 ---
 
-Installation & Development
+## Installation & Development
 
-1. Create and activate a Python virtual environment:
+### For End Users
 
+**Global Installation (Recommended):**
 
+```bash
+git clone https://github.com/GnomeMan4201/LANimals.git
+cd LANimals
+sudo pip install -e .
+```
 
+After installation, you can use LANimals from any directory:
+
+```bash
+LANimals help
+LANimals recon
+```
+
+**Uninstall:**
+
+```bash
+pip uninstall lanimals
+```
+
+### For Developers
+
+1. Clone and set up development environment:
+
+```bash
+git clone https://github.com/GnomeMan4201/LANimals.git
+cd LANimals
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-2. Install dependencies:
+2. Install in development mode:
 
+```bash
+pip install -e .
+```
 
+3. Install development dependencies:
 
+```bash
 pip install -r requirements.txt
+```
 
-3. Run the test suite:
+4. Run the test suite:
 
-
-
+```bash
 pytest -q
+```
 
-4. Run linters and formatters:
+5. Run linters and formatters:
 
-
-
-ruff check src tests
-black src tests
-
+```bash
+./run_quality.sh
+```
 
 ---
 
