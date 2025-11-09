@@ -1,7 +1,7 @@
 import os
 import shutil
 
-print("[✓] Network Scan (Non-root fallback)")
+print("[] Network Scan (Non-root fallback)")
 
 if shutil.which("nmap"):
     print("[+] Running Nmap ping sweep...")

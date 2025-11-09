@@ -13,7 +13,7 @@ from lanimals_utils import banner, print_status
 def list_interfaces():
     interfaces = psutil.net_if_addrs()
     if not interfaces:
-        print_status("No network interfaces found!", "✗")
+        print_status("No network interfaces found!", "")
         return
     for iface, addrs in interfaces.items():
         print_status(f"Interface: {iface}")

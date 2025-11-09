@@ -9,7 +9,7 @@ from rich.panel import Panel
 def main():
     print(Panel("Running Ghostscan: Passive Outbound Profiler", style="bold magenta"))
     if not os.path.exists("/tmp/loot.log"):
-        print("[✗] No loot.log file found.")
+        print("[] No loot.log file found.")
     else:
         with open("/tmp/loot.log", "r") as f:
             for line in f:

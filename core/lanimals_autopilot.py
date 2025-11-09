@@ -56,7 +56,7 @@ def diff_hosts(old, new):
         alerts.append(f"[MISSING] Device vanished: {ip} {old[ip]}")
     for ip in old_ips & new_ips:
         if old[ip] != new[ip]:
-            alerts.append(f"[CHANGE] Device OS changed: {ip} {old[ip]} → {new[ip]}")
+            alerts.append(f"[CHANGE] Device OS changed: {ip} {old[ip]}  {new[ip]}")
 
     return alerts
 

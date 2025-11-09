@@ -12,8 +12,8 @@ Scope: Latest version only
 
 | Version | Supported |
 | ------- | --------- |
-| latest  | ✅        |
-| < latest| ❌        |
+| latest  |         |
+| < latest|         |
 
 ## Disclosure Process
 

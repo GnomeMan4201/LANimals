@@ -20,7 +20,7 @@ def arp_scan(target="192.168.1.0/24"):
         return
 
     for sent, received in result:
-        log_event(f"{received.psrc} → {received.hwsrc}")
+        log_event(f"{received.psrc}  {received.hwsrc}")
 
 
 def main():

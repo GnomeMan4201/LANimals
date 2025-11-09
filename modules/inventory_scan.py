@@ -28,7 +28,7 @@ def build_tree(path: Path, tree: Tree):
         elif entry.is_symlink():
             label.stylize("bold magenta")
             try:
-                label.append(" → " + str(entry.resolve()))
+                label.append("  " + str(entry.resolve()))
             except:
                 label.append(" [broken]")
                 label.stylize("bold red")
@@ -38,7 +38,7 @@ def build_tree(path: Path, tree: Tree):
             tree.add(label)
 
 
-tree = Tree(f":package: [bold green]LANimals Inventory – {root_path.name}")
+tree = Tree(f":package: [bold green]LANimals Inventory  {root_path.name}")
 build_tree(root_path, tree)
 console.print(tree)
 

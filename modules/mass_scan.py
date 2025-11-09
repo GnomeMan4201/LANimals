@@ -18,7 +18,7 @@ OUT_DIR = "scan_output"
 
 def load_targets():
     if not os.path.exists(ALIVE_LOG):
-        print_status("Alive host log not found", "✗")
+        print_status("Alive host log not found", "")
         return []
     with open(ALIVE_LOG, "r") as f:
         return [line.strip() for line in f.readlines()]
@@ -38,7 +38,7 @@ def scan_targets(targets):
             f.write(f"\n--- Scan: {ip} ---\n")
             f.write(result.stdout)
 
-    print_status(f"Mass scan completed → {out_file}", "✓")
+    print_status(f"Mass scan completed  {out_file}", "")
 
 
 def main():

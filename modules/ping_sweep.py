@@ -35,7 +35,7 @@ def main():
     try:
         net = ipaddress.ip_network(subnet, strict=False)
     except ValueError:
-        print_status("Invalid subnet", "✗")
+        print_status("Invalid subnet", "")
         return
 
     q = Queue()
@@ -54,7 +54,7 @@ def main():
         t.start()
 
     q.join()
-    print_status(f"Scan complete. {len(ACTIVE)} host(s) up.", "✓")
+    print_status(f"Scan complete. {len(ACTIVE)} host(s) up.", "")
 
 
 if __name__ == "__main__":

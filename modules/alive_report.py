@@ -16,7 +16,7 @@ LOG_FILE = "scan_output/alive_hosts.log"
 
 def load_active_hosts():
     if not os.path.exists(LOG_FILE):
-        print_status("No alive hosts log found", "✗")
+        print_status("No alive hosts log found", "")
         return []
     with open(LOG_FILE, "r") as f:
         return [line.strip() for line in f.readlines()]
@@ -31,7 +31,7 @@ def generate_report():
     out_path = f"scan_output/alive_report_{timestamp}.txt"
     with open(out_path, "w") as f:
         f.write("\n".join(active))
-    print_status(f"Report saved → {out_path}", "✓")
+    print_status(f"Report saved  {out_path}", "")
     log_event(f"Report created with {len(active)} live host(s)")
 
 

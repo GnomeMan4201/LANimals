@@ -20,7 +20,7 @@ def launch(script):
         print_status(f"Launching: {script}")
         subprocess.run(["python3", script])
     else:
-        print_status(f"Missing: {script}", "✗")
+        print_status(f"Missing: {script}", "")
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
     while True:
         opt = prompt_menu(list(LEGACY.keys()) + ["Exit"])
         if opt == len(LEGACY) + 1:
-            print_status("Exiting UI.", "✓")
+            print_status("Exiting UI.", "")
             break
         elif 1 <= opt <= len(LEGACY):
             launch(LEGACY[list(LEGACY.keys())[opt - 1]])

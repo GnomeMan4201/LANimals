@@ -18,7 +18,7 @@ def main():
     console.clear()
     console.print("[bold yellow]LANIMALS LOOT COUNT[/bold yellow]")
     total = count_loot_entries()
-    console.print(Panel(f"[✓] Total Devices Logged: {total}", border_style="yellow"))
+    console.print(Panel(f"[] Total Devices Logged: {total}", border_style="yellow"))
 
 
 if __name__ == "__main__":

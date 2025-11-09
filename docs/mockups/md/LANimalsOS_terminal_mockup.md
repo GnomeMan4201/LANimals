@@ -3,14 +3,14 @@
 ```shell
 kali@redteam:~/LANimals$ ./lanimals-os.sh
 
-╔════════════════════════════════════════════════════════════╗
-║               LANimalsOS v1.0 – Terminal Recon Suite       ║
-║ Interface  : wlan0                                         ║
-║ Hostname   : kali                                          ║
-║ Target Net : 192.168.0.0/24                                ║
-║ Mode       : Passive Recon                                 ║
-║ Theme      : Classic Black                                 ║
-╚════════════════════════════════════════════════════════════╝
+
+               LANimalsOS v1.0  Terminal Recon Suite       
+ Interface  : wlan0                                         
+ Hostname   : kali                                          
+ Target Net : 192.168.0.0/24                                
+ Mode       : Passive Recon                                 
+ Theme      : Classic Black                                 
+
 
  [1] Start Network Recon
  [2] Launch Packet Sniffer

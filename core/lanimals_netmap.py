@@ -27,12 +27,12 @@ def parse_nmap(xml_path):
 
 
 def draw_ascii_map(network):
-    print("\n🐾 LANimals Network Map 🧭")
+    print("\n LANimals Network Map ")
     print("=" * 40)
     for ip, details in network.items():
         print(f"[{ip}]")
         for d in details:
-            print(f"  └─ {d}")
+            print(f"   {d}")
         print("-" * 40)
 
 

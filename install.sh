@@ -24,7 +24,7 @@ else
     export PATH="$LA_BIN:$PATH"
 fi
 
-echo -e "${GRN}[✓] LANimals installed.${NC}\n"
+echo -e "${GRN}[] LANimals installed.${NC}\n"
 echo -e "${RED}To use LANimals from any terminal, open a new shell or run:${NC}"
 echo -e "    export PATH=\"$PWD/bin:\$PATH\"\n"
 

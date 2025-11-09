@@ -14,16 +14,16 @@ NC='\033[0m'
 LANIMALS_DIR="$HOME/LANimals"
 
 echo -e "${CYAN}"
-echo "╔═══════════════════════════════════════════════════════════╗"
-echo "║                                                           ║"
-echo "║           LANimals GitHub Push Script                    ║"
-echo "║           Version: Production-Ready Network Arsenal      ║"
-echo "║                                                           ║"
-echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+echo "                                                           "
+echo "           LANimals GitHub Push Script                    "
+echo "           Version: Production-Ready Network Arsenal      "
+echo "                                                           "
+echo ""
 echo -e "${NC}"
 
 cd "$LANIMALS_DIR" || {
-    echo -e "${RED}[✗] LANimals directory not found at $LANIMALS_DIR${NC}"
+    echo -e "${RED}[] LANimals directory not found at $LANIMALS_DIR${NC}"
     exit 1
 }
 
@@ -34,9 +34,9 @@ echo
 if [ ! -d ".git" ]; then
     echo -e "${YELLOW}[*] Git not initialized. Initializing...${NC}"
     git init
-    echo -e "${GREEN}[✓] Git initialized${NC}"
+    echo -e "${GREEN}[] Git initialized${NC}"
 else
-    echo -e "${GREEN}[✓] Git already initialized${NC}"
+    echo -e "${GREEN}[] Git already initialized${NC}"
 fi
 
 # Check for remote
@@ -50,13 +50,13 @@ if [ -z "$REMOTE_URL" ]; then
     
     if [ -n "$REPO_URL" ]; then
         git remote add origin "$REPO_URL"
-        echo -e "${GREEN}[✓] Remote added: $REPO_URL${NC}"
+        echo -e "${GREEN}[] Remote added: $REPO_URL${NC}"
     else
-        echo -e "${RED}[✗] No URL provided${NC}"
+        echo -e "${RED}[] No URL provided${NC}"
         exit 1
     fi
 else
-    echo -e "${GREEN}[✓] Remote configured: $REMOTE_URL${NC}"
+    echo -e "${GREEN}[] Remote configured: $REMOTE_URL${NC}"
 fi
 
 # Check current branch
@@ -68,7 +68,7 @@ if [ -z "$CURRENT_BRANCH" ]; then
     CURRENT_BRANCH="main"
 fi
 
-echo -e "${GREEN}[✓] Current branch: $CURRENT_BRANCH${NC}"
+echo -e "${GREEN}[] Current branch: $CURRENT_BRANCH${NC}"
 
 # Create/update .gitignore
 echo -e "\n${YELLOW}[*] Updating .gitignore...${NC}"
@@ -130,7 +130,7 @@ Thumbs.db
 LANimals_github_backup/
 GITIGNORE
 
-echo -e "${GREEN}[✓] .gitignore updated${NC}"
+echo -e "${GREEN}[] .gitignore updated${NC}"
 
 # Show what will be committed
 echo -e "\n${YELLOW}[*] Files to be committed:${NC}"
@@ -169,12 +169,12 @@ fi
 # Stage all changes
 echo -e "\n${YELLOW}[*] Staging changes...${NC}"
 git add .
-echo -e "${GREEN}[✓] Changes staged${NC}"
+echo -e "${GREEN}[] Changes staged${NC}"
 
 # Commit
 echo -e "\n${YELLOW}[*] Creating commit...${NC}"
 git commit -m "$COMMIT_MSG"
-echo -e "${GREEN}[✓] Commit created${NC}"
+echo -e "${GREEN}[] Commit created${NC}"
 
 # Show commit info
 echo -e "\n${BLUE}Last commit:${NC}"
@@ -193,11 +193,11 @@ if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
     git push -u origin "$CURRENT_BRANCH"
     
     if [ $? -eq 0 ]; then
-        echo -e "\n${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║                  PUSH SUCCESSFUL!                         ║${NC}"
-        echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
+        echo -e "\n${GREEN}${NC}"
+        echo -e "${GREEN}                  PUSH SUCCESSFUL!                         ${NC}"
+        echo -e "${GREEN}${NC}"
         echo
-        echo -e "${GREEN}[✓] LANimals pushed to GitHub${NC}"
+        echo -e "${GREEN}[] LANimals pushed to GitHub${NC}"
         echo -e "${CYAN}Repository: $(git remote get-url origin)${NC}"
         echo -e "${CYAN}Branch: $CURRENT_BRANCH${NC}"
         echo
@@ -207,7 +207,7 @@ if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
         echo -e "  3. Add screenshots from docs/screenshots/"
         echo -e "  4. Tag release: git tag -a v1.0.0 -m 'Release v1.0.0' && git push origin v1.0.0"
     else
-        echo -e "\n${RED}[✗] Push failed!${NC}"
+        echo -e "\n${RED}[] Push failed!${NC}"
         echo -e "${YELLOW}Common issues:${NC}"
         echo -e "  - Check GitHub credentials"
         echo -e "  - Verify repository permissions"

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "[✓] Installing visual libraries..."
+echo "[] Installing visual libraries..."
 pip install -q rich pyfiglet
 
-echo "[✓] Patching LANimals UI visuals..."
+echo "[] Patching LANimals UI visuals..."
 
 tee ~/LANimals/lanimals_ui_FIXED.py >/dev/null <<'PYEOF'
 #!/usr/bin/env python3
@@ -20,7 +20,7 @@ def draw_banner():
     fig = Figlet(font='slant')
     banner = fig.renderText("LANIMALS")
     console.print(f"[bold green]{banner}[/bold green]")
-    console.print("[bold cyan]LANIMALS v1.0 — NETWORK OPS TOOL[/bold cyan]", style="dim")
+    console.print("[bold cyan]LANIMALS v1.0  NETWORK OPS TOOL[/bold cyan]", style="dim")
     console.print(f"[bold red]CTX_ID:[/bold red] ghost://SIMHOST/3899   [bold green]INTEGRITY:[/bold green] OK\n")
 
 def build_module_table():
@@ -39,24 +39,24 @@ def build_module_table():
 
 def run_module(choice):
     if choice == "01":
-        console.print("\n→ Scanning active interfaces...", style="bold yellow")
+        console.print("\n Scanning active interfaces...", style="bold yellow")
         os.system("ip addr | grep inet")
     elif choice == "02":
-        console.print("\n→ Probing local subnet...", style="bold yellow")
+        console.print("\n Probing local subnet...", style="bold yellow")
         os.system("nmap -sn 192.168.1.0/24 | grep 'Nmap scan report\|MAC Address'")
     elif choice == "03":
-        console.print("\n→ Starting passive traffic capture...", style="bold yellow")
+        console.print("\n Starting passive traffic capture...", style="bold yellow")
         os.system("sudo timeout 10 tcpdump -i any -nn -q")
     elif choice == "04":
-        console.print("\n→ Viewing lootlog...", style="bold yellow")
+        console.print("\n Viewing lootlog...", style="bold yellow")
         try:
             with open("loot.log", "r") as f:
                 for line in f:
                     console.print(line.strip(), style="bold white")
         except FileNotFoundError:
-            console.print("[✗] Loot directory not found: loot.log", style="bold red")
+            console.print("[] Loot directory not found: loot.log", style="bold red")
     elif choice == "05":
-        console.print("\n→ Gathering host diagnostics...", style="bold yellow")
+        console.print("\n Gathering host diagnostics...", style="bold yellow")
         os.system("uname -a && uptime")
     elif choice == "00":
         console.print(">> TERMINATING NODE SESSION...", style="bold red")
@@ -78,4 +78,4 @@ if __name__ == "__main__":
     main()
 PYEOF
 
-chmod +x ~/LANimals/lanimals_ui_FIXED.py && echo "[✓] UI visuals successfully patched."
+chmod +x ~/LANimals/lanimals_ui_FIXED.py && echo "[] UI visuals successfully patched."

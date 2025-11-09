@@ -8,7 +8,7 @@ console = Console()
 
 def main():
     console.print(
-        "[✓] SSID Hunter: Capturing broadcasted wireless IDs...\n", style="bold blue"
+        "[] SSID Hunter: Capturing broadcasted wireless IDs...\n", style="bold blue"
     )
     os.system("sudo iwlist wlan0 scanning | grep 'ESSID:'")
 

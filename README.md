@@ -4,18 +4,18 @@
 
 <h1 align="center">LANimals</h1>
 
-> **LANimals** is a modular LAN recon and threat mapping suite — stylized terminal ops meet real signal.
+> **LANimals** is a modular LAN recon and threat mapping suite  stylized terminal ops meet real signal.
 > Passive detection, rogue host tracking, session logging, loot visualization, and more.
 
 ---
 
 ## Features
 
-- 🧠 Intelligent LAN Sweep
-- 🐾 Rogue Host Detection
-- 🌐 Passive ARP Monitoring
-- 🔎 Threat Grid Visualization
-- 📦 Loot Viewer (Artifacts, Logs, Recon Cache)
+-  Intelligent LAN Sweep
+-  Rogue Host Detection
+-  Passive ARP Monitoring
+-  Threat Grid Visualization
+-  Loot Viewer (Artifacts, Logs, Recon Cache)
 
 ---
 

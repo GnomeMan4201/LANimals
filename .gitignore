@@ -53,3 +53,5 @@ Thumbs.db
 *.bak2
 *_backup/
 LANimals_github_backup/
+backup_*/
+build/

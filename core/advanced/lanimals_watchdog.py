@@ -8,7 +8,7 @@ console = Console()
 
 def main():
     console.print(
-        "[✓] Gathering system info + uptime + running processes...\n", style="bold cyan"
+        "[] Gathering system info + uptime + running processes...\n", style="bold cyan"
     )
     os.system("uptime")
     os.system("top -b -n 1 | head -20")

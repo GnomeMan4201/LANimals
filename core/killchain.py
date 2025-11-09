@@ -40,7 +40,7 @@ def process_services(xml_path):
             cve_list = [
                 line.split()[1][:-1]
                 for line in vulns.splitlines()
-                if line.startswith("🔓")
+                if line.startswith("")
             ]
             exploits = {cve: fetch_exploit_urls(cve) for cve in cve_list}
         else:

@@ -19,7 +19,7 @@ def query_osv(package_name, ecosystem):
             cve = vuln.get("id", "UNKNOWN")
             summary = vuln.get("summary", "")
             details = vuln.get("details", "")
-            output += f"🔓 {cve} - {summary or details[:80]}\n"
+            output += f" {cve} - {summary or details[:80]}\n"
         return output.strip()
     except Exception as e:
         return f"[ERROR] {e}"

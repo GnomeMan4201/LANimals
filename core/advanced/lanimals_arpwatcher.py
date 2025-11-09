@@ -7,8 +7,8 @@ console = Console()
 
 
 def main():
-    console.print("[✓] ARPWatcher: Tracking ARP anomalies on LAN...\n", style="yellow")
-    console.print("[•] ARP sniffing... press Ctrl+C to stop.", style="cyan")
+    console.print("[] ARPWatcher: Tracking ARP anomalies on LAN...\n", style="yellow")
+    console.print("[] ARP sniffing... press Ctrl+C to stop.", style="cyan")
     os.system("sudo tcpdump -l -i wlan0 arp")
 
 

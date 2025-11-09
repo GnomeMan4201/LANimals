@@ -69,7 +69,7 @@ def rdap_lookup(ip):
 
 
 def main():
-    print("[bold red]\nLANimals GhostScan – Outbound Infra Detection[/bold red]\n")
+    print("[bold red]\nLANimals GhostScan  Outbound Infra Detection[/bold red]\n")
     print("[red][ SCAN ] Checking live outbound TCP connections...\n[/red]")
     found = False
     for ip in sorted(get_remote_ips()):

@@ -1,4 +1,4 @@
 import os
 
-print("[✓] ARP Neighbors:")
+print("[] ARP Neighbors:")
 os.system("ip neigh")
