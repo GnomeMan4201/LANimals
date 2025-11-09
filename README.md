@@ -3,12 +3,9 @@
   <img src="assets/logos/LANimals.png" alt="LANimals Logo" width="420"/>
 </p>
 
-<h1 align="center">LANimals: Network Awareness Toolkit</h1>
-<p align="center"><em>Control is an illusion — but visibility isn't.</em></p>
+
 
 ---
-
-## 🧠 Demonstration
 
 Here’s a sneak peek of LANimals in action:
 
@@ -19,9 +16,6 @@ Here’s a sneak peek of LANimals in action:
 > Full threat-hunting automation, real-time notifications, and local system awareness — all in one command-line hub.
 
 ---
-<p align="center">
-  <img src="docs/images/lanimals_banner.png" width="450" alt="LANimals Banner"/>
-</p>
 
 <h1 align="center">LANimals</h1>
 
