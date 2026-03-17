@@ -27,14 +27,29 @@ def _safe_load_json(path: Path) -> Any:
 
 
 def _latest_reports(limit: int = 4, max_age_days: int = 7) -> List[Path]:
+    """Return recent reports. Uses filename date (YYYY-MM-DD) to avoid mtime tricks."""
     if not REPORTS_DIR.exists():
         return []
-    import time
-    cutoff = time.time() - max_age_days * 86400
-    files = [
-        p for p in REPORTS_DIR.glob("report_*.json")
-        if p.stat().st_mtime > cutoff
-    ]
+    from datetime import datetime, timezone
+    import re
+    cutoff = datetime.now(timezone.utc).timestamp() - max_age_days * 86400
+    files = []
+    for p in REPORTS_DIR.glob("report_*.json"):
+        # Filename: report_YYYY-MM-DD_HH-MM-SS.json
+        m = re.search(r"report_(\d{4}-\d{2}-\d{2})", p.name)
+        if m:
+            try:
+                file_ts = datetime.strptime(m.group(1), "%Y-%m-%d").replace(
+                    tzinfo=timezone.utc
+                ).timestamp()
+                if file_ts >= cutoff:
+                    files.append(p)
+            except ValueError:
+                pass
+        else:
+            # No date in filename — fall back to mtime
+            if p.stat().st_mtime >= cutoff:
+                files.append(p)
     return sorted(files)[-limit:]
 
 
