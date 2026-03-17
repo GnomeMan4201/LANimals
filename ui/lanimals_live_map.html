@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LANimals Live Map</title>
+  <style>
+    :root {
+      --bg: #0b0b0d;
+      --panel: #131317;
+      --panel-2: #17171d;
+      --border: #2a2a33;
+      --text: #f3f4f6;
+      --muted: #9aa0aa;
+      --red: #d61f2c;
+      --red-2: #a6111b;
+      --red-3: #ff4455;
+      --warn: #d08700;
+      --line: #4b5563;
+      --line-dim: #2f3542;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: 64px 1fr 190px;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 280px 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border);
+      background: #0f0f13;
+    }
+
+    .brand {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      color: var(--red);
+      text-transform: uppercase;
+    }
+
+    .scope {
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.primary {
+      background: var(--red);
+      border-color: var(--red-2);
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 300px 1fr 360px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .panel.right {
+      border-right: 0;
+      border-left: 1px solid var(--border);
+    }
+
+    .panel h3 {
+      margin: 0;
+      padding: 16px 16px 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .section {
+      padding: 0 16px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding-top: 6px;
+    }
+
+    .metric {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric .value {
+      margin-top: 6px;
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .filters {
+      display: grid;
+      gap: 10px;
+      padding-top: 8px;
+    }
+
+    .filters input, .filters select {
+      width: 100%;
+      background: #0f0f13;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .reports-list, .neighbor-list, .event-list {
+      display: grid;
+      gap: 8px;
+      padding-top: 8px;
+    }
+
+    .mini-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .mini-card .title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .mini-card .sub {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      background: radial-gradient(circle at center, rgba(214,31,44,0.06), transparent 45%), #0b0b0d;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .node {
+      cursor: pointer;
+    }
+
+    .node-label {
+      font-size: 12px;
+      fill: #e5e7eb;
+      pointer-events: none;
+    }
+
+    .edge {
+      stroke: var(--line);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+
+    .edge.dim {
+      stroke: var(--line-dim);
+      opacity: 0.32;
+    }
+
+    .edge.highlight {
+      stroke: var(--red-3);
+      stroke-width: 3;
+      opacity: 1;
+    }
+
+    .edge.warning { stroke: var(--red); stroke-width: 2.2; }
+    .edge.critical { stroke: var(--red-3); stroke-width: 2.8; }
+
+    .node-normal { fill: #24242c; stroke: #555869; stroke-width: 1.5; }
+    .node-warning { fill: #2a1518; stroke: var(--red); stroke-width: 2; }
+    .node-critical { fill: #3b1116; stroke: var(--red-3); stroke-width: 2.6; }
+    .node-alert { fill: #4a1117; stroke: var(--red-3); stroke-width: 2.6; }
+    .node-subnet { fill: #191a1f; stroke: #6b7280; stroke-width: 1.6; }
+    .node-router { fill: #221417; stroke: var(--red); stroke-width: 2; }
+
+    .node-faded { opacity: 0.28; }
+    .node-selected circle { stroke: #ffffff; stroke-width: 3; }
+
+    .detail-list {
+      display: grid;
+      gap: 10px;
+      padding-top: 8px;
+    }
+
+    .detail-item {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .detail-item .k {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .detail-item .v {
+      font-size: 14px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .feed {
+      border-top: 1px solid var(--border);
+      background: #0f0f13;
+      overflow: auto;
+      padding: 10px 16px;
+    }
+
+    .feed-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .feed-head .title {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 88px 140px 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+    }
+
+    .sev {
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    .sev.info { color: var(--muted); }
+    .sev.warning { color: var(--warn); }
+    .sev.high, .sev.critical { color: var(--red-3); }
+
+    .muted { color: var(--muted); }
+
+    @media (max-width: 1200px) {
+      .main {
+        grid-template-columns: 250px 1fr 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">LANimals</div>
+    <div class="scope" id="scopeText">Live Network Map</div>
+    <div class="actions">
+      <button id="refreshBtn" class="primary">Refresh</button>
+      <button id="centerBtn">Center</button>
+      <button id="clearBtn">Clear Focus</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <aside class="panel">
+      <h3>Overview</h3>
+      <div class="section">
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="label">Nodes</div>
+            <div class="value" id="mNodes">0</div>
+          </div>
+          <div class="metric">
+            <div class="label">Edges</div>
+            <div class="value" id="mEdges">0</div>
+          </div>
+          <div class="metric">
+            <div class="label">Hosts</div>
+            <div class="value" id="mHosts">0</div>
+          </div>
+          <div class="metric">
+            <div class="label">Alerts</div>
+            <div class="value" id="mAlerts">0</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Filters</h3>
+      <div class="section">
+        <div class="filters">
+          <input id="searchInput" type="text" placeholder="Search nodes" />
+          <select id="typeFilter">
+            <option value="">All types</option>
+            <option value="host">Host</option>
+            <option value="router">Router</option>
+            <option value="subnet">Subnet</option>
+            <option value="service">Service</option>
+            <option value="interface">Interface</option>
+            <option value="alert">Alert</option>
+          </select>
+          <select id="riskFilter">
+            <option value="">All risk</option>
+            <option value="high">High risk (70+)</option>
+            <option value="medium">Medium risk (30+)</option>
+            <option value="low">Low risk</option>
+          </select>
+        </div>
+      </div>
+
+      <h3>Recent Reports</h3>
+      <div class="section">
+        <div class="reports-list" id="reportsList">
+          <div class="mini-card">
+            <div class="sub">Loading reports…</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="canvas-wrap">
+      <svg id="graph"></svg>
+    </main>
+
+    <aside class="panel right">
+      <h3>Node Details</h3>
+      <div class="section">
+        <div class="detail-list" id="detailList">
+          <div class="detail-item">
+            <div class="k">Status</div>
+            <div class="v muted">Select a node to inspect it.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Neighbors</h3>
+      <div class="section">
+        <div class="neighbor-list" id="neighborList">
+          <div class="mini-card">
+            <div class="sub">No node selected.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Node Events</h3>
+      <div class="section">
+        <div class="event-list" id="nodeEventList">
+          <div class="mini-card">
+            <div class="sub">No node selected.</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="feed">
+    <div class="feed-head">
+      <div class="title">Event Feed</div>
+      <div class="muted" id="generatedAt">--</div>
+    </div>
+    <div id="feedList"></div>
+  </div>
+
+  <script>
+    const svg = document.getElementById("graph");
+    const NS = "http://www.w3.org/2000/svg";
+
+    let snapshot = null;
+    let selectedNode = null;
+    let selectedNodeContext = null;
+    let panX = 0;
+    let panY = 0;
+    let scale = 1;
+
+    function byId(id) { return document.getElementById(id); }
+
+    async function fetchGraph() {
+      const res = await fetch("/api/graph");
+      snapshot = await res.json();
+      renderStats(snapshot.stats || {});
+      renderFeed(snapshot.events || []);
+      renderGraph();
+      byId("scopeText").textContent = snapshot.subtitle || "Live Network Map";
+      byId("generatedAt").textContent = "Generated " + (snapshot.generated_at || "--");
+    }
+
+    async function fetchReports() {
+      const res = await fetch("/api/reports");
+      const data = await res.json();
+      renderReports(data.reports || []);
+    }
+
+    async function fetchNode(nodeId) {
+      const res = await fetch(`/api/node/${encodeURIComponent(nodeId)}`);
+      if (!res.ok) return;
+      selectedNodeContext = await res.json();
+      renderDetails(selectedNodeContext.node);
+      renderNeighbors(selectedNodeContext.neighbors || []);
+      renderNodeEvents(selectedNodeContext.events || []);
+      renderGraph();
+    }
+
+    function renderStats(stats) {
+      byId("mNodes").textContent = stats.total_nodes ?? 0;
+      byId("mEdges").textContent = stats.total_edges ?? 0;
+      byId("mHosts").textContent = stats.hosts ?? 0;
+      byId("mAlerts").textContent = stats.alerts ?? 0;
+    }
+
+    function renderReports(reports) {
+      const wrap = byId("reportsList");
+      wrap.innerHTML = "";
+      if (!reports.length) {
+        wrap.innerHTML = `<div class="mini-card"><div class="sub">No reports found.</div></div>`;
+        return;
+      }
+
+      reports.slice(0, 8).forEach(r => {
+        const item = document.createElement("div");
+        item.className = "mini-card";
+        item.innerHTML = `
+          <div class="title">${escapeHtml(r.name)}</div>
+          <div class="sub">Size: ${escapeHtml(String(r.size))} bytes</div>
+        `;
+        wrap.appendChild(item);
+      });
+    }
+
+    function renderFeed(events) {
+      const wrap = byId("feedList");
+      wrap.innerHTML = "";
+      events.forEach(evt => {
+        const row = document.createElement("div");
+        row.className = "event";
+        row.innerHTML = `
+          <div class="sev ${evt.severity}">${evt.severity}</div>
+          <div class="muted">${evt.ts}</div>
+          <div>
+            <div><strong>${escapeHtml(evt.title)}</strong></div>
+            <div class="muted">${escapeHtml(evt.summary)}</div>
+          </div>
+        `;
+        wrap.appendChild(row);
+      });
+    }
+
+    function renderNeighbors(neighbors) {
+      const wrap = byId("neighborList");
+      wrap.innerHTML = "";
+      if (!neighbors.length) {
+        wrap.innerHTML = `<div class="mini-card"><div class="sub">No neighbors.</div></div>`;
+        return;
+      }
+      neighbors.forEach(n => {
+        const item = document.createElement("div");
+        item.className = "mini-card";
+        item.innerHTML = `
+          <div class="title">${escapeHtml(n.label)}</div>
+          <div class="sub">${escapeHtml(n.node_type)} • risk ${escapeHtml(String(n.risk_score ?? 0))}</div>
+        `;
+        item.addEventListener("click", () => {
+          selectedNode = n;
+          fetchNode(n.id);
+        });
+        wrap.appendChild(item);
+      });
+    }
+
+    function renderNodeEvents(events) {
+      const wrap = byId("nodeEventList");
+      wrap.innerHTML = "";
+      if (!events.length) {
+        wrap.innerHTML = `<div class="mini-card"><div class="sub">No events for this node.</div></div>`;
+        return;
+      }
+      events.forEach(evt => {
+        const item = document.createElement("div");
+        item.className = "mini-card";
+        item.innerHTML = `
+          <div class="title">${escapeHtml(evt.title)}</div>
+          <div class="sub">${escapeHtml(evt.ts)}</div>
+          <div class="sub">${escapeHtml(evt.summary)}</div>
+        `;
+        wrap.appendChild(item);
+      });
+    }
+
+    function getFilteredNodes(nodes) {
+      const q = byId("searchInput").value.trim().toLowerCase();
+      const typeVal = byId("typeFilter").value;
+      const riskVal = byId("riskFilter").value;
+
+      return nodes.filter(n => {
+        if (q) {
+          const hay = `${n.label} ${n.id} ${n.ip || ""} ${n.hostname || ""}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        if (typeVal && n.node_type !== typeVal) return false;
+        if (riskVal === "high" && (n.risk_score || 0) < 70) return false;
+        if (riskVal === "medium" && (n.risk_score || 0) < 30) return false;
+        if (riskVal === "low" && (n.risk_score || 0) >= 30) return false;
+        return true;
+      });
+    }
+
+    function renderGraph() {
+      svg.innerHTML = "";
+
+      const width = svg.clientWidth || 1000;
+      const height = svg.clientHeight || 700;
+
+      const allNodes = snapshot?.nodes || [];
+      const visibleNodes = getFilteredNodes(allNodes);
+      const visibleIds = new Set(visibleNodes.map(n => n.id));
+      const edges = (snapshot?.edges || []).filter(e => visibleIds.has(e.source) && visibleIds.has(e.target));
+
+      const nodes = visibleNodes.map((node, i) => {
+        const angle = (Math.PI * 2 * i) / Math.max(visibleNodes.length, 1);
+        const ring = 180 + (i % 5) * 38;
+        const x = width / 2 + Math.cos(angle) * ring;
+        const y = height / 2 + Math.sin(angle) * ring;
+        return { ...node, x, y };
+      });
+
+      const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+      let neighborIds = new Set();
+      if (selectedNodeContext?.neighbors) {
+        neighborIds = new Set(selectedNodeContext.neighbors.map(n => n.id));
+      }
+
+      const g = document.createElementNS(NS, "g");
+      g.setAttribute("transform", `translate(${panX},${panY}) scale(${scale})`);
+      svg.appendChild(g);
+
+      edges.forEach(edge => {
+        const s = nodeMap.get(edge.source);
+        const t = nodeMap.get(edge.target);
+        if (!s || !t) return;
+
+        const line = document.createElementNS(NS, "line");
+        line.setAttribute("x1", s.x);
+        line.setAttribute("y1", s.y);
+        line.setAttribute("x2", t.x);
+        line.setAttribute("y2", t.y);
+
+        let cls = `edge ${edge.status || "normal"}`;
+        if (selectedNode) {
+          const touchesSelected = edge.source === selectedNode.id || edge.target === selectedNode.id;
+          cls = touchesSelected ? `${cls} highlight` : `${cls} dim`;
+        }
+        line.setAttribute("class", cls.trim());
+        g.appendChild(line);
+      });
+
+      nodes.forEach(node => {
+        const group = document.createElementNS(NS, "g");
+        let cls = "node";
+
+        if (selectedNode) {
+          const related = node.id === selectedNode.id || neighborIds.has(node.id);
+          if (!related) cls += " node-faded";
+          if (node.id === selectedNode.id) cls += " node-selected";
+        }
+
+        group.setAttribute("class", cls);
+        group.setAttribute("transform", `translate(${node.x},${node.y})`);
+        group.addEventListener("click", () => {
+          selectedNode = node;
+          fetchNode(node.id);
+        });
+
+        const circle = document.createElementNS(NS, "circle");
+        circle.setAttribute("r", radiusFor(node));
+        circle.setAttribute("class", nodeClassFor(node));
+        group.appendChild(circle);
+
+        const text = document.createElementNS(NS, "text");
+        text.setAttribute("x", 0);
+        text.setAttribute("y", radiusFor(node) + 16);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("class", "node-label");
+        text.textContent = node.label;
+        group.appendChild(text);
+
+        g.appendChild(group);
+      });
+    }
+
+    function radiusFor(node) {
+      if (node.node_type === "subnet") return 26;
+      if (node.node_type === "router") return 20;
+      if (node.node_type === "alert") return 16;
+      if (node.node_type === "service") return 12;
+      return 15;
+    }
+
+    function nodeClassFor(node) {
+      if (node.node_type === "alert") return "node-alert";
+      if (node.node_type === "subnet") return "node-subnet";
+      if (node.node_type === "router") return "node-router";
+      if (node.status === "critical") return "node-critical";
+      if (node.status === "warning") return "node-warning";
+      return "node-normal";
+    }
+
+    function renderDetails(node) {
+      const wrap = byId("detailList");
+      const metaHtml = Object.entries(node.meta || {}).map(([k, v]) => `
+        <div class="detail-item">
+          <div class="k">${escapeHtml(k)}</div>
+          <div class="v">${escapeHtml(typeof v === "string" ? v : JSON.stringify(v))}</div>
+        </div>
+      `).join("");
+
+      wrap.innerHTML = `
+        <div class="detail-item">
+          <div class="k">Label</div>
+          <div class="v">${escapeHtml(node.label || "")}</div>
+        </div>
+        <div class="detail-item">
+          <div class="k">Type</div>
+          <div class="v">${escapeHtml(node.node_type || "")}</div>
+        </div>
+        <div class="detail-item">
+          <div class="k">Status</div>
+          <div class="v">${escapeHtml(node.status || "")}</div>
+        </div>
+        <div class="detail-item">
+          <div class="k">Risk</div>
+          <div class="v">${escapeHtml(String(node.risk_score ?? 0))}</div>
+        </div>
+        <div class="detail-item">
+          <div class="k">IP</div>
+          <div class="v">${escapeHtml(node.ip || "--")}</div>
+        </div>
+        <div class="detail-item">
+          <div class="k">Hostname</div>
+          <div class="v">${escapeHtml(node.hostname || "--")}</div>
+        </div>
+        <div class="detail-item">
+          <div class="k">Group</div>
+          <div class="v">${escapeHtml(node.group || "--")}</div>
+        </div>
+        ${metaHtml}
+      `;
+    }
+
+    function clearSelection() {
+      selectedNode = null;
+      selectedNodeContext = null;
+      byId("detailList").innerHTML = `
+        <div class="detail-item">
+          <div class="k">Status</div>
+          <div class="v muted">Select a node to inspect it.</div>
+        </div>
+      `;
+      byId("neighborList").innerHTML = `<div class="mini-card"><div class="sub">No node selected.</div></div>`;
+      byId("nodeEventList").innerHTML = `<div class="mini-card"><div class="sub">No node selected.</div></div>`;
+      renderGraph();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    byId("refreshBtn").addEventListener("click", fetchGraph);
+    byId("centerBtn").addEventListener("click", () => {
+      panX = 0;
+      panY = 0;
+      scale = 1;
+      renderGraph();
+    });
+    byId("clearBtn").addEventListener("click", clearSelection);
+    byId("searchInput").addEventListener("input", renderGraph);
+    byId("typeFilter").addEventListener("change", renderGraph);
+    byId("riskFilter").addEventListener("change", renderGraph);
+
+    svg.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1.08 : 0.92;
+      scale = Math.max(0.45, Math.min(2.8, scale * delta));
+      renderGraph();
+    });
+
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    svg.addEventListener("mousedown", (e) => {
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      panX += e.clientX - lastX;
+      panY += e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      renderGraph();
+    });
+
+    window.addEventListener("mouseup", () => {
+      dragging = false;
+    });
+
+    fetchGraph();
+    fetchReports();
+    setInterval(fetchGraph, 15000);
+    setInterval(fetchReports, 30000);
+  </script>
+</body>
+</html>
