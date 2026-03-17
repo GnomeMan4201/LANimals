@@ -319,6 +319,7 @@
     <div class="scope" id="scopeText">Live Network Map</div>
     <div class="actions">
       <button id="refreshBtn" class="primary">Refresh</button>
+      <button id="scanBtn">Run Scan</button>
       <button id="centerBtn">Center</button>
       <button id="clearBtn">Clear Focus</button>
     </div>
@@ -452,6 +453,23 @@
       renderReports(data.reports || []);
     }
 
+    async function runScan() {
+      const btn = byId("scanBtn");
+      const prev = btn.textContent;
+      btn.textContent = "Scanning...";
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/scan/ping", { method: "POST" });
+        const data = await res.json();
+        console.log("scan result", data);
+        await fetchGraph();
+        await fetchReports();
+      } finally {
+        btn.textContent = prev;
+        btn.disabled = false;
+      }
+    }
+
     async function fetchNode(nodeId) {
       const res = await fetch(`/api/node/${encodeURIComponent(nodeId)}`);
       if (!res.ok) return;
@@ -576,13 +594,58 @@
       const visibleIds = new Set(visibleNodes.map(n => n.id));
       const edges = (snapshot?.edges || []).filter(e => visibleIds.has(e.source) && visibleIds.has(e.target));
 
-      const nodes = visibleNodes.map((node, i) => {
-        const angle = (Math.PI * 2 * i) / Math.max(visibleNodes.length, 1);
-        const ring = 180 + (i % 5) * 38;
-        const x = width / 2 + Math.cos(angle) * ring;
-        const y = height / 2 + Math.sin(angle) * ring;
-        return { ...node, x, y };
+      const subnetNodes = visibleNodes.filter(n => n.node_type === "subnet");
+      const nonSubnetNodes = visibleNodes.filter(n => n.node_type !== "subnet");
+
+      const subnetPositions = new Map();
+      const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(subnetNodes.length, 1))));
+      const xGap = Math.max(260, width / (cols + 1));
+      const rowCount = Math.max(1, Math.ceil(subnetNodes.length / cols));
+      const yGap = Math.max(180, height / (rowCount + 1));
+
+      subnetNodes.forEach((node, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = xGap * (col + 1);
+        const y = yGap * (row + 1);
+        subnetPositions.set(node.id, { x, y });
       });
+
+      const bucketMap = new Map();
+      nonSubnetNodes.forEach(node => {
+        const subnetId = node.group ? `subnet:${node.group}` : "subnet:unknown";
+        if (!bucketMap.has(subnetId)) bucketMap.set(subnetId, []);
+        bucketMap.get(subnetId).push(node);
+      });
+
+      const nodes = [];
+
+      subnetNodes.forEach(node => {
+        const pos = subnetPositions.get(node.id) || { x: width / 2, y: height / 2 };
+        nodes.push({ ...node, x: pos.x, y: pos.y });
+      });
+
+      for (const [subnetId, items] of bucketMap.entries()) {
+        const center = subnetPositions.get(subnetId) || { x: width / 2, y: height / 2 };
+        const interfaces = items.filter(n => n.node_type === "interface");
+        const others = items.filter(n => n.node_type !== "interface");
+
+        interfaces.forEach((node, i) => {
+          const angle = (-Math.PI / 2) + (i * 0.8);
+          const ring = 90;
+          const x = center.x + Math.cos(angle) * ring;
+          const y = center.y + Math.sin(angle) * ring;
+          nodes.push({ ...node, x, y });
+        });
+
+        others.forEach((node, i) => {
+          const angle = (Math.PI * 2 * i) / Math.max(others.length, 1);
+          const ring = 150 + (i % 2) * 28;
+          const x = center.x + Math.cos(angle) * ring;
+          const y = center.y + Math.sin(angle) * ring;
+          nodes.push({ ...node, x, y });
+        });
+      }
 
       const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
@@ -732,6 +795,7 @@
     }
 
     byId("refreshBtn").addEventListener("click", fetchGraph);
+    byId("scanBtn").addEventListener("click", runScan);
     byId("centerBtn").addEventListener("click", () => {
       panX = 0;
       panY = 0;

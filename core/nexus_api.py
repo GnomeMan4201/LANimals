@@ -5,12 +5,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
 from core.nexus_builder import build_snapshot
+from core.nexus_collectors import collect_all
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_FILE = ROOT / "ui" / "lanimals_live_map.html"
 REPORTS_DIR = ROOT / "reports"
 
-app = FastAPI(title="LANimals Live Map", version="0.2.0")
+app = FastAPI(title="LANimals Live Map", version="0.3.0")
 
 
 @app.get("/api/graph")
@@ -27,10 +28,7 @@ def get_node(node_id: str):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    related_edges = [
-        e for e in snapshot.edges
-        if e.source == node_id or e.target == node_id
-    ]
+    related_edges = [e for e in snapshot.edges if e.source == node_id or e.target == node_id]
 
     neighbor_ids = set()
     for e in related_edges:
@@ -62,6 +60,26 @@ def get_reports():
                 "modified": stat.st_mtime,
             })
     return {"reports": files[:20]}
+
+
+@app.post("/api/scan/ping")
+def run_ping_scan():
+    data = collect_all(cidr="192.168.0.0/24")
+    return {
+        "ok": True,
+        "message": "Collector refresh complete",
+        "counts": {
+            "arp_neighbors": len(data.get("arp_neighbors", [])),
+            "local_interfaces": len(data.get("local_interfaces", [])),
+            "nmap_hosts": len(data.get("nmap_hosts", [])),
+            "service_scan": len(data.get("service_scan", [])),
+        },
+        "targets": sorted({row.get("ip") for row in (
+            data.get("arp_neighbors", []) +
+            data.get("local_interfaces", []) +
+            data.get("nmap_hosts", [])
+        ) if row.get("ip")}),
+    }
 
 
 @app.get("/api/health")

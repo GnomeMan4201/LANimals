@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Tuple
 
 from core.nexus_collectors import collect_all
 from core.nexus_models import GraphEdge, GraphEvent, GraphNode, GraphSnapshot
+from core.nexus_state import load_state, save_state
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -275,6 +276,8 @@ def _normalize_collector_data(data: Dict[str, Any]) -> Tuple[List[GraphNode], Li
     all_hosts.extend(data.get("local_interfaces", []))
     all_hosts.extend(data.get("nmap_hosts", []))
 
+    service_rows = data.get("service_scan", [])
+
     for item in all_hosts:
         ip = item.get("ip")
         if not ip:
@@ -353,7 +356,136 @@ def _normalize_collector_data(data: Dict[str, Any]) -> Tuple[List[GraphNode], Li
                 ),
             )
 
+    for svc in service_rows:
+        ip = svc.get("ip")
+        port = str(svc.get("port") or "")
+        if not ip or not port:
+            continue
+
+        group = _host_group_from_ip(ip)
+        host_id = f"host:{ip}"
+        svc_name = svc.get("service_name") or "service"
+        product = svc.get("product") or ""
+        version = svc.get("version") or ""
+        protocol = svc.get("protocol") or "tcp"
+
+        label = f"{svc_name}:{port}"
+        svc_id = f"service:{ip}:{protocol}:{port}"
+
+        _add_node(
+            nodes,
+            GraphNode(
+                id=svc_id,
+                node_type="service",
+                label=label,
+                status="normal",
+                risk_score=20,
+                group=group,
+                meta={
+                    "port": port,
+                    "protocol": protocol,
+                    "service_name": svc_name,
+                    "product": product,
+                    "version": version,
+                    "source": "nmap_service",
+                },
+            ),
+        )
+
+        if host_id in nodes:
+            _add_edge(
+                edges,
+                GraphEdge(
+                    id=_edge_id(host_id, svc_id, "offers_service"),
+                    source=host_id,
+                    target=svc_id,
+                    edge_type="offers_service",
+                    status="normal",
+                ),
+            )
+
     return list(nodes.values()), list(edges.values()), events
+
+
+def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
+    now = _now()
+    current_hosts = {}
+
+    for node in nodes.values():
+        if node.node_type == "host" and node.ip:
+            current_hosts[node.ip] = {
+                "label": node.label,
+                "status": node.status,
+                "risk_score": node.risk_score,
+                "group": node.group,
+            }
+
+    prev = load_state()
+    prev_hosts = prev.get("hosts", {})
+
+    events: List[GraphEvent] = []
+
+    current_ips = set(current_hosts.keys())
+    prev_ips = set(prev_hosts.keys())
+
+    for ip in sorted(current_ips - prev_ips):
+        info = current_hosts[ip]
+        events.append(
+            GraphEvent(
+                id=f"evt:new:{ip}:{now}",
+                ts=now,
+                severity="info",
+                title="New Host Observed",
+                summary=f'{info["label"]} appeared on {info["group"]}.',
+                node_id=f"host:{ip}",
+            )
+        )
+
+    for ip in sorted(prev_ips - current_ips):
+        info = prev_hosts[ip]
+        events.append(
+            GraphEvent(
+                id=f"evt:gone:{ip}:{now}",
+                ts=now,
+                severity="warning",
+                title="Host Missing",
+                summary=f'{info["label"]} is no longer present in the latest scan state.',
+                node_id=f"host:{ip}",
+            )
+        )
+
+    for ip in sorted(current_ips & prev_ips):
+        cur = current_hosts[ip]
+        old = prev_hosts[ip]
+
+        if cur["status"] != old.get("status"):
+            sev = "warning" if cur["status"] == "warning" else "info"
+            events.append(
+                GraphEvent(
+                    id=f"evt:status:{ip}:{now}",
+                    ts=now,
+                    severity=sev,
+                    title="Host Status Changed",
+                    summary=f'{cur["label"]} changed from {old.get("status")} to {cur["status"]}.',
+                    node_id=f"host:{ip}",
+                )
+            )
+
+        if cur["risk_score"] != old.get("risk_score"):
+            sev = "warning" if cur["risk_score"] > old.get("risk_score", 0) else "info"
+            events.append(
+                GraphEvent(
+                    id=f"evt:risk:{ip}:{now}",
+                    ts=now,
+                    severity=sev,
+                    title="Host Risk Changed",
+                    summary=f'{cur["label"]} risk changed from {old.get("risk_score")} to {cur["risk_score"]}.',
+                    node_id=f"host:{ip}",
+                )
+            )
+
+    save_state({"hosts": current_hosts, "saved_at": now})
+    return events
 
 
 def build_snapshot() -> GraphSnapshot:
@@ -373,7 +505,7 @@ def build_snapshot() -> GraphSnapshot:
             _add_edge(all_edges, edge)
         all_events.extend(events)
 
-    collector_data = collect_all(cidr="192.168.1.0/24")
+    collector_data = collect_all(cidr="192.168.0.0/24")
     c_nodes, c_edges, c_events = _normalize_collector_data(collector_data)
 
     for node in c_nodes:
@@ -420,6 +552,8 @@ def build_snapshot() -> GraphSnapshot:
             ]
         )
 
+    all_events.extend(_generate_state_events(all_nodes))
+
     stats = {
         "total_nodes": len(all_nodes),
         "total_edges": len(all_edges),
@@ -435,6 +569,6 @@ def build_snapshot() -> GraphSnapshot:
         generated_at=_now(),
         nodes=list(all_nodes.values()),
         edges=list(all_edges.values()),
-        events=sorted(all_events, key=lambda e: e.ts, reverse=True)[:30],
+        events=sorted(all_events, key=lambda e: e.ts, reverse=True)[:50],
         stats=stats,
     )
