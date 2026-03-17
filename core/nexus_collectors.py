@@ -88,6 +88,17 @@ def _is_virtual_ip(ip: str) -> bool:
     return any(ip.startswith(p) for p in _VIRTUAL_IP_PREFIXES)
 
 
+def _get_iface_mac(iface: str) -> str | None:
+    """Read MAC address for an interface from /sys/class/net."""
+    try:
+        mac = Path(f"/sys/class/net/{iface}/address").read_text().strip()
+        if mac and mac != "00:00:00:00:00:00":
+            return mac.upper()
+    except Exception:
+        pass
+    return None
+
+
 def collect_local_interfaces() -> List[Dict[str, Any]]:
     try:
         import psutil
@@ -104,10 +115,11 @@ def collect_local_interfaces() -> List[Dict[str, Any]]:
             if fam == "AF_INET" and not ip.startswith("127.") and not _is_virtual_ip(ip):
                 if ip not in seen_ips:
                     seen_ips.add(ip)
+                    mac = _get_iface_mac(iface)
                     rows.append({
                         "ip": ip,
                         "hostname": socket.gethostname(),
-                        "mac": None,
+                        "mac": mac,
                         "interface": iface,
                         "state": "LOCAL",
                         "source": "local_interface",
