@@ -55,3 +55,13 @@ Thumbs.db
 LANimals_github_backup/
 backup_*/
 build/
+
+# Runtime state — do not commit
+tmp/nexus_discovery_cache.json
+tmp/nexus_state.json
+tmp/nexus_services.json
+tmp/*.xml
+__pycache__/
+*.pyc
+.venv/
+tmp/lanimals.db
