@@ -60,9 +60,10 @@ def collect_arp_neighbors() -> List[Dict[str, Any]]:
             idx = parts.index("dev")
             if idx + 1 < len(parts):
                 dev = parts[idx + 1]
+        hostname = _resolve(ip)
         rows.append({
             "ip": ip,
-            "hostname": _resolve(ip),
+            "hostname": hostname if hostname != ip else ip,
             "mac": mac,
             "interface": dev,
             "state": state,
