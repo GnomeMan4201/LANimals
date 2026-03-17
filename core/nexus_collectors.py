@@ -34,18 +34,46 @@ def _is_virtual_ip(ip: str) -> bool:
 
 # ── OUI vendor lookup ─────────────────────────────────────────────────────────
 _OUI_TABLE: dict[str, str] = {
-    "C0C522": "TP-Link",      "C0C5C0": "TP-Link",      "C83A35": "TP-Link",
-    "6C6A77": "Intel",        "8086F2": "Intel",         "A4C3F0": "Intel",
-    "B827EB": "Raspberry Pi", "DCA632": "Raspberry Pi",  "E45F01": "Raspberry Pi",
-    "ACDE48": "Apple",        "F0DEF1": "Apple",         "A8BB50": "Apple",
-    "606BBD": "Apple",        "3C2EFF": "Apple",         "784F43": "Apple",
-    "001A11": "Google",       "F4F5E8": "Google",
-    "000C29": "VMware",       "005056": "VMware",
-    "080027": "VirtualBox",
-    "D8BB2C": "Netgear",      "20E52A": "Netgear",       "A40CCB": "Netgear",
-    "C80CC8": "Cisco",        "0026CB": "Cisco",         "70105C": "Cisco",
-    "18D6C7": "Cisco",        "F872EA": "Cisco",
-    "000000": "Xerox",        "00005E": "IANA",
+    # TP-Link
+    "C0C522":"TP-Link","C0C5C0":"TP-Link","C83A35":"TP-Link","1C61B4":"TP-Link",
+    "5054FF":"TP-Link","788CB5":"TP-Link","B0487A":"TP-Link","2C4D54":"TP-Link",
+    # Intel
+    "6C6A77":"Intel","8086F2":"Intel","A4C3F0":"Intel","8C8D28":"Intel",
+    "A0C589":"Intel","8C70D4":"Intel","B88D12":"Intel",
+    # Apple
+    "ACDE48":"Apple","F0DEF1":"Apple","A8BB50":"Apple","606BBD":"Apple",
+    "3C2EFF":"Apple","784F43":"Apple","98FEE8":"Apple","3C15C2":"Apple",
+    "A8B5E4":"Apple","A8B57C":"Apple",
+    # Samsung
+    "A8B57C":"Samsung","A4C2C6":"Samsung","B8C68E":"Samsung","6CBB14":"Samsung",
+    "F49F54":"Samsung","68F63B":"Samsung",
+    # Raspberry Pi
+    "B827EB":"Raspberry Pi","DCA632":"Raspberry Pi","E45F01":"Raspberry Pi",
+    # Google
+    "001A11":"Google","F4F5E8":"Google","3C5AB4":"Google",
+    # VMware / VirtualBox
+    "000C29":"VMware","005056":"VMware","080027":"VirtualBox",
+    # Cisco
+    "C80CC8":"Cisco","0026CB":"Cisco","70105C":"Cisco","18D6C7":"Cisco",
+    "F872EA":"Cisco","001143":"Cisco","0013C4":"Cisco","001B2B":"Cisco",
+    # Netgear
+    "D8BB2C":"Netgear","20E52A":"Netgear","A40CCB":"Netgear","9C3DCF":"Netgear",
+    # Arris / CommScope
+    "0000CA":"Arris","001A2A":"Arris","34A84E":"Arris","4C09D4":"Arris",
+    # ASUSTek
+    "1C872C":"ASUS","10BF48":"ASUS","50465D":"ASUS","AC220B":"ASUS",
+    # Ubiquiti
+    "687F74":"Ubiquiti","788A20":"Ubiquiti","DCEF09":"Ubiquiti","E063DA":"Ubiquiti",
+    # Xiaomi
+    "F8A45F":"Xiaomi","286C07":"Xiaomi","64B473":"Xiaomi",
+    # Huawei
+    "001E10":"Huawei","001E67":"Huawei","286ED4":"Huawei","48DB50":"Huawei",
+    # Dell
+    "848598":"Dell","F8DB88":"Dell","14187E":"Dell","BCEE7B":"Dell",
+    # HP
+    "001708":"HP","0022F3":"HP","30E171":"HP","9CB6D0":"HP",
+    # Misc
+    "1ADE E8":"Unknown","000000":"Xerox","00005E":"IANA",
 }
 
 

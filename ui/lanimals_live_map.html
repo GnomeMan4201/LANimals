@@ -13,23 +13,14 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;overflow:hidden;}
-body{display:grid;grid-template-rows:48px 1fr 200px;grid-template-columns:1fr;}
-
-/* TOP BAR */
-.topbar{
-  display:grid;grid-template-columns:auto 1fr auto;align-items:center;
-  gap:16px;padding:0 16px;
-  border-bottom:1px solid var(--border);background:#0d0d11;z-index:10;
-}
+body{display:grid;grid-template-rows:48px 1fr 200px;}
+.topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--border);background:#0d0d11;z-index:10;}
 .brand{font-size:20px;font-weight:900;letter-spacing:.04em;user-select:none;white-space:nowrap;}
 .brand span.LA{color:var(--red);}
 .brand span.Nimals{color:var(--text);}
 .topbar-center{display:flex;align-items:center;gap:10px;min-width:0;}
 .scope-label{color:var(--muted);font-size:10px;white-space:nowrap;}
-#cidrInput{
-  background:#0b0b0d;color:var(--text);border:1px solid var(--border);
-  border-radius:5px;padding:4px 9px;width:150px;font-family:var(--font);font-size:12px;
-}
+#cidrInput{background:#0b0b0d;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 9px;width:150px;font-family:var(--font);font-size:12px;}
 #cidrInput:focus{outline:none;border-color:var(--red);}
 .topbar-right{display:flex;gap:6px;align-items:center;}
 .status-pip{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;}
@@ -37,53 +28,28 @@ body{display:grid;grid-template-rows:48px 1fr 200px;grid-template-columns:1fr;}
 .status-pip.error{background:var(--red3);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 #statusLabel{color:var(--muted);font-size:10px;}
-
-/* MAIN GRID */
 .main{display:grid;grid-template-columns:240px 1fr 340px;min-height:0;overflow:hidden;}
-
-/* ── LEFT RAIL ── */
-.rail{
-  background:var(--panel);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;min-height:0;overflow-y:auto;
-  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
-}
+.rail{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .rail-section{border-bottom:1px solid var(--border);padding:10px 12px;}
 .rail-section.collapsed .rail-body{display:none;}
-.rail-hdr{
-  display:flex;align-items:center;justify-content:space-between;
-  cursor:pointer;user-select:none;margin-bottom:8px;
-}
-.rail-hdr h4{
-  font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
-}
+.rail-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:8px;}
+.rail-hdr h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
 .rail-hdr .toggle{font-size:10px;color:var(--muted);}
 .rail-section.collapsed .rail-hdr{margin-bottom:0;}
-
-.op-btn{
-  display:flex;align-items:center;gap:7px;width:100%;
-  background:var(--panel2);border:1px solid var(--border);border-radius:5px;
-  color:var(--text);padding:7px 9px;cursor:pointer;font-family:var(--font);
-  font-size:11px;font-weight:600;margin-bottom:5px;transition:border-color .12s,background .12s;
-  text-align:left;
-}
+.op-btn{display:flex;align-items:center;gap:7px;width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:7px 9px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:600;margin-bottom:5px;transition:border-color .12s,background .12s;text-align:left;}
 .op-btn:last-child{margin-bottom:0;}
 .op-btn:hover{border-color:var(--red);}
 .op-btn:disabled{opacity:.35;cursor:not-allowed;}
-.op-btn:disabled:hover{border-color:var(--border);}
 .op-btn.primary{background:rgba(214,31,44,.14);border-color:var(--red2);}
 .op-btn.primary:hover{background:rgba(214,31,44,.24);}
 .op-btn.active{border-color:var(--info);background:rgba(59,126,207,.1);}
 .op-btn .icon{font-size:13px;flex-shrink:0;width:16px;text-align:center;}
 .op-btn .lbl{flex:1;}
-.op-btn .badge{
-  font-size:9px;background:var(--border);border-radius:3px;
-  padding:1px 4px;color:var(--muted);
-}
+.op-btn .badge{font-size:9px;background:var(--border);border-radius:3px;padding:1px 4px;color:var(--muted);}
 .op-btn .badge.warn{background:rgba(201,123,0,.2);color:var(--warn);}
 .op-btn .badge.ok{background:rgba(42,157,78,.2);color:var(--ok);}
 .op-btn .badge.run{background:rgba(59,126,207,.2);color:var(--info);}
 .op-btn .badge.err{background:rgba(214,31,44,.2);color:var(--red3);}
-
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
 .stat{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:7px 9px;}
 .stat .sv{font-size:18px;font-weight:800;line-height:1;}
@@ -91,47 +57,17 @@ body{display:grid;grid-template-rows:48px 1fr 200px;grid-template-columns:1fr;}
 .stat .sv.red{color:var(--red3);}
 .stat .sv.warn{color:var(--warn);}
 .stat .sv.ok{color:var(--ok);}
-
-/* ── GRAPH ── */
-.canvas-wrap{
-  position:relative;
-  background:radial-gradient(ellipse at center,rgba(214,31,44,.035),transparent 65%),var(--bg);
-  min-height:0;overflow:hidden;
-}
+.canvas-wrap{position:relative;background:radial-gradient(ellipse at center,rgba(214,31,44,.035),transparent 65%),var(--bg);min-height:0;overflow:hidden;}
 canvas#graphCanvas{width:100%;height:100%;display:block;}
-.graph-tools{
-  position:absolute;bottom:10px;right:10px;
-  display:flex;gap:5px;
-}
-.gt-btn{
-  background:rgba(17,17,21,.88);border:1px solid var(--border);
-  border-radius:5px;color:var(--muted);padding:5px 9px;cursor:pointer;
-  font-family:var(--font);font-size:11px;backdrop-filter:blur(4px);
-}
+.graph-tools{position:absolute;bottom:10px;right:10px;display:flex;gap:5px;}
+.gt-btn{background:rgba(17,17,21,.88);border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:5px 9px;cursor:pointer;font-family:var(--font);font-size:11px;backdrop-filter:blur(4px);}
 .gt-btn:hover{border-color:var(--red);color:var(--text);}
-.graph-search{
-  position:absolute;top:10px;left:10px;
-  display:flex;gap:5px;
-}
-.graph-search input,.graph-search select{
-  background:rgba(17,17,21,.9);color:var(--text);border:1px solid var(--border);
-  border-radius:5px;padding:5px 9px;font-family:var(--font);font-size:11px;
-  backdrop-filter:blur(4px);
-}
+.graph-search{position:absolute;top:10px;left:10px;display:flex;gap:5px;}
+.graph-search input,.graph-search select{background:rgba(17,17,21,.9);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-family:var(--font);font-size:11px;backdrop-filter:blur(4px);}
 .graph-search input{width:140px;}
 .graph-search input:focus,.graph-search select:focus{outline:none;border-color:var(--red);}
-.graph-search select{background:rgba(17,17,21,.9);}
-
-/* ── RIGHT PANEL ── */
-.detail-panel{
-  background:var(--panel);border-left:1px solid var(--border);
-  display:flex;flex-direction:column;min-height:0;
-}
-.dp-hdr{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:10px 12px 8px;border-bottom:1px solid var(--border);
-  position:sticky;top:0;background:var(--panel);z-index:1;flex-shrink:0;
-}
+.detail-panel{background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;}
+.dp-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--panel);z-index:1;flex-shrink:0;}
 .dp-hdr h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
 .dp-hdr-actions{display:flex;gap:4px;}
 .dp-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
@@ -150,11 +86,7 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .svc-table th{color:var(--muted);font-weight:600;text-align:left;padding:2px 3px;border-bottom:1px solid var(--border);}
 .svc-table td{padding:2px 3px;border-bottom:1px solid rgba(255,255,255,.025);font-family:var(--font);}
 .svc-table tr:hover td{background:rgba(255,255,255,.025);}
-.neighbor-chip{
-  display:inline-flex;align-items:center;gap:3px;
-  background:var(--panel2);border:1px solid var(--border);border-radius:3px;
-  padding:2px 6px;font-size:10px;cursor:pointer;margin:2px;
-}
+.neighbor-chip{display:inline-flex;align-items:center;gap:3px;background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:2px 6px;font-size:10px;cursor:pointer;margin:2px;}
 .neighbor-chip:hover{border-color:var(--red);}
 .evt-row{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.025);}
 .evt-row .et{font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:1px;}
@@ -163,46 +95,28 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .sev-warning{color:var(--warn);}
 .sev-critical,.sev-high{color:var(--red3);}
 .sev-ok,.sev-normal{color:var(--ok);}
-.scan-btn-node{
-  width:100%;background:rgba(214,31,44,.12);border:1px solid var(--red2);
-  border-radius:5px;color:var(--text);padding:7px;cursor:pointer;
-  font-family:var(--font);font-size:11px;font-weight:700;margin-top:5px;
-}
+.scan-btn-node{width:100%;background:rgba(214,31,44,.12);border:1px solid var(--red2);border-radius:5px;color:var(--text);padding:7px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;margin-top:5px;}
 .scan-btn-node:hover{background:rgba(214,31,44,.22);}
 .scan-btn-node:disabled{opacity:.4;cursor:not-allowed;}
 .empty-state{color:var(--muted);font-size:11px;padding:4px 0;}
-.src-tag{
-  display:inline-block;background:rgba(59,126,207,.15);border:1px solid rgba(59,126,207,.3);
-  border-radius:3px;padding:1px 5px;font-size:9px;color:var(--info);margin:1px;
-}
-
-/* ── BOTTOM ── */
-.bottom{
-  border-top:1px solid var(--border);background:#0d0d11;
-  display:grid;grid-template-rows:32px 1fr;min-height:0;
-}
-.bottom-tabs{
-  display:flex;align-items:stretch;border-bottom:1px solid var(--border);
-  padding:0 12px;gap:2px;flex-shrink:0;
-}
-.tab-btn{
-  background:none;border:none;border-bottom:2px solid transparent;
-  color:var(--muted);cursor:pointer;font-family:var(--font);
-  font-size:10px;font-weight:600;text-transform:uppercase;
-  letter-spacing:.07em;padding:0 9px;
-}
+.src-tag{display:inline-block;background:rgba(59,126,207,.15);border:1px solid rgba(59,126,207,.3);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--info);margin:1px;}
+.timeline-row{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.025);font-size:10px;}
+.timeline-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.timeline-dot.info{background:var(--info);}
+.timeline-dot.warning{background:var(--warn);}
+.timeline-dot.critical,.timeline-dot.high{background:var(--red3);}
+.timeline-dot.normal,.timeline-dot.ok{background:var(--ok);}
+.timeline-ts{color:var(--muted);white-space:nowrap;font-size:9px;}
+.timeline-title{color:var(--text);flex:1;}
+.bottom{border-top:1px solid var(--border);background:#0d0d11;display:grid;grid-template-rows:32px 1fr;min-height:0;}
+.bottom-tabs{display:flex;align-items:stretch;border-bottom:1px solid var(--border);padding:0 12px;gap:2px;flex-shrink:0;}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;font-family:var(--font);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;padding:0 9px;}
 .tab-btn.active{color:var(--text);border-bottom-color:var(--red);}
 .tab-btn:hover{color:var(--text);}
 .bottom-content{min-height:0;overflow:hidden;position:relative;}
-.tab-pane{
-  position:absolute;inset:0;overflow-y:auto;padding:6px 12px;
-  display:none;scrollbar-width:thin;scrollbar-color:var(--border) transparent;
-}
+.tab-pane{position:absolute;inset:0;overflow-y:auto;padding:6px 12px;display:none;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .tab-pane.active{display:block;}
-.log-line{
-  font-size:10px;font-family:var(--font);line-height:1.65;
-  white-space:pre-wrap;word-break:break-all;color:var(--text);
-}
+.log-line{font-size:10px;font-family:var(--font);line-height:1.65;white-space:pre-wrap;word-break:break-all;color:var(--text);}
 .log-line.err{color:var(--red3);}
 .log-line.warn{color:var(--warn);}
 .log-line.ok{color:var(--ok);}
@@ -221,66 +135,50 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .bar-fg{height:100%;border-radius:2px;}
 .iface-row{font-size:10px;padding:2px 0;color:var(--muted);}
 .iface-row span{color:var(--text);}
-
-/* Buttons */
 button{cursor:pointer;font-family:var(--font);}
-.btn{
-  background:var(--panel2);border:1px solid var(--border);border-radius:5px;
-  color:var(--text);padding:5px 10px;font-size:11px;font-weight:600;
-}
+.btn{background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 10px;font-size:11px;font-weight:600;}
 .btn:hover{border-color:var(--red);}
-.btn.primary{background:var(--red);border-color:var(--red2);}
-.btn.primary:hover{background:var(--red2);}
 .btn.sm{padding:3px 7px;font-size:10px;}
+/* hosts table */
+.hosts-table{width:100%;border-collapse:collapse;font-size:10px;}
+.hosts-table th{color:var(--muted);font-weight:600;text-align:left;padding:3px 5px;border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.06em;}
+.hosts-table td{padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.025);}
+.hosts-table tr{cursor:pointer;}
+.hosts-table tr:hover td{background:rgba(255,255,255,.03);}
+.hosts-table .status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;}
 </style>
 </head>
 <body>
-
-<!-- TOP BAR -->
 <div class="topbar">
   <div class="brand"><span class="LA">LAN</span><span class="Nimals">imals</span></div>
   <div class="topbar-center">
     <span class="scope-label">CIDR</span>
-    <input id="cidrInput" value="192.168.0.0/24" placeholder="192.168.0.0/24" title="Scan target range"/>
+    <input id="cidrInput" value="192.168.0.0/24" placeholder="192.168.0.0/24"/>
     <div class="status-pip" id="statusDot"></div>
     <span id="statusLabel">ready</span>
   </div>
   <div class="topbar-right">
-    <button class="btn sm" id="btnRefresh" title="Refresh graph from cache">↻ Refresh</button>
-    <button class="btn sm" id="btnCenter" title="Reset graph view">⊕ Center</button>
-    <button class="btn sm" id="btnSysinfo" title="System info">≡ Sysinfo</button>
+    <button class="btn sm" id="btnRefresh">↻ Refresh</button>
+    <button class="btn sm" id="btnCenter">⊕ Center</button>
+    <button class="btn sm" id="btnSysinfo">≡ Sysinfo</button>
+    <button class="btn sm" id="btnReport" title="Export HTML report">⬇ Report</button>
   </div>
 </div>
-
-<!-- MAIN -->
 <div class="main">
-
-  <!-- LEFT RAIL -->
   <div class="rail">
-
     <div class="rail-section" id="sec-ops">
       <div class="rail-hdr" onclick="toggleSection('sec-ops')">
         <h4>Operations</h4><span class="toggle" id="tog-sec-ops">▾</span>
       </div>
       <div class="rail-body">
-        <button class="op-btn primary" id="btnDiscovery">
-          <span class="icon">◎</span><span class="lbl">Discovery Scan</span>
-        </button>
-        <button class="op-btn" id="btnArp">
-          <span class="icon">⬡</span><span class="lbl">ARP Refresh</span>
-        </button>
-        <button class="op-btn" id="btnHostmap">
-          <span class="icon">⬡</span><span class="lbl">Host Mapping</span>
-        </button>
-        <button class="op-btn" id="btnRogue">
-          <span class="icon">⚑</span><span class="lbl">Rogue Detection</span>
-        </button>
-        <button class="op-btn" id="btnInventory">
-          <span class="icon">≡</span><span class="lbl">Inventory</span>
-        </button>
+        <button class="op-btn primary" id="btnDiscovery"><span class="icon">◎</span><span class="lbl">Discovery Scan</span></button>
+        <button class="op-btn" id="btnArp"><span class="icon">⬡</span><span class="lbl">ARP Refresh</span></button>
+        <button class="op-btn" id="btnHostmap"><span class="icon">⬡</span><span class="lbl">Host Mapping</span></button>
+        <button class="op-btn" id="btnRogue"><span class="icon">⚑</span><span class="lbl">Rogue Detection</span></button>
+        <button class="op-btn" id="btnInventory"><span class="icon">≡</span><span class="lbl">Inventory</span></button>
+        <button class="op-btn" id="btnAnomaly"><span class="icon">⚡</span><span class="lbl">Anomaly Scan</span></button>
       </div>
     </div>
-
     <div class="rail-section" id="sec-stats">
       <div class="rail-hdr" onclick="toggleSection('sec-stats')">
         <h4>Network Stats</h4><span class="toggle" id="tog-sec-stats">▾</span>
@@ -294,7 +192,6 @@ button{cursor:pointer;font-family:var(--font);}
         </div>
       </div>
     </div>
-
     <div class="rail-section" id="sec-jobs">
       <div class="rail-hdr" onclick="toggleSection('sec-jobs')">
         <h4>Recent Jobs</h4><span class="toggle" id="tog-sec-jobs">▾</span>
@@ -303,10 +200,8 @@ button{cursor:pointer;font-family:var(--font);}
         <div id="jobsList" style="display:grid;gap:3px;"></div>
       </div>
     </div>
-
   </div>
 
-  <!-- GRAPH -->
   <div class="canvas-wrap" id="graphWrap">
     <canvas id="graphCanvas"></canvas>
     <div class="graph-search">
@@ -328,12 +223,11 @@ button{cursor:pointer;font-family:var(--font);}
     </div>
   </div>
 
-  <!-- RIGHT DETAIL -->
   <div class="detail-panel" id="detailPanel">
     <div class="dp-hdr">
       <h4 id="detailTitle">No node selected</h4>
       <div class="dp-hdr-actions">
-        <button class="btn sm" id="btnDetailRefresh" title="Reload node" style="display:none">↻</button>
+        <button class="btn sm" id="btnDetailRefresh" style="display:none">↻</button>
       </div>
     </div>
     <div class="dp-scroll" id="detailBody">
@@ -344,27 +238,20 @@ button{cursor:pointer;font-family:var(--font);}
   </div>
 </div>
 
-<!-- BOTTOM -->
 <div class="bottom">
   <div class="bottom-tabs">
     <button class="tab-btn active" data-tab="scanout">Scan Output</button>
     <button class="tab-btn" data-tab="events">Events</button>
+    <button class="tab-btn" data-tab="hosts">Hosts</button>
     <button class="tab-btn" data-tab="reports">Reports</button>
     <button class="tab-btn" data-tab="sysinfo">Sysinfo</button>
   </div>
   <div class="bottom-content">
-    <div class="tab-pane active" id="tab-scanout">
-      <div id="scanOutput"></div>
-    </div>
-    <div class="tab-pane" id="tab-events">
-      <div id="eventFeed"></div>
-    </div>
-    <div class="tab-pane" id="tab-reports">
-      <div id="reportsList"></div>
-    </div>
-    <div class="tab-pane" id="tab-sysinfo">
-      <div id="sysinfoContent"><p class="log-line muted">Click ≡ Sysinfo or run Inventory to populate.</p></div>
-    </div>
+    <div class="tab-pane active" id="tab-scanout"><div id="scanOutput"></div></div>
+    <div class="tab-pane" id="tab-events"><div id="eventFeed"></div></div>
+    <div class="tab-pane" id="tab-hosts"><div id="hostsTable"></div></div>
+    <div class="tab-pane" id="tab-reports"><div id="reportsList"></div></div>
+    <div class="tab-pane" id="tab-sysinfo"><div id="sysinfoContent"><p class="log-line muted">Click ≡ Sysinfo or run Inventory.</p></div></div>
   </div>
 </div>
 
@@ -375,8 +262,16 @@ let selectedNode = null;
 let selectedCtx = null;
 let panX = 0, panY = 0, scale = 1;
 let dragging = false, dragStartX = 0, dragStartY = 0;
-let nodePositions = new Map();
 let jobPollTimer = null;
+
+// Force simulation state
+let simNodes = [];   // {id, x, y, vx, vy, data}
+let simEdges = [];   // {source, target}
+let simRunning = false;
+let simTimer = null;
+const SIM_ALPHA_START = 1.0;
+const SIM_ALPHA_DECAY = 0.012;
+let simAlpha = 0;
 
 const canvas = document.getElementById('graphCanvas');
 const ctx2d = canvas.getContext('2d');
@@ -389,16 +284,16 @@ function cidr(){ return $('cidrInput').value.trim()||'192.168.0.0/24'; }
 function setStatus(label, state='ready'){
   $('statusLabel').textContent = label;
   const dot = $('statusDot');
-  dot.className = 'status-pip' + (state==='scanning'?' scanning':state==='error'?' error':'');
+  dot.className = 'status-pip'+(state==='scanning'?' scanning':state==='error'?' error':'');
 }
 
 function addScanLine(text, cls=''){
-  const pane = $('scanOutput');
-  const div = document.createElement('div');
-  div.className = 'log-line'+(cls?' '+cls:'');
-  div.textContent = text;
+  const pane=$('scanOutput');
+  const div=document.createElement('div');
+  div.className='log-line'+(cls?' '+cls:'');
+  div.textContent=text;
   pane.appendChild(div);
-  pane.scrollTop = pane.scrollHeight;
+  pane.scrollTop=pane.scrollHeight;
 }
 
 function activateTab(name){
@@ -407,10 +302,102 @@ function activateTab(name){
 }
 
 function toggleSection(id){
-  const sec = $(id);
-  const tog = $('tog-'+id);
+  const sec=$(id), tog=$('tog-'+id);
   sec.classList.toggle('collapsed');
-  if(tog) tog.textContent = sec.classList.contains('collapsed') ? '▸' : '▾';
+  if(tog) tog.textContent=sec.classList.contains('collapsed')?'▸':'▾';
+}
+
+// ── Force Simulation ──────────────────────────────────────────────────────────
+function nodeRadius(n){
+  if(n.node_type==='subnet') return 28;
+  if(n.node_type==='router') return 18;
+  if(n.node_type==='alert')  return 14;
+  if(n.node_type==='service') return 9;
+  return 13;
+}
+
+function nodeColor(n){
+  if(n.node_type==='alert'||n.status==='critical') return{fill:'#d61f2c',stroke:'#a00'};
+  if(n.status==='warning') return{fill:'#c97b00',stroke:'#a06000'};
+  if(n.node_type==='router') return{fill:'#8b3dd6',stroke:'#6b2db0'};
+  if(n.node_type==='service') return{fill:'#2a7a4e',stroke:'#1a5a3a'};
+  if(n.node_type==='subnet') return{fill:'rgba(42,42,64,.2)',stroke:'#2a2a50'};
+  return{fill:'#3b7ecf',stroke:'#2a5fa0'};
+}
+
+function initSimulation(nodes, edges){
+  const w=canvas.width/scale, h=canvas.height/scale;
+  const cx=w/2, cy=h/2;
+  simNodes = nodes.map((n,i)=>{
+    const existing = simNodes.find(s=>s.id===n.id);
+    if(existing) return{...existing, data:n};
+    const angle=(Math.PI*2*i)/Math.max(nodes.length,1);
+    const r=Math.min(w,h)*0.3;
+    return{id:n.id, x:cx+Math.cos(angle)*r, y:cy+Math.sin(angle)*r, vx:0, vy:0, data:n};
+  });
+  simEdges = edges.map(e=>({source:e.source, target:e.target, data:e}));
+  simAlpha = SIM_ALPHA_START;
+  if(!simRunning) runSim();
+}
+
+function runSim(){
+  simRunning = true;
+  const step = () => {
+    if(simAlpha < 0.01){ simRunning=false; renderGraph(); return; }
+    simAlpha *= (1-SIM_ALPHA_DECAY);
+    tickForces();
+    renderGraph();
+    simTimer = requestAnimationFrame(step);
+  };
+  simTimer = requestAnimationFrame(step);
+}
+
+function tickForces(){
+  const w=canvas.width/scale, h=canvas.height/scale;
+  const cx=w/2, cy=h/2;
+  const nodeMap=new Map(simNodes.map(n=>[n.id,n]));
+
+  // Link forces
+  for(const e of simEdges){
+    const a=nodeMap.get(e.source), b=nodeMap.get(e.target);
+    if(!a||!b) continue;
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const dist=Math.sqrt(dx*dx+dy*dy)||1;
+    const targetDist = (a.data.node_type==='subnet'||b.data.node_type==='subnet') ? 160 : 120;
+    const force=(dist-targetDist)/dist * 0.08 * simAlpha;
+    a.vx+=dx*force; a.vy+=dy*force;
+    b.vx-=dx*force; b.vy-=dy*force;
+  }
+
+  // Repulsion
+  for(let i=0;i<simNodes.length;i++){
+    for(let j=i+1;j<simNodes.length;j++){
+      const a=simNodes[i], b=simNodes[j];
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const dist2=dx*dx+dy*dy||1;
+      const strength=4000/dist2;
+      const fx=dx/Math.sqrt(dist2)*strength;
+      const fy=dy/Math.sqrt(dist2)*strength;
+      a.vx-=fx; a.vy-=fy;
+      b.vx+=fx; b.vy+=fy;
+    }
+  }
+
+  // Gravity toward center
+  for(const n of simNodes){
+    n.vx += (cx-n.x)*0.01*simAlpha;
+    n.vy += (cy-n.y)*0.01*simAlpha;
+  }
+
+  // Integrate + dampen
+  for(const n of simNodes){
+    n.vx*=0.7; n.vy*=0.7;
+    n.x+=n.vx; n.y+=n.vy;
+    // Boundary
+    const r=nodeRadius(n.data)+8;
+    n.x=Math.max(r,Math.min(w-r,n.x));
+    n.y=Math.max(r,Math.min(h-r,n.y));
+  }
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -420,28 +407,53 @@ async function apiPost(path){ const r=await fetch(path,{method:'POST'}); if(!r.o
 async function fetchGraph(){
   try{
     setStatus('loading…','scanning');
-    const data = await apiGet('/api/graph');
-    snapshot = data;
-    updateStats(data.stats||{});
-    renderGraph();
-    renderEvents(data.events||[]);
+    const data=await apiGet('/api/graph');
+    snapshot=data;
+    const q=$('searchInput').value.trim().toLowerCase();
+    const t=$('typeFilter').value;
+    const filtered=(data.nodes||[]).filter(n=>{
+      if(q&&!`${n.label} ${n.id} ${n.ip||''} ${n.hostname||''}`.toLowerCase().includes(q)) return false;
+      if(t&&n.node_type!==t) return false;
+      return true;
+    });
+    initSimulation(filtered, (data.edges||[]).filter(e=>{
+      const vis=new Set(filtered.map(n=>n.id));
+      return vis.has(e.source)&&vis.has(e.target);
+    }));
     setStatus('ready','ready');
-    autoFitGraph();
-  } catch(e){ setStatus('error','error'); console.error('fetchGraph',e); }
+  } catch(e){ setStatus('error','error'); }
+}
+
+async function fetchStats(){
+  try{
+    const data=await apiGet('/api/stats');
+    const s=data.db||{};
+    $('statHosts').textContent=s.hosts??'—';
+    $('statWarn').textContent=s.warnings??'—';
+    $('statCrit').textContent=s.critical??'—';
+    $('statSvc').textContent=s.services??'—';
+  } catch(e){}
 }
 
 async function fetchReports(){
   try{
-    const data = await apiGet('/api/reports');
+    const data=await apiGet('/api/reports');
     renderReports(data.reports||[]);
   } catch(e){}
 }
 
 async function fetchNode(id){
   try{
-    const data = await apiGet('/api/node/'+encodeURIComponent(id));
-    selectedCtx = data;
-    renderDetail(data.node, data.neighbors||[], data.events||[]);
+    const data=await apiGet('/api/node/'+encodeURIComponent(id));
+    selectedCtx=data;
+    const node=data.node;
+    // Fetch DB services and events for this IP
+    let dbServices=[], dbEvents=[];
+    if(node.ip){
+      try{ const sv=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/services'); dbServices=sv.services||[]; } catch(e){}
+      try{ const ev=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/events'); dbEvents=ev.events||[]; } catch(e){}
+    }
+    renderDetail(node, data.neighbors||[], dbEvents, dbServices);
     $('btnDetailRefresh').style.display='';
     $('btnDetailRefresh').onclick=()=>fetchNode(id);
   } catch(e){ console.error('fetchNode',e); }
@@ -449,31 +461,46 @@ async function fetchNode(id){
 
 async function fetchJobs(){
   try{
-    const data = await apiGet('/api/jobs');
+    const data=await apiGet('/api/jobs');
     renderJobsList(data.jobs||[]);
+  } catch(e){}
+}
+
+async function fetchEvents(){
+  try{
+    const data=await apiGet('/api/events?limit=80');
+    renderEvents(data.events||[]);
+  } catch(e){}
+}
+
+async function fetchHosts(){
+  try{
+    const data=await apiGet('/api/hosts');
+    renderHostsTable(data.hosts||[]);
   } catch(e){}
 }
 
 async function fetchSysinfo(){
   try{
-    const data = await apiGet('/api/sysinfo');
+    const data=await apiGet('/api/sysinfo');
     renderSysinfo(data);
     activateTab('sysinfo');
-  } catch(e){ $('sysinfoContent').innerHTML='<p class="log-line err">Failed to fetch sysinfo</p>'; }
+  } catch(e){}
 }
 
 async function pollJob(jid){
   try{
-    const job = await apiGet('/api/jobs/'+jid);
-    const lines = job.lines||[];
-    const pane = $('scanOutput');
+    const job=await apiGet('/api/jobs/'+jid);
+    const lines=job.lines||[];
+    const pane=$('scanOutput');
     pane.innerHTML='';
     lines.forEach(l=>{
-      const cls = l.includes('ERROR')?'err':l.includes('ROGUE')||l.includes('rogue')?'warn':
-                  l.includes('complete')||l.includes('done')?'ok':
-                  l.includes('→')||l.includes('Starting')?'muted':'';
+      const cls=l.includes('ERROR')?'err':l.includes('ROGUE')||l.includes('rogue')?'warn':
+               l.includes('complete')||l.includes('done')?'ok':
+               l.includes('→')||l.includes('Starting')||l.includes('scan:')?'muted':'';
       const d=document.createElement('div');
-      d.className='log-line'+(cls?' '+cls:'');d.textContent=l;pane.appendChild(d);
+      d.className='log-line'+(cls?' '+cls:'');
+      d.textContent=l; pane.appendChild(d);
     });
     pane.scrollTop=pane.scrollHeight;
     fetchJobs();
@@ -481,8 +508,10 @@ async function pollJob(jid){
       jobPollTimer=setTimeout(()=>pollJob(jid),700);
     } else {
       setStatus(job.status==='done'?'done':'error', job.status==='done'?'ready':'error');
-      if(job.status==='done') setTimeout(fetchGraph, 500);
-      if(job.op==='inventory' && job.result) renderSysinfo(job.result);
+      if(job.status==='done'){
+        setTimeout(()=>{ fetchGraph(); fetchStats(); fetchEvents(); fetchHosts(); }, 500);
+      }
+      if(job.op==='inventory'&&job.result) renderSysinfo(job.result);
     }
   } catch(e){ clearTimeout(jobPollTimer); setStatus('error','error'); }
 }
@@ -495,193 +524,156 @@ async function runOp(endpoint){
   addScanLine('→ POST '+endpoint,'muted');
   try{
     const res=await apiPost(endpoint);
-    if(res.job_id){
-      jobPollTimer=setTimeout(()=>pollJob(res.job_id),500);
-    }
+    if(res.job_id) jobPollTimer=setTimeout(()=>pollJob(res.job_id),500);
   } catch(e){ addScanLine('ERROR: '+e,'err'); setStatus('error','error'); }
 }
 
-// ── Render Stats ──────────────────────────────────────────────────────────────
-function updateStats(s){
-  $('statHosts').textContent = s.hosts??'—';
-  $('statWarn').textContent  = s.warning_nodes??'—';
-  $('statCrit').textContent  = s.critical_nodes??'—';
-  const nodes = snapshot?.nodes||[];
-  $('statSvc').textContent = nodes.filter(n=>n.node_type==='service').length||'—';
+async function runAnomaly(){
+  try{
+    addScanLine('→ GET /api/scan/anomaly','muted');
+    activateTab('scanout');
+    const data=await apiGet('/api/scan/anomaly');
+    if(data.anomalies&&data.anomalies.length){
+      addScanLine(`[!] ${data.anomalies.length} external connections detected:`,'warn');
+      data.anomalies.forEach(a=>{
+        addScanLine(`  ${a.ip}:${a.port}  status=${a.status}  pid=${a.pid||'?'}  known=${a.known}`,'warn');
+      });
+    } else {
+      addScanLine('[ OK ] No anomalous external connections detected.','ok');
+    }
+  } catch(e){ addScanLine('ERROR: '+e,'err'); }
 }
 
-// ── Render Jobs ───────────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────────
 function renderJobsList(jobs){
   const wrap=$('jobsList');
   wrap.innerHTML='';
-  if(!jobs.length){
-    wrap.innerHTML='<div class="log-line muted" style="font-size:10px;padding:2px 0;">No jobs yet.</div>';
-    return;
-  }
+  if(!jobs.length){ wrap.innerHTML='<div class="log-line muted" style="font-size:10px;padding:2px 0;">No jobs yet.</div>'; return; }
   jobs.slice(0,7).forEach(j=>{
     const d=document.createElement('button');
     d.className='op-btn'+(j.status==='running'?' active':'');
     const bc=j.status==='running'?'run':j.status==='done'?'ok':j.status==='error'?'err':'';
     d.innerHTML=`<span class="lbl" style="font-size:10px;">${esc(j.op)}</span><span class="badge ${bc}">${esc(j.status)}</span>`;
-    d.onclick=()=>{
-      if(jobPollTimer) clearTimeout(jobPollTimer);
-      jobPollTimer=setTimeout(()=>pollJob(j.id),0);
-      activateTab('scanout');
-    };
+    d.onclick=()=>{ if(jobPollTimer) clearTimeout(jobPollTimer); jobPollTimer=setTimeout(()=>pollJob(j.id),0); activateTab('scanout'); };
     wrap.appendChild(d);
   });
 }
 
-// ── Render Events ─────────────────────────────────────────────────────────────
 function renderEvents(events){
   const wrap=$('eventFeed');
   wrap.innerHTML='';
-  if(!events.length){wrap.innerHTML='<p class="log-line muted">No events.</p>';return;}
-  events.slice(0,50).forEach(e=>{
+  if(!events.length){ wrap.innerHTML='<p class="log-line muted">No events yet.</p>'; return; }
+  events.forEach(e=>{
     const d=document.createElement('div');
     d.className='feed-row';
-    const ts = e.ts ? e.ts.replace('T',' ').replace('Z','') : '';
-    d.innerHTML=`
-      <div class="fhdr">
-        <span class="et sev-${esc(e.severity)}">${esc(e.severity)}</span>
-        <span class="ft">${esc(ts)}</span>
-        <strong style="font-size:11px;">${esc(e.title)}</strong>
-      </div>
-      <div class="fs">${esc(e.summary)}</div>`;
-    if(e.node_id){
-      d.style.cursor='pointer';
-      d.onclick=()=>{
-        const n=snapshot?.nodes?.find(x=>x.id===e.node_id);
-        if(n){selectedNode=n;fetchNode(n.id);renderGraph();}
-      };
-    }
+    const ts=(e.ts||'').replace('T',' ').replace('Z','').slice(0,19);
+    d.innerHTML=`<div class="fhdr"><span class="et sev-${esc(e.severity)}">${esc(e.severity)}</span><span class="ft">${esc(ts)}</span><strong style="font-size:11px;">${esc(e.title)}</strong></div><div class="fs">${esc(e.summary||'')}</div>`;
     wrap.appendChild(d);
   });
 }
 
-// ── Render Reports ────────────────────────────────────────────────────────────
+function renderHostsTable(hosts){
+  const wrap=$('hostsTable');
+  if(!hosts.length){ wrap.innerHTML='<p class="log-line muted" style="padding:8px 0;">No hosts in database yet. Run Discovery Scan.</p>'; return; }
+  let rows='';
+  hosts.forEach(h=>{
+    const sc=h.status==='critical'?'#ff4455':h.status==='warning'?'#c97b00':'#2a9d4e';
+    const ls=(h.last_seen||'').replace('T',' ').replace('Z','').slice(0,19)||'—';
+    rows+=`<tr onclick="selectHostByIp('${esc(h.ip)}')">
+      <td><span class="status-dot" style="background:${sc}"></span>${esc(h.ip)}</td>
+      <td>${esc(h.hostname||'—')}</td>
+      <td>${esc(h.mac||'—')}</td>
+      <td>${esc(h.vendor||'—')}</td>
+      <td style="color:${sc}">${esc(h.status||'normal')}</td>
+      <td>${esc(String(h.risk_score||0))}</td>
+      <td>${esc(ls)}</td>
+    </tr>`;
+  });
+  wrap.innerHTML=`<table class="hosts-table">
+    <thead><tr><th>IP</th><th>Hostname</th><th>MAC</th><th>Vendor</th><th>Status</th><th>Risk</th><th>Last Seen</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function selectHostByIp(ip){
+  const node=snapshot?.nodes?.find(n=>n.ip===ip||n.id==='host:'+ip);
+  if(node){ selectedNode=node; fetchNode(node.id); renderGraph(); }
+}
+
 function renderReports(reports){
   const wrap=$('reportsList');
   wrap.innerHTML='';
-  if(!reports.length){wrap.innerHTML='<div class="log-line muted">No reports.</div>';return;}
+  if(!reports.length){ wrap.innerHTML='<div class="log-line muted">No reports.</div>'; return; }
   reports.forEach(r=>{
     const d=document.createElement('div');
     d.className='log-line';
-    const kb=(r.size/1024).toFixed(1);
-    const date=new Date(r.modified*1000).toLocaleString();
-    d.textContent=`${r.name}  ${kb}kb  ${date}`;
+    d.textContent=`${r.name}  ${(r.size/1024).toFixed(1)}kb  ${new Date(r.modified*1000).toLocaleString()}`;
     wrap.appendChild(d);
   });
 }
 
-// ── Render Sysinfo ────────────────────────────────────────────────────────────
 function renderSysinfo(info){
   const wrap=$('sysinfoContent');
-  const cpu = info.cpu_percent??null;
-  const ram = info.ram_percent??null;
-  const disk = info.disk_percent??null;
-  const cpuCls = cpu>85?'warn':cpu>60?'warn':'ok';
-  const ramCls = ram>85?'warn':ram>60?'warn':'ok';
-  const diskCls = disk>90?'warn':disk>75?'warn':'ok';
-
-  const ifaces = info.interfaces||{};
-  const ifaceHtml = Object.entries(ifaces).map(([iface,ips])=>
-    `<div class="iface-row">${esc(iface)}: <span>${esc(ips.join(', '))}</span></div>`
-  ).join('') || '<div class="iface-row">—</div>';
-
-  wrap.innerHTML=`
-    <div class="sysinfo-grid">
-      <div class="sysinfo-card">
-        <div class="sc-label">Hostname</div>
-        <div class="sc-value" style="font-size:12px;">${esc(info.hostname||'—')}</div>
-      </div>
-      <div class="sysinfo-card">
-        <div class="sc-label">CPU</div>
-        <div class="sc-value ${cpuCls}">${cpu!==null?cpu+'%':'—'}</div>
-        ${cpu!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${cpu}%;background:${cpu>85?'var(--warn)':'var(--ok)'};"></div></div>`:''}
-      </div>
-      <div class="sysinfo-card">
-        <div class="sc-label">RAM</div>
-        <div class="sc-value ${ramCls}">${ram!==null?info.ram_used_mb+'mb / '+info.ram_total_mb+'mb':'—'}</div>
-        ${ram!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${ram}%;background:${ram>85?'var(--warn)':'var(--ok)'};"></div></div>`:''}
-      </div>
-      <div class="sysinfo-card">
-        <div class="sc-label">Disk /</div>
-        <div class="sc-value ${diskCls}">${disk!==null?info.disk_used_gb+'gb / '+info.disk_total_gb+'gb':'—'}</div>
-        ${disk!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${disk}%;background:${disk>90?'var(--warn)':'var(--ok)'};"></div></div>`:''}
-      </div>
-    </div>
-    <div style="padding:6px 0 4px;">
-      <div class="sc-label" style="font-size:9px;color:var(--muted);margin-bottom:4px;">INTERFACES</div>
-      ${ifaceHtml}
-    </div>
-    ${info.uname?`<div class="log-line muted" style="padding:4px 0;">${esc(info.uname)}</div>`:''}
-  `;
-
-  // Auto-detect CIDR from interfaces
-  const ips = Object.values(ifaces).flat();
+  const cpu=info.cpu_percent??null, ram=info.ram_percent??null, disk=info.disk_percent??null;
+  const cc=cpu>85?'warn':cpu>60?'warn':'ok', rc=ram>85?'warn':ram>60?'warn':'ok', dc=disk>90?'warn':disk>75?'warn':'ok';
+  const ifaces=info.interfaces||{};
+  const ifHtml=Object.entries(ifaces).map(([i,ips])=>`<div class="iface-row">${esc(i)}: <span>${esc(ips.join(', '))}</span></div>`).join('')||'<div class="iface-row">—</div>';
+  wrap.innerHTML=`<div class="sysinfo-grid">
+    <div class="sysinfo-card"><div class="sc-label">Hostname</div><div class="sc-value" style="font-size:12px;">${esc(info.hostname||'—')}</div></div>
+    <div class="sysinfo-card"><div class="sc-label">CPU</div><div class="sc-value ${cc}">${cpu!==null?cpu+'%':'—'}</div>${cpu!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${cpu}%;background:${cpu>85?'var(--warn)':'var(--ok)'}"></div></div>`:''}</div>
+    <div class="sysinfo-card"><div class="sc-label">RAM</div><div class="sc-value ${rc}">${ram!==null?info.ram_used_mb+'mb / '+info.ram_total_mb+'mb':'—'}</div>${ram!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${ram}%;background:${ram>85?'var(--warn)':'var(--ok)'}"></div></div>`:''}</div>
+    <div class="sysinfo-card"><div class="sc-label">Disk /</div><div class="sc-value ${dc}">${disk!==null?info.disk_used_gb+'gb / '+info.disk_total_gb+'gb':'—'}</div>${disk!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${disk}%;background:${disk>90?'var(--warn)':'var(--ok)'}"></div></div>`:''}</div>
+  </div>
+  <div style="padding:6px 0 4px;"><div class="sc-label" style="font-size:9px;color:var(--muted);margin-bottom:4px;">INTERFACES</div>${ifHtml}</div>
+  ${info.uname?`<div class="log-line muted" style="padding:4px 0;">${esc(info.uname)}</div>`:''}`;
+  // Auto-fill CIDR
+  const ips=Object.values(ifaces).flat();
   for(const ip of ips){
-    if(ip && !ip.startsWith('127.')){
-      const parts = ip.split('.');
-      if(parts.length===4){
-        const cidrVal = parts.slice(0,3).join('.')+'.0/24';
-        if($('cidrInput').value==='192.168.0.0/24'||$('cidrInput').value===''){
-          $('cidrInput').value = cidrVal;
-        }
+    if(ip&&!ip.startsWith('127.')){
+      const p=ip.split('.');
+      if(p.length===4&&$('cidrInput').value.startsWith('192.168.0')){
+        $('cidrInput').value=p.slice(0,3).join('.')+'.0/24';
       }
     }
   }
 }
 
-// ── Render Detail Panel ───────────────────────────────────────────────────────
-function renderDetail(node, neighbors, events){
-  $('detailTitle').textContent = node.label || node.id;
-  const riskColor = node.risk_score>=70?'red':node.risk_score>=35?'warn':'ok';
-  const riskHex   = node.risk_score>=70?'#d61f2c':node.risk_score>=35?'#c97b00':'#2a9d4e';
-  const services  = (node.meta?.services)||[];
-  const mac = node.mac || node.meta?.mac || null;
-  const vendor = node.meta?.vendor || null;
-  const iface = node.meta?.interface || null;
-  const source = node.meta?.source || null;
-  const neighborState = node.meta?.neighbor_state || null;
+function renderDetail(node, neighbors, events, dbServices){
+  $('detailTitle').textContent=node.label||node.id;
+  const riskColor=node.risk_score>=70?'red':node.risk_score>=35?'warn':'ok';
+  const riskHex=node.risk_score>=70?'#d61f2c':node.risk_score>=35?'#c97b00':'#2a9d4e';
 
+  // Services — prefer DB, fall back to graph meta
+  const services=dbServices.length>0?dbServices:(node.meta?.services||[]);
   let svcHtml='<p class="empty-state">No service data. Run service scan.</p>';
   if(services.length){
-    svcHtml=`<table class="svc-table">
-      <thead><tr><th>Port</th><th>Proto</th><th>Service</th><th>Product</th><th>Ver</th></tr></thead>
-      <tbody>`+services.map(s=>`
-        <tr>
-          <td>${esc(s.port)}</td>
-          <td>${esc((s.protocol||'tcp').toUpperCase())}</td>
-          <td>${esc(s.service_name||'')}</td>
-          <td>${esc(s.product||'')}</td>
-          <td>${esc(s.version||'')}</td>
-        </tr>`).join('')+`</tbody></table>`;
+    svcHtml=`<table class="svc-table"><thead><tr><th>Port</th><th>Proto</th><th>Service</th><th>Product</th><th>Ver</th></tr></thead><tbody>`
+      +services.map(s=>`<tr><td>${esc(s.port)}</td><td>${esc((s.protocol||'tcp').toUpperCase())}</td><td>${esc(s.service_name||'')}</td><td>${esc(s.product||'')}</td><td>${esc(s.version||'')}</td></tr>`).join('')
+      +`</tbody></table>`;
   }
 
   let neighborHtml='<p class="empty-state">No neighbors.</p>';
-  if(neighbors.length){
-    neighborHtml=neighbors.map(n=>`<span class="neighbor-chip" data-id="${esc(n.id)}">${esc(n.label)}</span>`).join('');
-  }
+  if(neighbors.length) neighborHtml=neighbors.map(n=>`<span class="neighbor-chip" data-id="${esc(n.id)}">${esc(n.label)}</span>`).join('');
 
-  let evtHtml='<p class="empty-state">No events.</p>';
+  // Timeline from DB events
+  let timelineHtml='<p class="empty-state">No history.</p>';
   if(events.length){
-    evtHtml=events.slice(0,8).map(e=>`
-      <div class="evt-row">
-        <div class="et sev-${esc(e.severity)}">${esc(e.severity)} — ${esc(e.title)}</div>
-        <div class="es">${esc(e.summary)}</div>
-        <div class="es">${esc((e.ts||'').replace('T',' ').replace('Z',''))}</div>
-      </div>`).join('');
+    timelineHtml=events.slice(0,15).map(e=>{
+      const ts=(e.ts||'').replace('T',' ').replace('Z','').slice(0,19);
+      return `<div class="timeline-row">
+        <div class="timeline-dot ${esc(e.severity)}"></div>
+        <div class="timeline-ts">${esc(ts)}</div>
+        <div class="timeline-title">${esc(e.title)} — <span style="color:var(--muted)">${esc(e.summary||'')}</span></div>
+      </div>`;
+    }).join('');
   }
 
   // Source modules
-  const sources = new Set();
-  if(source) sources.add(source);
-  if(neighborState) sources.add('arp');
+  const sources=new Set();
+  const src=node.meta?.source;
+  if(src) sources.add(src);
   services.forEach(s=>{ if(s.source) sources.add(s.source); });
-  const srcHtml = sources.size
-    ? [...sources].map(s=>`<span class="src-tag">${esc(s)}</span>`).join('')
-    : '<span class="src-tag" style="background:rgba(120,120,120,.1);border-color:rgba(120,120,120,.2);color:var(--muted);">unknown</span>';
+  const srcHtml=sources.size?[...sources].map(s=>`<span class="src-tag">${esc(s)}</span>`).join('')
+    :'<span class="src-tag" style="background:rgba(120,120,120,.1);border-color:rgba(120,120,120,.2);color:var(--muted);">unknown</span>';
 
   $('detailBody').innerHTML=`
     <div class="detail-section">
@@ -689,17 +681,17 @@ function renderDetail(node, neighbors, events){
       <div class="kv"><div class="k">type</div><div class="v">${esc(node.node_type)}</div></div>
       <div class="kv"><div class="k">ip</div><div class="v">${esc(node.ip||'—')}</div></div>
       <div class="kv"><div class="k">hostname</div><div class="v">${esc(node.hostname||'—')}</div></div>
-      <div class="kv"><div class="k">mac</div><div class="v">${esc(mac||'—')}</div></div>
-      ${vendor?`<div class="kv"><div class="k">vendor</div><div class="v">${esc(vendor)}</div></div>`:''}
-      ${iface?`<div class="kv"><div class="k">interface</div><div class="v">${esc(iface)}</div></div>`:''}
-      ${neighborState?`<div class="kv"><div class="k">arp state</div><div class="v ${neighborState.toUpperCase()==='STALE'?'warn':''}">${esc(neighborState)}</div></div>`:''}
+      <div class="kv"><div class="k">mac</div><div class="v">${esc(node.mac||node.meta?.mac||'—')}</div></div>
+      ${node.meta?.vendor?`<div class="kv"><div class="k">vendor</div><div class="v info">${esc(node.meta.vendor)}</div></div>`:''}
+      ${node.meta?.interface?`<div class="kv"><div class="k">interface</div><div class="v">${esc(node.meta.interface)}</div></div>`:''}
+      ${node.meta?.neighbor_state?`<div class="kv"><div class="k">arp state</div><div class="v ${node.meta.neighbor_state==='STALE'?'warn':''}">${esc(node.meta.neighbor_state)}</div></div>`:''}
       <div class="kv"><div class="k">group</div><div class="v">${esc(node.group||'—')}</div></div>
     </div>
     <div class="detail-section">
       <h5>Risk</h5>
       <div class="kv"><div class="k">score</div><div class="v ${riskColor}">${esc(String(node.risk_score??0))} / 100</div></div>
       <div class="kv"><div class="k">status</div><div class="v ${riskColor}">${esc(node.status)}</div></div>
-      <div class="risk-bar"><div class="risk-fill" style="width:${node.risk_score||0}%;background:${riskHex};"></div></div>
+      <div class="risk-bar"><div class="risk-fill" style="width:${node.risk_score||0}%;background:${riskHex}"></div></div>
     </div>
     <div class="detail-section">
       <h5>Services (${services.length})</h5>
@@ -707,68 +699,45 @@ function renderDetail(node, neighbors, events){
       ${(node.node_type==='host'&&node.ip)?`<button class="scan-btn-node" id="btnScanSvcNode">▶ Scan Services on ${esc(node.ip)}</button>`:''}
     </div>
     <div class="detail-section">
+      <h5>Host Timeline (${events.length})</h5>
+      <div>${timelineHtml}</div>
+    </div>
+    <div class="detail-section">
       <h5>Neighbors (${neighbors.length})</h5>
       <div id="neighborChips">${neighborHtml}</div>
     </div>
     <div class="detail-section">
-      <h5>Events</h5>
-      ${evtHtml}
-    </div>
-    <div class="detail-section">
       <h5>Source Modules</h5>
       <div>${srcHtml}</div>
-    </div>
-  `;
+    </div>`;
 
   document.querySelectorAll('.neighbor-chip').forEach(chip=>{
     chip.addEventListener('click',()=>{
       const n=snapshot?.nodes?.find(x=>x.id===chip.dataset.id);
-      if(n){selectedNode=n;fetchNode(n.id);renderGraph();}
+      if(n){ selectedNode=n; fetchNode(n.id); renderGraph(); }
     });
   });
 
   const ssBtn=$('btnScanSvcNode');
   if(ssBtn){
     ssBtn.addEventListener('click',async()=>{
-      ssBtn.disabled=true;ssBtn.textContent='Scanning…';
+      ssBtn.disabled=true; ssBtn.textContent='Scanning…';
       await runOp('/api/scan/services/'+encodeURIComponent(node.ip));
-      ssBtn.disabled=false;ssBtn.textContent='▶ Scan Services on '+node.ip;
+      ssBtn.disabled=false; ssBtn.textContent='▶ Scan Services on '+node.ip;
       await fetchNode(node.id);
     });
   }
 }
 
 function clearDetail(){
-  selectedNode=null;selectedCtx=null;
+  selectedNode=null; selectedCtx=null;
   $('detailTitle').textContent='No node selected';
   $('btnDetailRefresh').style.display='none';
   $('detailBody').innerHTML='<div class="detail-section"><p class="empty-state">Click a node to inspect it.</p></div>';
   renderGraph();
 }
 
-// ── Auto-fit ─────────────────────────────────────────────────────────────────
-function autoFitGraph(){
-  if(!snapshot||!canvas.width) return;
-  const nodes=snapshot.nodes||[];
-  if(!nodes.length) return;
-  const laidOut=layoutNodes(getFilteredNodes(nodes),canvas.width,canvas.height);
-  if(!laidOut.length) return;
-  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-  laidOut.forEach(n=>{
-    minX=Math.min(minX,n.x); maxX=Math.max(maxX,n.x);
-    minY=Math.min(minY,n.y); maxY=Math.max(maxY,n.y);
-  });
-  const pw=canvas.width, ph=canvas.height;
-  const gw=Math.max(maxX-minX,1), gh=Math.max(maxY-minY,1);
-  const pad=80;
-  const s=Math.min((pw-pad*2)/gw,(ph-pad*2)/gh,2.5);
-  scale=Math.max(0.3,Math.min(s,1.5));
-  panX=(pw/2)-((minX+maxX)/2)*scale;
-  panY=(ph/2)-((minY+maxY)/2)*scale;
-  renderGraph();
-}
-
-// ── Graph ─────────────────────────────────────────────────────────────────────
+// ── Graph rendering ───────────────────────────────────────────────────────────
 function resizeCanvas(){
   const wrap=$('graphWrap');
   canvas.width=wrap.clientWidth;
@@ -776,169 +745,89 @@ function resizeCanvas(){
   renderGraph();
 }
 
-function getFilteredNodes(nodes){
-  const q=$('searchInput').value.trim().toLowerCase();
-  const t=$('typeFilter').value;
-  return nodes.filter(n=>{
-    if(q&&!`${n.label} ${n.id} ${n.ip||''} ${n.hostname||''}`.toLowerCase().includes(q)) return false;
-    if(t&&n.node_type!==t) return false;
-    return true;
-  });
-}
-
-function layoutNodes(nodes, w, h){
-  const subnets=nodes.filter(n=>n.node_type==='subnet');
-  const others=nodes.filter(n=>n.node_type!=='subnet');
-  // Grid: prefer square-ish, max 3 cols
-  const cols=Math.min(3,Math.max(1,Math.ceil(Math.sqrt(subnets.length))));
-  const rows=Math.max(1,Math.ceil(subnets.length/cols));
-  // Padding so nodes don't hit edges
-  const padX=160, padY=120;
-  const cellW=(w-padX*2)/Math.max(cols,1);
-  const cellH=(h-padY*2)/Math.max(rows,1);
-  const subnetPos=new Map();
-  subnets.forEach((n,i)=>{
-    const c=i%cols, r=Math.floor(i/cols);
-    subnetPos.set(n.id,{x:padX+cellW*(c+0.5), y:padY+cellH*(r+0.5)});
-  });
-  const positioned=[];
-  subnets.forEach(n=>{
-    const p=subnetPos.get(n.id)||{x:w/2,y:h/2};
-    positioned.push({...n,...p});
-  });
-  const buckets=new Map();
-  others.forEach(n=>{
-    const sid=n.group?`subnet:${n.group}`:'subnet:unknown';
-    if(!buckets.has(sid)) buckets.set(sid,[]);
-    buckets.get(sid).push(n);
-  });
-  for(const[sid,items] of buckets){
-    const center=subnetPos.get(sid)||{x:w/2,y:h/2};
-    const ifaces=items.filter(n=>n.node_type==='interface');
-    const rest=items.filter(n=>n.node_type!=='interface');
-    ifaces.forEach((n,i)=>{
-      const a=(-Math.PI/2)+(i*0.85);
-      positioned.push({...n,x:center.x+Math.cos(a)*80,y:center.y+Math.sin(a)*80});
-    });
-    // Spiral outward so dense subnets don't all stack
-    rest.forEach((n,i)=>{
-      const a=(Math.PI*2*i)/Math.max(rest.length,1)-(Math.PI/2);
-      const baseR=Math.min(160,60+rest.length*12);
-      const r=baseR+(Math.floor(i/8)*40);
-      positioned.push({...n,x:center.x+Math.cos(a)*r,y:center.y+Math.sin(a)*r});
-    });
-  }
-  return positioned;
-}
-
-function nodeRadius(n){
-  if(n.node_type==='subnet')    return 30;
-  if(n.node_type==='router')    return 18;
-  if(n.node_type==='alert')     return 14;
-  if(n.node_type==='service')   return 9;
-  if(n.node_type==='interface') return 8;
-  return 13;
-}
-
-function nodeColor(n){
-  if(n.node_type==='alert'||n.status==='critical') return{fill:'#d61f2c',stroke:'#a00'};
-  if(n.status==='warning') return{fill:'#c97b00',stroke:'#a06000'};
-  if(n.node_type==='router') return{fill:'#8b3dd6',stroke:'#6b2db0'};
-  if(n.node_type==='service') return{fill:'#2a7a4e',stroke:'#1a5a3a'};
-  if(n.node_type==='interface') return{fill:'#444',stroke:'#333'};
-  if(n.node_type==='subnet') return{fill:'rgba(42,42,64,.25)',stroke:'#2a2a50'};
-  return{fill:'#3b7ecf',stroke:'#2a5fa0'};
-}
-
 function renderGraph(){
   if(!canvas.width||!canvas.height) return;
   const c=ctx2d;
   c.clearRect(0,0,canvas.width,canvas.height);
-  const nodes=snapshot?getFilteredNodes(snapshot.nodes||[]):[];
-  const allEdges=snapshot?.edges||[];
-  const visIds=new Set(nodes.map(n=>n.id));
-  const edges=allEdges.filter(e=>visIds.has(e.source)&&visIds.has(e.target));
-  const laidOut=layoutNodes(nodes,canvas.width/scale,canvas.height/scale);
-  nodePositions.clear();
-  laidOut.forEach(n=>nodePositions.set(n.id,{x:n.x,y:n.y,data:n}));
+  if(!simNodes.length) return;
+
   const neighborIds=new Set(selectedCtx?.neighbors?.map(n=>n.id)||[]);
+  const nodeMap=new Map(simNodes.map(n=>[n.id,n]));
 
   c.save();
   c.translate(panX,panY);
   c.scale(scale,scale);
 
   // Edges
-  edges.forEach(e=>{
-    const sp=nodePositions.get(e.source),tp=nodePositions.get(e.target);
-    if(!sp||!tp) return;
+  for(const e of simEdges){
+    const sp=nodeMap.get(e.source), tp=nodeMap.get(e.target);
+    if(!sp||!tp) continue;
     const isHighlight=selectedNode&&(e.source===selectedNode.id||e.target===selectedNode.id);
     const isDim=selectedNode&&!isHighlight;
-    c.beginPath();
-    c.moveTo(sp.x,sp.y);c.lineTo(tp.x,tp.y);
-    c.setLineDash(e.edge_type==='contains'?[3,4]:[]);
-    c.strokeStyle=isDim?'rgba(42,42,64,.15)':isHighlight?'#d61f2c':
-      e.status==='critical'?'rgba(214,31,44,.6)':
-      e.status==='warning'?'rgba(201,123,0,.45)':'#252538';
+    c.beginPath(); c.moveTo(sp.x,sp.y); c.lineTo(tp.x,tp.y);
+    c.setLineDash(e.data?.edge_type==='contains'?[3,4]:[]);
+    c.strokeStyle=isDim?'rgba(42,42,64,.12)':isHighlight?'#d61f2c':
+      e.data?.status==='critical'?'rgba(214,31,44,.6)':
+      e.data?.status==='warning'?'rgba(201,123,0,.4)':'#252538';
     c.lineWidth=isHighlight?1.5:1;
-    c.globalAlpha=isDim?.12:1;
+    c.globalAlpha=isDim?.1:1;
     c.stroke();
-    c.setLineDash([]);c.globalAlpha=1;
-  });
+    c.setLineDash([]); c.globalAlpha=1;
+  }
 
   // Nodes
-  laidOut.forEach(n=>{
-    const r=nodeRadius(n);
-    const col=nodeColor(n);
+  for(const sn of simNodes){
+    const n=sn.data;
+    const r=nodeRadius(n), col=nodeColor(n);
     const isSelected=selectedNode?.id===n.id;
     const isNeighbor=neighborIds.has(n.id);
     const isDim=selectedNode&&!isSelected&&!isNeighbor;
-    c.globalAlpha=isDim?.2:1;
+    c.globalAlpha=isDim?.18:1;
 
     if(n.node_type==='subnet'){
-      c.beginPath();c.arc(n.x,n.y,r,0,Math.PI*2);
-      c.fillStyle='rgba(42,42,64,.15)';c.fill();
+      c.beginPath(); c.arc(sn.x,sn.y,r,0,Math.PI*2);
+      c.fillStyle='rgba(42,42,64,.12)'; c.fill();
       c.setLineDash([5,4]);
       c.strokeStyle=isSelected?'#d61f2c':'#2a2a50';
       c.lineWidth=isSelected?2:1.5;
-      c.stroke();c.setLineDash([]);
+      c.stroke(); c.setLineDash([]);
     } else {
       if(isSelected){
-        c.beginPath();c.arc(n.x,n.y,r+5,0,Math.PI*2);
-        c.strokeStyle='rgba(214,31,44,.35)';c.lineWidth=1.5;c.stroke();
+        c.beginPath(); c.arc(sn.x,sn.y,r+6,0,Math.PI*2);
+        c.strokeStyle='rgba(214,31,44,.3)'; c.lineWidth=1.5; c.stroke();
       }
-      c.beginPath();c.arc(n.x,n.y,r,0,Math.PI*2);
-      c.fillStyle=col.fill;c.fill();
+      c.beginPath(); c.arc(sn.x,sn.y,r,0,Math.PI*2);
+      c.fillStyle=col.fill; c.fill();
       c.strokeStyle=isSelected?'#ff4455':col.stroke;
-      c.lineWidth=isSelected?1.5:1;c.stroke();
+      c.lineWidth=isSelected?2:1; c.stroke();
     }
 
-    c.globalAlpha=isDim?.18:1;
+    c.globalAlpha=isDim?.15:1;
     c.fillStyle=isSelected?'#f0f1f3':'#7a8090';
-    c.font=(isSelected?'700 ':'')+'9px JetBrains Mono, monospace';
+    c.font=(isSelected?'700 ':'')+'9px JetBrains Mono,monospace';
     c.textAlign='center';
     const label=n.label.length>20?n.label.slice(0,18)+'…':n.label;
-    c.fillText(label,n.x,n.y+r+11);
+    c.fillText(label,sn.x,sn.y+r+11);
     c.globalAlpha=1;
-  });
+  }
 
   c.restore();
 }
 
-// ── Canvas Events ─────────────────────────────────────────────────────────────
+// ── Canvas events ─────────────────────────────────────────────────────────────
 function canvasXY(e){
   const rect=canvas.getBoundingClientRect();
-  return{x:(e.clientX-rect.left-panX)/scale,y:(e.clientY-rect.top-panY)/scale};
+  return{x:(e.clientX-rect.left-panX)/scale, y:(e.clientY-rect.top-panY)/scale};
 }
 
 canvas.addEventListener('click',e=>{
   const{x,y}=canvasXY(e);
   let hit=null;
-  for(const[id,pos] of nodePositions){
-    const r=nodeRadius(pos.data)+5;
-    if(Math.hypot(x-pos.x,y-pos.y)<r){hit=pos.data;break;}
+  for(const sn of simNodes){
+    if(Math.hypot(x-sn.x,y-sn.y)<nodeRadius(sn.data)+5){hit=sn.data;break;}
   }
-  if(hit){selectedNode=hit;fetchNode(hit.id);renderGraph();}
-  else{clearDetail();}
+  if(hit){ selectedNode=hit; fetchNode(hit.id); renderGraph(); }
+  else clearDetail();
 });
 
 canvas.addEventListener('wheel',e=>{
@@ -948,34 +837,43 @@ canvas.addEventListener('wheel',e=>{
   renderGraph();
 },{passive:false});
 
-canvas.addEventListener('mousedown',e=>{dragging=true;dragStartX=e.clientX-panX;dragStartY=e.clientY-panY;});
-window.addEventListener('mousemove',e=>{if(!dragging)return;panX=e.clientX-dragStartX;panY=e.clientY-dragStartY;renderGraph();});
-window.addEventListener('mouseup',()=>{dragging=false;});
+canvas.addEventListener('mousedown',e=>{ dragging=true; dragStartX=e.clientX-panX; dragStartY=e.clientY-panY; });
+window.addEventListener('mousemove',e=>{ if(!dragging) return; panX=e.clientX-dragStartX; panY=e.clientY-dragStartY; renderGraph(); });
+window.addEventListener('mouseup',()=>{ dragging=false; });
 
-// ── Button Wiring ─────────────────────────────────────────────────────────────
+// ── Wiring ────────────────────────────────────────────────────────────────────
 $('btnRefresh').onclick=fetchGraph;
-$('btnCenter').onclick=$('btnCenter2').onclick=()=>{panX=0;panY=0;scale=1;renderGraph();};
+$('btnCenter').onclick=$('btnCenter2').onclick=()=>{ panX=0; panY=0; scale=1; renderGraph(); };
 $('btnClearSel').onclick=clearDetail;
-$('btnZoomIn').onclick=()=>{scale=Math.min(4,scale*1.2);renderGraph();};
-$('btnZoomOut').onclick=()=>{scale=Math.max(.25,scale/1.2);renderGraph();};
+$('btnZoomIn').onclick=()=>{ scale=Math.min(4,scale*1.2); renderGraph(); };
+$('btnZoomOut').onclick=()=>{ scale=Math.max(.25,scale/1.2); renderGraph(); };
 $('btnDiscovery').onclick=()=>runOp('/api/scan/discovery?cidr='+encodeURIComponent(cidr()));
 $('btnArp').onclick=()=>runOp('/api/scan/arp');
 $('btnHostmap').onclick=()=>runOp('/api/scan/hostmap?cidr='+encodeURIComponent(cidr()));
 $('btnRogue').onclick=()=>runOp('/api/scan/rogue?cidr='+encodeURIComponent(cidr()));
 $('btnInventory').onclick=()=>runOp('/api/scan/inventory');
+$('btnAnomaly').onclick=()=>runAnomaly();
 $('btnSysinfo').onclick=fetchSysinfo;
-$('searchInput').oninput=renderGraph;
-$('typeFilter').onchange=renderGraph;
-document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>activateTab(b.dataset.tab));
+$('btnReport').onclick=()=>window.open('/api/export/report','_blank');
+$('searchInput').oninput=fetchGraph;
+$('typeFilter').onchange=fetchGraph;
+document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
+  activateTab(b.dataset.tab);
+  if(b.dataset.tab==='events') fetchEvents();
+  if(b.dataset.tab==='hosts') fetchHosts();
+  if(b.dataset.tab==='sysinfo') fetchSysinfo();
+});
 window.addEventListener('resize',resizeCanvas);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 resizeCanvas();
 fetchGraph();
+fetchStats();
 fetchReports();
 fetchJobs();
 fetchSysinfo();
-setInterval(fetchGraph,20000);
+setInterval(fetchGraph,25000);
+setInterval(fetchStats,10000);
 setInterval(fetchJobs,4000);
 </script>
 </body>
