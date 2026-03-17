@@ -22,6 +22,7 @@ from core.nexus_collectors import (
 )
 from core.nexus_service_state import load_service_state, save_service_state
 from core.nexus_state import load_state, save_state
+from core.nexus_risk import rescore_all_hosts, score_host
 from core.nexus_db import (
     init_db, upsert_hosts, upsert_services, insert_events,
     get_all_hosts, get_services_for_ip, get_recent_events,
@@ -131,6 +132,16 @@ def _run_discovery(jid: str, cidr: str) -> None:
             "summary": f"{len(seen)} hosts found on {cidr}",
         }])
         _job_log(jid, f"Discovery complete: {len(seen)} unique hosts — graph cache updated")
+        try:
+            from core.nexus_risk import rescore_all_hosts
+            scores = rescore_all_hosts()
+            flagged = [s for s in scores if s["status"] != "normal"]
+            if flagged:
+                _job_log(jid, f"  Risk engine: {len(flagged)} hosts flagged")
+                for s in flagged:
+                    _job_log(jid, f"    [{s['status'].upper()}] {s['ip']}  risk={s['risk_score']}")
+        except Exception as _re:
+            _job_log(jid, f"  Risk engine error: {_re}")
         _job_done(jid, {"host_count": len(seen), "hosts": list(seen.values())})
     except Exception as exc:
         _job_log(jid, f"ERROR: {exc}")
@@ -222,6 +233,11 @@ def _run_service_scan(jid: str, ip: str) -> None:
             "summary": f"{len(services)} open ports found",
             "ip": ip,
         }])
+        try:
+            from core.nexus_risk import rescore_all_hosts
+            rescore_all_hosts()
+        except Exception:
+            pass
         _job_log(jid, f"Service scan complete: {len(services)} open ports — detail panel updated")
         _job_done(jid, {"ip": ip, "count": len(services), "services": services})
     except Exception as exc:
@@ -615,3 +631,222 @@ def enrich_vt(ip: str):
         return result
     except Exception as e:
         return {"ip": ip, "available": False, "error": str(e)}
+
+
+# ── CVE scan ──────────────────────────────────────────────────────────────────
+
+def _run_cve_scan(jid: str, ip: str) -> None:
+    import shutil, subprocess, json as _json
+    from xml.etree import ElementTree as ET
+    from pathlib import Path as _Path
+
+    TMP = _Path(__file__).resolve().parent.parent / "tmp"
+    try:
+        _job_log(jid, f"CVE scan starting on {ip} (nmap vulners)")
+        if not shutil.which("nmap"):
+            _job_done(jid, None, "nmap not found")
+            return
+
+        xml_path = TMP / f"cve_{ip.replace('.','_')}.xml"
+        cmd = ["nmap", "-Pn", "-sV", "--script", "vulners", "-oX", str(xml_path), ip]
+        if shutil.which("sudo") and __import__("os").geteuid() != 0:
+            cmd = ["sudo"] + cmd
+
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if not xml_path.exists():
+            _job_done(jid, None, "nmap produced no output")
+            return
+
+        root = ET.parse(xml_path).getroot()
+        cves: list[dict] = []
+        for host in root.findall("host"):
+            for port in host.findall(".//port"):
+                portid = port.get("portid", "")
+                for script in port.findall(".//script[@id='vulners']"):
+                    output = script.get("output", "")
+                    for line in output.splitlines():
+                        line = line.strip()
+                        if line.startswith("CVE-") or "CVE-" in line:
+                            parts = line.split()
+                            cve_id = next((p for p in parts if p.startswith("CVE-")), line[:20])
+                            score_str = next((p for p in parts if p.replace(".","").isdigit() and "." in p), "?")
+                            cves.append({"cve": cve_id, "score": score_str, "port": portid})
+                            _job_log(jid, f"  [{portid}] {cve_id}  CVSS={score_str}")
+
+        if not cves:
+            _job_log(jid, "  No CVEs found")
+        else:
+            _job_log(jid, f"  {len(cves)} CVE(s) found")
+
+        # Persist CVE count to host meta
+        host_row = get_host(ip) or {"ip": ip}
+        try:
+            meta = _json.loads(host_row.get("meta") or "{}")
+        except Exception:
+            meta = {}
+        meta["cve_count"] = len(cves)
+        meta["cves"] = cves[:30]
+        host_row["meta"] = _json.dumps(meta)
+        upsert_hosts([host_row])
+
+        # Store as events
+        for cve in cves[:10]:
+            insert_events([{
+                "id": f"evt:cve:{ip}:{cve['cve']}",
+                "ts": _now_iso(),
+                "severity": "critical" if float(cve["score"]) >= 7.0 else "warning"
+                            if float(cve["score"]) >= 4.0 else "info"
+                            if cve["score"] != "?" else "warning",
+                "title": f"CVE: {cve['cve']}",
+                "summary": f"CVSS {cve['score']} on port {cve['port']}",
+                "ip": ip,
+            }])
+
+        # Rescore
+        try:
+            rescore_all_hosts()
+        except Exception:
+            pass
+
+        _job_log(jid, "CVE scan complete")
+        _job_done(jid, {"ip": ip, "cve_count": len(cves), "cves": cves})
+    except subprocess.TimeoutExpired:
+        _job_done(jid, None, "nmap timeout after 180s")
+    except Exception as exc:
+        _job_log(jid, f"ERROR: {exc}")
+        _job_done(jid, None, str(exc))
+
+
+@app.post("/api/scan/cve/{ip}")
+def scan_cve(ip: str):
+    jid = _job_create("cve_scan", {"ip": ip})
+    threading.Thread(target=_run_cve_scan, args=(jid, ip), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "cve_scan", "ip": ip}
+
+
+@app.get("/api/hosts/{ip}/cves")
+def get_cves(ip: str):
+    import json as _json
+    row = get_host(ip)
+    if not row:
+        return {"ip": ip, "cves": [], "cve_count": 0}
+    try:
+        meta = _json.loads(row.get("meta") or "{}")
+    except Exception:
+        meta = {}
+    return {"ip": ip, "cves": meta.get("cves", []), "cve_count": meta.get("cve_count", 0)}
+
+
+# ── Risk rescore endpoint ─────────────────────────────────────────────────────
+
+@app.post("/api/scan/rescore")
+def rescore():
+    results = rescore_all_hosts()
+    flagged = [r for r in results if r["status"] != "normal"]
+    insert_events([{
+        "id": f"evt:rescore:{_now_iso()}",
+        "ts": _now_iso(),
+        "severity": "warning" if flagged else "info",
+        "title": "Risk Rescore",
+        "summary": f"{len(results)} hosts scored. {len(flagged)} flagged.",
+    }])
+    return {"rescored": len(results), "flagged": len(flagged), "results": results}
+
+
+# ── Network diff ──────────────────────────────────────────────────────────────
+
+@app.get("/api/diff")
+def network_diff():
+    """Compare current DB state to previous snapshot. Shows what changed."""
+    from core.nexus_state import load_state
+    import json as _json
+
+    current_hosts = {h["ip"]: h for h in get_all_hosts()}
+    prev_state = load_state()
+    prev_hosts: dict = prev_state.get("hosts", {})
+
+    current_ips = set(current_hosts.keys())
+    prev_ips = set(prev_hosts.keys())
+
+    appeared = []
+    disappeared = []
+    changed = []
+
+    for ip in sorted(current_ips - prev_ips):
+        h = current_hosts[ip]
+        appeared.append({
+            "ip": ip, "hostname": h.get("hostname", ip),
+            "mac": h.get("mac", ""), "vendor": h.get("vendor", ""),
+            "first_seen": h.get("first_seen", ""),
+        })
+
+    for ip in sorted(prev_ips - current_ips):
+        prev = prev_hosts[ip]
+        disappeared.append({
+            "ip": ip, "hostname": prev.get("label", ip),
+            "last_seen": prev.get("last_seen", ""),
+        })
+
+    for ip in sorted(current_ips & prev_ips):
+        cur = current_hosts[ip]
+        prev = prev_hosts[ip]
+        diffs = []
+        if cur.get("status") != prev.get("status"):
+            diffs.append(f"status: {prev.get('status')} → {cur.get('status')}")
+        if cur.get("risk_score") != prev.get("risk_score"):
+            diffs.append(f"risk: {prev.get('risk_score')} → {cur.get('risk_score')}")
+        if cur.get("mac") and prev.get("mac") and cur["mac"].lower() != prev["mac"].lower():
+            diffs.append(f"MAC: {prev['mac']} → {cur['mac']}")
+        if diffs:
+            changed.append({"ip": ip, "hostname": cur.get("hostname", ip), "changes": diffs})
+
+    return {
+        "appeared": appeared,
+        "disappeared": disappeared,
+        "changed": changed,
+        "summary": f"+{len(appeared)} new  -{len(disappeared)} gone  ~{len(changed)} changed",
+        "generated_at": _now_iso(),
+    }
+
+
+# ── Watchdog ──────────────────────────────────────────────────────────────────
+
+@app.get("/api/watchdog")
+def watchdog():
+    """Check which baseline hosts are currently NOT in the ARP table."""
+    from core.nexus_collectors import collect_arp_neighbors
+
+    arp_rows = collect_arp_neighbors()
+    arp_ips = {r["ip"] for r in arp_rows}
+    baseline = get_mac_baseline()
+
+    offline = []
+    online = []
+    for ip, info in baseline.items():
+        if ip in arp_ips:
+            online.append(ip)
+        else:
+            offline.append({
+                "ip": ip,
+                "mac": info.get("mac", ""),
+                "hostname": info.get("hostname", ip),
+                "last_seen": info.get("last_seen", ""),
+            })
+
+    if offline:
+        insert_events([{
+            "id": f"evt:watchdog:{_now_iso()}",
+            "ts": _now_iso(),
+            "severity": "warning",
+            "title": "Watchdog: Hosts Offline",
+            "summary": f"{len(offline)} baseline host(s) not in ARP table: "
+                       + ", ".join(o["ip"] for o in offline[:5]),
+        }])
+
+    return {
+        "online_count": len(online),
+        "offline_count": len(offline),
+        "offline": offline,
+        "arp_count": len(arp_ips),
+        "checked_at": _now_iso(),
+    }

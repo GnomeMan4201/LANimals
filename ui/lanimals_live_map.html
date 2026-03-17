@@ -144,6 +144,11 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .vt-result{font-size:10px;padding:6px 0;color:var(--muted);}
 .vt-result .mal{color:var(--red3);}
 .vt-result .ok{color:var(--ok);}
+.cve-btn{width:100%;background:rgba(214,31,44,.12);border:1px solid var(--red2);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
+.cve-btn:hover{background:rgba(214,31,44,.22);}
+.cve-row{font-size:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.025);}
+.risk-reason{font-size:10px;color:var(--muted);padding:1px 0;}
+.risk-reason::before{content:'• ';color:var(--warn);}
 button{cursor:pointer;font-family:var(--font);}
 .btn{background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 10px;font-size:11px;font-weight:600;}
 .btn:hover{border-color:var(--red);}
@@ -186,6 +191,9 @@ button{cursor:pointer;font-family:var(--font);}
         <button class="op-btn" id="btnRogue"><span class="icon">⚑</span><span class="lbl">Rogue Detection</span></button>
         <button class="op-btn" id="btnInventory"><span class="icon">≡</span><span class="lbl">Inventory</span></button>
         <button class="op-btn" id="btnAnomaly"><span class="icon">⚡</span><span class="lbl">Anomaly Scan</span></button>
+        <button class="op-btn" id="btnRescore"><span class="icon">⊙</span><span class="lbl">Rescore Risks</span></button>
+        <button class="op-btn" id="btnWatchdog"><span class="icon">◈</span><span class="lbl">Watchdog Check</span></button>
+        <button class="op-btn" id="btnDiff"><span class="icon">≠</span><span class="lbl">Network Diff</span></button>
       </div>
     </div>
     <div class="rail-section" id="sec-stats">
@@ -463,7 +471,9 @@ async function fetchNode(id){
       try{ const ev=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/events'); dbEvents=ev.events||[]; } catch(e){}
       try{ const nt=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/notes'); dbNotes=nt.notes||''; } catch(e){}
     }
-    renderDetail(node, data.neighbors||[], dbEvents, dbServices, dbNotes);
+    let dbCves=[];
+    if(node.ip){ try{ const cv=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/cves'); dbCves=cv.cves||[]; } catch(e){} }
+    renderDetail(node, data.neighbors||[], dbEvents, dbServices, dbNotes, dbCves);
     $('btnDetailRefresh').style.display='';
     $('btnDetailRefresh').onclick=()=>fetchNode(id);
   } catch(e){ console.error('fetchNode',e); }
@@ -647,7 +657,7 @@ function renderSysinfo(info){
   }
 }
 
-function renderDetail(node, neighbors, events, dbServices, notes=''){
+function renderDetail(node, neighbors, events, dbServices, notes='', cves=[]){
   $('detailTitle').textContent=node.label||node.id;
   const riskColor=node.risk_score>=70?'red':node.risk_score>=35?'warn':'ok';
   const riskHex=node.risk_score>=70?'#d61f2c':node.risk_score>=35?'#c97b00':'#2a9d4e';
@@ -702,11 +712,16 @@ function renderDetail(node, neighbors, events, dbServices, notes=''){
       <div class="kv"><div class="k">score</div><div class="v ${riskColor}">${esc(String(node.risk_score??0))} / 100</div></div>
       <div class="kv"><div class="k">status</div><div class="v ${riskColor}">${esc(node.status)}</div></div>
       <div class="risk-bar"><div class="risk-fill" style="width:${node.risk_score||0}%;background:${riskHex}"></div></div>
+      ${(()=>{const reasons=(node.meta?.risk_reasons)||[];return reasons.length?'<div style="margin-top:6px;">'+reasons.map(r=>'<div class="risk-reason">'+esc(r)+'</div>').join('')+'</div>':''})()}
     </div>
+    ${cves.length?`<div class="detail-section">
+      <h5>CVEs (${cves.length})</h5>
+      ${cves.slice(0,10).map(c=>'<div class="cve-row"><span style="color:var(--red3)">${esc(c.cve)}</span> CVSS ${esc(c.score)} port ${esc(c.port)}</div>').join('')}
+    </div>`:''}
     <div class="detail-section">
       <h5>Services (${services.length})</h5>
       ${svcHtml}
-      ${(node.node_type==='host'&&node.ip)?`<button class="scan-btn-node" id="btnScanSvcNode">▶ Scan Services on ${esc(node.ip)}</button>`:''}
+      ${(node.node_type==='host'&&node.ip)?`<button class="scan-btn-node" id="btnScanSvcNode">▶ Scan Services on ${esc(node.ip)}</button><button class="cve-btn" id="btnScanCve">☠ CVE Scan on ${esc(node.ip)}</button>`:''}
     </div>
     <div class="detail-section">
       <h5>Host Timeline (${events.length})</h5>
@@ -746,6 +761,15 @@ function renderDetail(node, neighbors, events, dbServices, notes=''){
       ssBtn.disabled=true; ssBtn.textContent='Scanning…';
       await runOp('/api/scan/services/'+encodeURIComponent(node.ip));
       ssBtn.disabled=false; ssBtn.textContent='▶ Scan Services on '+node.ip;
+      await fetchNode(node.id);
+    });
+  }
+  const cveBtn=$('btnScanCve');
+  if(cveBtn){
+    cveBtn.addEventListener('click',async()=>{
+      cveBtn.disabled=true; cveBtn.textContent='Scanning CVEs…';
+      await runOp('/api/scan/cve/'+encodeURIComponent(node.ip));
+      cveBtn.disabled=false; cveBtn.textContent='☠ CVE Scan on '+node.ip;
       await fetchNode(node.id);
     });
   }
@@ -916,6 +940,33 @@ $('btnHostmap').onclick=()=>runOp('/api/scan/hostmap?cidr='+encodeURIComponent(c
 $('btnRogue').onclick=()=>runOp('/api/scan/rogue?cidr='+encodeURIComponent(cidr()));
 $('btnInventory').onclick=()=>runOp('/api/scan/inventory');
 $('btnAnomaly').onclick=()=>runAnomaly();
+$('btnRescore').onclick=async()=>{
+  addScanLine('→ POST /api/scan/rescore','muted'); activateTab('scanout');
+  const d=await apiPost('/api/scan/rescore');
+  addScanLine(`Rescored ${d.rescored} hosts. Flagged: ${d.flagged}`,'ok');
+  d.results?.filter(r=>r.status!=='normal').forEach(r=>{
+    addScanLine(`  [${r.status.toUpperCase()}] ${r.ip}  risk=${r.risk_score}`,'warn');
+    r.reasons?.forEach(reason=>addScanLine(`    - ${reason}`,'muted'));
+  });
+  fetchGraph(); fetchStats();
+};
+$('btnWatchdog').onclick=async()=>{
+  addScanLine('→ GET /api/watchdog','muted'); activateTab('scanout');
+  const d=await apiGet('/api/watchdog');
+  addScanLine(`Watchdog: ${d.online_count} online, ${d.offline_count} offline of ${d.online_count+d.offline_count} baseline hosts`,'ok');
+  d.offline?.forEach(o=>addScanLine(`  [OFFLINE] ${o.ip}  ${o.hostname}  mac=${o.mac}`,'warn'));
+};
+$('btnDiff').onclick=async()=>{
+  addScanLine('→ GET /api/diff','muted'); activateTab('scanout');
+  const d=await apiGet('/api/diff');
+  addScanLine(d.summary,'ok');
+  d.appeared?.forEach(h=>addScanLine(`  [NEW]     ${h.ip}  ${h.hostname}  mac=${h.mac}  vendor=${h.vendor}`,'ok'));
+  d.disappeared?.forEach(h=>addScanLine(`  [GONE]    ${h.ip}  ${h.hostname}`,'warn'));
+  d.changed?.forEach(h=>{
+    addScanLine(`  [CHANGED] ${h.ip}  ${h.hostname}`,'warn');
+    h.changes?.forEach(c=>addScanLine(`    ${c}`,'muted'));
+  });
+};
 $('btnSysinfo').onclick=fetchSysinfo;
 $('btnReport').onclick=()=>window.open('/api/export/report','_blank');
 $('searchInput').oninput=fetchGraph;
