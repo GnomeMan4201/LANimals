@@ -851,3 +851,79 @@ def watchdog():
         "arp_count": len(arp_ips),
         "checked_at": _now_iso(),
     }
+
+
+# ── Security audit summary ────────────────────────────────────────────────────
+
+@app.get("/api/audit")
+def get_audit():
+    """Full security posture summary — suitable for report header."""
+    import json as _json
+
+    hosts = get_all_hosts()
+    baseline = get_mac_baseline()
+    events = get_recent_events(limit=200)
+    services = []
+    try:
+        from core.nexus_db import get_all_services
+        services = get_all_services()
+    except Exception:
+        pass
+
+    # Risk distribution
+    critical = [h for h in hosts if h.get("status") == "critical"]
+    warning  = [h for h in hosts if h.get("status") == "warning"]
+    normal   = [h for h in hosts if h.get("status") == "normal"]
+
+    # Randomized MACs
+    from core.nexus_risk import _is_randomized_mac
+    randomized = [h for h in hosts if _is_randomized_mac(h.get("mac"))]
+
+    # New hosts (not in baseline)
+    baseline_ips = set(baseline.keys())
+    new_hosts = [h for h in hosts if h["ip"] not in baseline_ips]
+
+    # High-risk ports
+    risky_ports = {"21","23","445","3389","5900","4444","6379","9200","27017"}
+    exposed = [s for s in services if s.get("port") in risky_ports]
+
+    # CVE-flagged hosts
+    cve_hosts = []
+    for h in hosts:
+        try:
+            meta = _json.loads(h.get("meta") or "{}")
+        except Exception:
+            meta = {}
+        if meta.get("cve_count", 0) > 0:
+            cve_hosts.append({
+                "ip": h["ip"],
+                "hostname": h.get("hostname", h["ip"]),
+                "cve_count": meta["cve_count"],
+            })
+
+    # Recent alerts
+    alert_events = [e for e in events if e.get("severity") in ("critical","high","warning")][:20]
+
+    return {
+        "generated_at": _now_iso(),
+        "summary": {
+            "total_hosts": len(hosts),
+            "critical": len(critical),
+            "warning": len(warning),
+            "normal": len(normal),
+            "in_baseline": len(baseline_ips),
+            "new_hosts": len(new_hosts),
+            "randomized_macs": len(randomized),
+            "exposed_services": len(exposed),
+            "cve_flagged_hosts": len(cve_hosts),
+            "total_services": len(services),
+            "total_events": len(events),
+        },
+        "critical_hosts": [{"ip": h["ip"], "hostname": h.get("hostname",""), "risk": h.get("risk_score",0)} for h in critical],
+        "warning_hosts":  [{"ip": h["ip"], "hostname": h.get("hostname",""), "risk": h.get("risk_score",0)} for h in warning],
+        "new_hosts": [{"ip": h["ip"], "hostname": h.get("hostname",""), "mac": h.get("mac",""), "vendor": h.get("vendor","")} for h in new_hosts],
+        "randomized_macs": [{"ip": h["ip"], "mac": h.get("mac",""), "hostname": h.get("hostname","")} for h in randomized],
+        "exposed_services": [{"ip": s["ip"], "port": s["port"], "service": s.get("service_name",""), "product": s.get("product","")} for s in exposed],
+        "cve_flagged": cve_hosts,
+        "recent_alerts": [{"ts": e["ts"], "severity": e["severity"], "title": e["title"], "ip": e.get("ip","")} for e in alert_events],
+    }

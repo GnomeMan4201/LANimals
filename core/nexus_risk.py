@@ -140,9 +140,9 @@ def score_host(
     # ── Cap and classify ─────────────────────────────────────────────────────
     score = max(5, min(score, 100))
 
-    if score >= 70:
+    if score >= 65:
         status = "critical"
-    elif score >= 35:
+    elif score >= 25:
         status = "warning"
     else:
         status = "normal"
