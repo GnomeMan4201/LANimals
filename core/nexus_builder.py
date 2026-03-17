@@ -322,11 +322,39 @@ def _load_discovery_cache() -> Dict[str, Any]:
         return {}
 
 
+_VIRTUAL_IP_PREFIXES_BUILD = ("172.17.", "172.18.", "172.19.", "172.20.", "172.21.", "172.22.",
+                               "172.23.", "172.24.", "172.25.", "172.26.", "172.27.", "172.28.",
+                               "172.29.", "172.30.", "172.31.", "10.0.3.", "10.0.2.")
+_VIRTUAL_IFACE_PREFIXES_BUILD = ("docker", "veth", "virbr", "br-", "lxc", "lxd", "vbox", "vmnet",
+                                  "tun", "tap", "wg", "utun")
+
+
+def _filter_virtual_hosts(rows: list) -> list:
+    out = []
+    for h in rows:
+        ip = h.get("ip") or ""
+        iface = h.get("interface") or ""
+        if any(ip.startswith(p) for p in _VIRTUAL_IP_PREFIXES_BUILD):
+            continue
+        if any(iface.lower().startswith(p) for p in _VIRTUAL_IFACE_PREFIXES_BUILD):
+            continue
+        out.append(h)
+    return out
+
+
 def save_discovery_cache(data: Dict[str, Any]) -> None:
-    """Called by scan jobs to persist results."""
+    """Called by scan jobs to persist results. Filters virtual interfaces before writing."""
     TMP_DIR.mkdir(exist_ok=True)
     existing = _load_discovery_cache()
-    existing.update(data)
+    # Merge lists, filtering virtual entries
+    for key in ("arp_neighbors", "local_interfaces", "nmap_hosts"):
+        if key in data:
+            existing[key] = _filter_virtual_hosts(data[key])
+        elif key not in existing:
+            existing[key] = []
+    for key in ("cidr",):
+        if key in data:
+            existing[key] = data[key]
     existing["saved_at"] = _now()
     DISCOVERY_CACHE.write_text(json.dumps(existing, indent=2))
 
