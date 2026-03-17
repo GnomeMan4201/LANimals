@@ -22,6 +22,11 @@ from core.nexus_collectors import (
 )
 from core.nexus_service_state import load_service_state, save_service_state
 from core.nexus_state import load_state, save_state
+from core.nexus_db import (
+    init_db, upsert_hosts, upsert_services, insert_events,
+    get_all_hosts, get_services_for_ip, get_recent_events,
+    get_db_stats, update_mac_baseline, get_mac_baseline,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_FILE = ROOT / "ui" / "lanimals_live_map.html"
@@ -110,6 +115,20 @@ def _run_discovery(jid: str, cidr: str) -> None:
             "cidr": cidr,
         }
         save_discovery_cache(cache_data)
+        # Persist to SQLite
+        host_rows = []
+        for ip, h in seen.items():
+            parts = ip.split(".")
+            group_cidr = ".".join(parts[:3]) + ".0/24" if len(parts) == 4 else None
+            host_rows.append({**h, "group_cidr": group_cidr})
+        upsert_hosts(host_rows)
+        insert_events([{
+            "id": f"evt:discovery:{jid}",
+            "ts": _now_iso(),
+            "severity": "info",
+            "title": "Discovery Scan Complete",
+            "summary": f"{len(seen)} hosts found on {cidr}",
+        }])
         _job_log(jid, f"Discovery complete: {len(seen)} unique hosts — graph cache updated")
         _job_done(jid, {"host_count": len(seen), "hosts": list(seen.values())})
     except Exception as exc:
@@ -193,6 +212,15 @@ def _run_service_scan(jid: str, ip: str) -> None:
         save_service_state(state)
         for svc in services:
             _job_log(jid, f"  {svc.get('protocol','tcp'):4s}/{svc.get('port','?'):6s}  {svc.get('service_name',''):16s}  {svc.get('product','')} {svc.get('version','')}")
+        upsert_services(services)
+        insert_events([{
+            "id": f"evt:svc:{jid}",
+            "ts": _now_iso(),
+            "severity": "info",
+            "title": f"Service Scan: {ip}",
+            "summary": f"{len(services)} open ports found",
+            "ip": ip,
+        }])
         _job_log(jid, f"Service scan complete: {len(services)} open ports — detail panel updated")
         _job_done(jid, {"ip": ip, "count": len(services), "services": services})
     except Exception as exc:
@@ -351,3 +379,168 @@ def get_job(jid: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+# ── Production endpoints ───────────────────────────────────────────────────────
+
+@app.get("/api/hosts")
+def get_hosts():
+    """All known hosts from persistent DB."""
+    hosts = get_all_hosts()
+    return {"hosts": hosts, "count": len(hosts)}
+
+
+@app.get("/api/hosts/{ip}/services")
+def get_host_services(ip: str):
+    svcs = get_services_for_ip(ip)
+    return {"ip": ip, "services": svcs, "count": len(svcs)}
+
+
+@app.get("/api/hosts/{ip}/events")
+def get_host_events(ip: str):
+    events = get_recent_events(limit=50, ip=ip)
+    return {"ip": ip, "events": events, "count": len(events)}
+
+
+@app.get("/api/events")
+def get_events(limit: int = 60):
+    events = get_recent_events(limit=min(limit, 200))
+    return {"events": events, "count": len(events)}
+
+
+@app.get("/api/stats")
+def get_stats():
+    db = get_db_stats()
+    snap = build_snapshot()
+    return {
+        "db": db,
+        "graph": snap.stats,
+        "generated_at": _now_iso(),
+    }
+
+
+@app.get("/api/scan/anomaly")
+def get_anomaly():
+    """Check live outbound connections against known hosts — flag unknowns."""
+    import psutil
+    known_hosts = {h["ip"] for h in get_all_hosts()}
+    baseline = get_mac_baseline()
+    known_ips = known_hosts | set(baseline.keys())
+
+    try:
+        conns = psutil.net_connections(kind="inet")
+    except Exception as e:
+        return {"error": str(e), "anomalies": []}
+
+    anomalies = []
+    seen = set()
+    for c in conns:
+        if not c.raddr:
+            continue
+        rip = c.raddr[0]
+        if rip in seen:
+            continue
+        seen.add(rip)
+        # Skip loopback and RFC1918
+        if (rip.startswith("127.") or rip.startswith("::1") or
+                rip.startswith("192.168.") or rip.startswith("10.") or
+                any(rip.startswith(p) for p in ("172.16.","172.17.","172.18.","172.19.","172.20.",
+                    "172.21.","172.22.","172.23.","172.24.","172.25.","172.26.","172.27.",
+                    "172.28.","172.29.","172.30.","172.31."))):
+            continue
+        anomalies.append({
+            "ip": rip,
+            "port": c.raddr[1],
+            "status": c.status,
+            "known": rip in known_ips,
+            "pid": c.pid,
+        })
+
+    insert_events([{
+        "id": f"evt:anomaly:{_now_iso()}",
+        "ts": _now_iso(),
+        "severity": "warning" if anomalies else "info",
+        "title": "Anomaly Scan",
+        "summary": f"{len(anomalies)} external connections detected",
+    }])
+
+    return {"anomalies": anomalies, "count": len(anomalies), "scanned_at": _now_iso()}
+
+
+@app.get("/api/export/report")
+def export_report():
+    """Generate a full HTML operator report."""
+    from fastapi.responses import HTMLResponse
+    hosts = get_all_hosts()
+    events = get_recent_events(limit=100)
+    stats = get_db_stats()
+    now = _now_iso()
+
+    rows = ""
+    for h in sorted(hosts, key=lambda x: x.get("ip") or ""):
+        svcs = get_services_for_ip(h["ip"])
+        svc_str = ", ".join(f"{s['service_name']}:{s['port']}" for s in svcs) or "—"
+        status_color = "#ff4455" if h["status"]=="critical" else "#c97b00" if h["status"]=="warning" else "#2a9d4e"
+        rows += f"""<tr>
+            <td>{h.get("ip","")}</td>
+            <td>{h.get("hostname","")}</td>
+            <td>{h.get("mac","") or "—"}</td>
+            <td>{h.get("vendor","") or "—"}</td>
+            <td style="color:{status_color}">{h.get("status","normal")}</td>
+            <td>{h.get("risk_score",0)}</td>
+            <td style="font-size:11px">{svc_str}</td>
+            <td>{h.get("last_seen","") or "—"}</td>
+        </tr>"""
+
+    event_rows = ""
+    for e in events[:50]:
+        sev_color = "#ff4455" if e["severity"] in ("critical","high") else "#c97b00" if e["severity"]=="warning" else "#3b7ecf"
+        event_rows += f"""<tr>
+            <td style="color:{sev_color}">{e["severity"].upper()}</td>
+            <td>{e["ts"]}</td>
+            <td>{e["title"]}</td>
+            <td>{e.get("summary","")}</td>
+            <td>{e.get("ip","") or "—"}</td>
+        </tr>"""
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/>
+<title>LANimals Report — {now}</title>
+<style>
+  body{{font-family:'JetBrains Mono',monospace;background:#0b0b0d;color:#f0f1f3;padding:32px;}}
+  h1{{color:#d61f2c;font-size:28px;margin-bottom:4px;}}
+  h2{{color:#7a8090;font-size:13px;font-weight:400;margin-bottom:32px;}}
+  h3{{color:#d61f2c;font-size:14px;text-transform:uppercase;letter-spacing:.1em;margin:32px 0 12px;}}
+  table{{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:32px;}}
+  th{{background:#17171d;color:#7a8090;text-align:left;padding:8px 10px;border-bottom:1px solid #252530;font-size:10px;text-transform:uppercase;letter-spacing:.08em;}}
+  td{{padding:7px 10px;border-bottom:1px solid #17171d;}}
+  tr:hover td{{background:#111115;}}
+  .stat{{display:inline-block;background:#111115;border:1px solid #252530;border-radius:6px;padding:12px 20px;margin:0 8px 8px 0;}}
+  .sv{{font-size:28px;font-weight:800;color:#d61f2c;}}
+  .sl{{font-size:10px;color:#7a8090;text-transform:uppercase;}}
+  .footer{{color:#252530;font-size:10px;margin-top:48px;}}
+</style>
+</head><body>
+<h1>LANimals</h1>
+<h2>Network Intelligence Report — Generated {now}</h2>
+<div>
+  <div class="stat"><div class="sv">{stats["hosts"]}</div><div class="sl">Hosts</div></div>
+  <div class="stat"><div class="sv">{stats["services"]}</div><div class="sl">Services</div></div>
+  <div class="stat"><div class="sv" style="color:#c97b00">{stats["warnings"]}</div><div class="sl">Warnings</div></div>
+  <div class="stat"><div class="sv">{stats["baseline_entries"]}</div><div class="sl">Baseline</div></div>
+  <div class="stat"><div class="sv">{stats["events"]}</div><div class="sl">Events</div></div>
+</div>
+<h3>Host Inventory</h3>
+<table><thead><tr>
+  <th>IP</th><th>Hostname</th><th>MAC</th><th>Vendor</th>
+  <th>Status</th><th>Risk</th><th>Services</th><th>Last Seen</th>
+</tr></thead><tbody>{rows}</tbody></table>
+<h3>Recent Events</h3>
+<table><thead><tr>
+  <th>Severity</th><th>Timestamp</th><th>Event</th><th>Summary</th><th>IP</th>
+</tr></thead><tbody>{event_rows}</tbody></table>
+<div class="footer">LANimals Nexus v2.0 — badBANANA/LANimals</div>
+</body></html>"""
+
+    return HTMLResponse(content=html)
+

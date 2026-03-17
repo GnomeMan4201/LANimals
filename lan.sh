@@ -13,7 +13,8 @@ URL="http://127.0.0.1:${PORT}"
 pkill -f "nexus_api" 2>/dev/null && sleep 0.4 || true
 
 # Dependency check
-for dep in uvicorn python3 nmap; do
+for dep in python3; do
+  command -v nmap >/dev/null || echo "  [!] nmap not found — discovery scan will use ARP only"
   command -v "$dep" >/dev/null || { echo "[!] missing: $dep"; exit 1; }
 done
 
@@ -29,7 +30,7 @@ echo "  Nexus operator console — starting on ${URL}"
 echo ""
 
 # Start server
-nohup uvicorn core.nexus_api:app \
+nohup python3 -m uvicorn core.nexus_api:app \
   --host 0.0.0.0 \
   --port "${PORT}" \
   --log-level warning \
@@ -55,6 +56,9 @@ for i in $(seq 1 12); do
     echo ""
     # Open browser if available
     xdg-open "${URL}" 2>/dev/null || true
+    # Auto-run ARP refresh on boot
+    curl -sf "${URL}/api/scan/arp" -X POST >/dev/null 2>&1 &
+    echo "  [✓] ARP refresh queued"
     exit 0
   fi
 done
