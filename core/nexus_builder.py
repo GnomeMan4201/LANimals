@@ -272,16 +272,9 @@ def _normalize_collector_data(data: Dict[str, Any]) -> Tuple[List[GraphNode], Li
             source=subnet_id, target=node_id, edge_type="contains", status="normal",
         ))
         if interface:
-            iface_id = f"iface:{interface}"
-            _add_node(nodes, GraphNode(
-                id=iface_id, node_type="interface", label=interface,
-                status="normal", risk_score=5, group=group,
-                meta={"source": "collector"},
-            ))
-            _add_edge(edges, GraphEdge(
-                id=_edge_id(iface_id, node_id, "sees"),
-                source=iface_id, target=node_id, edge_type="sees", status="normal",
-            ))
+            # Store interface on the host node meta instead of a separate node
+            # (interface nodes clutter the graph when there's only one physical NIC)
+            nodes[node_id].meta["interface"] = interface
 
     return list(nodes.values()), list(edges.values()), events
 

@@ -251,7 +251,14 @@ def collect_sysinfo() -> Dict[str, Any]:
         info["disk_percent"] = disk.percent
         ifaces = {}
         for iface, addrs in psutil.net_if_addrs().items():
-            ips = [a.address for a in addrs if getattr(a.family, "name", "") == "AF_INET"]
+            if _is_virtual_iface(iface):
+                continue
+            ips = [
+                a.address for a in addrs
+                if getattr(a.family, "name", "") == "AF_INET"
+                and not a.address.startswith("127.")
+                and not _is_virtual_ip(a.address)
+            ]
             if ips:
                 ifaces[iface] = ips
         info["interfaces"] = ifaces
