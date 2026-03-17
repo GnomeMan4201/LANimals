@@ -1,17 +1,240 @@
 from __future__ import annotations
 
+import threading
+import time
+import uuid
+from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from typing import Any, Dict, List, Optional
+
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from core.nexus_builder import build_snapshot
-from core.nexus_collectors import collect_all
+from core.nexus_builder import build_snapshot, save_discovery_cache
+from core.nexus_collectors import (
+    collect_arp_neighbors,
+    collect_local_interfaces,
+    collect_nmap_ping_sweep,
+    collect_host_map,
+    collect_rogue_scan,
+    collect_sysinfo,
+    collect_services_for_ip,
+)
+from core.nexus_service_state import load_service_state, save_service_state
+from core.nexus_state import load_state, save_state
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_FILE = ROOT / "ui" / "lanimals_live_map.html"
 REPORTS_DIR = ROOT / "reports"
 
-app = FastAPI(title="LANimals Live Map", version="0.3.0")
+app = FastAPI(title="LANimals Nexus", version="2.0.0")
+
+# ── Job registry ──────────────────────────────────────────────────────────────
+_JOBS: Dict[str, Dict[str, Any]] = {}
+_JOBS_LOCK = threading.Lock()
+_JOB_MAX = 50
+
+
+def _now_iso() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def _job_create(op: str, params: dict) -> str:
+    jid = str(uuid.uuid4())[:8]
+    with _JOBS_LOCK:
+        _JOBS[jid] = {
+            "id": jid, "op": op, "params": params, "status": "running",
+            "started_at": _now_iso(), "finished_at": None,
+            "lines": [], "result": None, "error": None,
+        }
+        keys = list(_JOBS.keys())
+        if len(keys) > _JOB_MAX:
+            for old in keys[: len(keys) - _JOB_MAX]:
+                del _JOBS[old]
+    return jid
+
+
+def _job_log(jid: str, line: str) -> None:
+    with _JOBS_LOCK:
+        if jid in _JOBS:
+            _JOBS[jid]["lines"].append(f"[{_now_iso()}] {line}")
+
+
+def _job_done(jid: str, result: Any, error: Optional[str] = None) -> None:
+    with _JOBS_LOCK:
+        if jid in _JOBS:
+            _JOBS[jid]["status"] = "error" if error else "done"
+            _JOBS[jid]["finished_at"] = _now_iso()
+            _JOBS[jid]["result"] = result
+            _JOBS[jid]["error"] = error
+
+
+def _job_get(jid: str) -> Optional[Dict[str, Any]]:
+    with _JOBS_LOCK:
+        return dict(_JOBS.get(jid, {}))
+
+
+def _jobs_recent(limit: int = 20) -> List[Dict[str, Any]]:
+    with _JOBS_LOCK:
+        jobs = list(_JOBS.values())
+    jobs.sort(key=lambda j: j.get("started_at", ""), reverse=True)
+    return [{k: v for k, v in j.items() if k != "lines"} for j in jobs[:limit]]
+
+
+# ── Background runners ────────────────────────────────────────────────────────
+
+def _run_discovery(jid: str, cidr: str) -> None:
+    try:
+        _job_log(jid, f"Discovery scan: {cidr}")
+        arp = collect_arp_neighbors()
+        local = collect_local_interfaces()
+        _job_log(jid, f"  ARP table: {len(arp)} entries")
+        _job_log(jid, f"  Local interfaces: {len(local)} addresses")
+        _job_log(jid, f"  Starting nmap ping sweep on {cidr} …")
+        nmap_hosts = collect_nmap_ping_sweep(cidr=cidr)
+        _job_log(jid, f"  nmap found: {len(nmap_hosts)} hosts")
+
+        seen: dict[str, dict] = {}
+        for h in arp + local + nmap_hosts:
+            ip = h.get("ip")
+            if ip and ip not in seen:
+                seen[ip] = h
+
+        for ip, h in sorted(seen.items()):
+            _job_log(jid, f"  {ip:18s}  {h.get('hostname',''):32s}  mac={h.get('mac') or '--':18s}  src={h.get('source','')}")
+
+        cache_data = {
+            "arp_neighbors": arp,
+            "local_interfaces": local,
+            "nmap_hosts": nmap_hosts,
+            "cidr": cidr,
+        }
+        save_discovery_cache(cache_data)
+        _job_log(jid, f"Discovery complete: {len(seen)} unique hosts — graph cache updated")
+        _job_done(jid, {"host_count": len(seen), "hosts": list(seen.values())})
+    except Exception as exc:
+        _job_log(jid, f"ERROR: {exc}")
+        _job_done(jid, None, str(exc))
+
+
+def _run_arp_refresh(jid: str) -> None:
+    try:
+        _job_log(jid, "ARP neighbor refresh")
+        rows = collect_arp_neighbors()
+        local = collect_local_interfaces()
+        for r in rows:
+            _job_log(jid, f"  {r.get('ip',''):18s}  mac={r.get('mac') or '--':20s}  state={r.get('state','')}")
+        save_discovery_cache({
+            "arp_neighbors": rows,
+            "local_interfaces": local,
+            "nmap_hosts": [],
+        })
+        _job_log(jid, f"ARP refresh complete: {len(rows)} entries — graph cache updated")
+        _job_done(jid, {"count": len(rows), "neighbors": rows})
+    except Exception as exc:
+        _job_log(jid, f"ERROR: {exc}")
+        _job_done(jid, None, str(exc))
+
+
+def _run_hostmap(jid: str, cidr: str) -> None:
+    try:
+        _job_log(jid, f"Host mapping: {cidr}")
+        rows = collect_host_map(cidr=cidr)
+        for r in rows:
+            _job_log(jid, f"  {r.get('ip',''):18s}  {r.get('hostname',''):40s}  mac={r.get('mac') or '--'}")
+        # Merge into cache
+        existing_cache = {}
+        try:
+            from core.nexus_builder import DISCOVERY_CACHE
+            import json
+            if DISCOVERY_CACHE.exists():
+                existing_cache = json.loads(DISCOVERY_CACHE.read_text())
+        except Exception:
+            pass
+        nmap_hosts = existing_cache.get("nmap_hosts", [])
+        existing_ips = {h.get("ip") for h in nmap_hosts}
+        for r in rows:
+            if r.get("ip") not in existing_ips:
+                nmap_hosts.append(r)
+        save_discovery_cache({"nmap_hosts": nmap_hosts, "cidr": cidr})
+        _job_log(jid, f"Host map complete: {len(rows)} hosts — graph cache updated")
+        _job_done(jid, {"count": len(rows), "hosts": rows})
+    except Exception as exc:
+        _job_log(jid, f"ERROR: {exc}")
+        _job_done(jid, None, str(exc))
+
+
+def _run_rogue(jid: str, cidr: str) -> None:
+    try:
+        _job_log(jid, f"Rogue detection: {cidr}")
+        result = collect_rogue_scan(cidr=cidr)
+        rogues = result.get("rogues", [])
+        known = result.get("known_count", 0)
+        if rogues:
+            for r in rogues:
+                _job_log(jid, f"  [ROGUE] {r.get('ip',''):18s}  mac={r.get('mac') or '--':20s}  {r.get('reason','')}")
+        else:
+            _job_log(jid, "  No rogue devices detected")
+        _job_log(jid, f"Rogue scan complete: {known} known, {len(rogues)} flagged")
+        _job_done(jid, result)
+    except Exception as exc:
+        _job_log(jid, f"ERROR: {exc}")
+        _job_done(jid, None, str(exc))
+
+
+def _run_service_scan(jid: str, ip: str) -> None:
+    try:
+        _job_log(jid, f"Service fingerprint: {ip}")
+        services = collect_services_for_ip(ip)
+        state = load_service_state()
+        svc_map = state.get("services_by_ip", {})
+        svc_map[ip] = services
+        state["services_by_ip"] = svc_map
+        save_service_state(state)
+        for svc in services:
+            _job_log(jid, f"  {svc.get('protocol','tcp'):4s}/{svc.get('port','?'):6s}  {svc.get('service_name',''):16s}  {svc.get('product','')} {svc.get('version','')}")
+        _job_log(jid, f"Service scan complete: {len(services)} open ports — detail panel updated")
+        _job_done(jid, {"ip": ip, "count": len(services), "services": services})
+    except Exception as exc:
+        _job_log(jid, f"ERROR: {exc}")
+        _job_done(jid, None, str(exc))
+
+
+def _run_inventory(jid: str) -> None:
+    try:
+        _job_log(jid, "Inventory collection started")
+        info = collect_sysinfo()
+        for k, v in info.items():
+            if k == "interfaces":
+                for iface, ips in (v or {}).items():
+                    _job_log(jid, f"  iface: {iface}  →  {', '.join(ips)}")
+            else:
+                _job_log(jid, f"  {k}: {v}")
+        _job_log(jid, "Inventory complete")
+        _job_done(jid, info)
+    except Exception as exc:
+        _job_log(jid, f"ERROR: {exc}")
+        _job_done(jid, None, str(exc))
+
+
+# ── API ───────────────────────────────────────────────────────────────────────
+
+@app.get("/")
+def ui():
+    return FileResponse(UI_FILE)
+
+
+@app.get("/favicon.ico")
+def favicon():
+    p = ROOT / "assets" / "LANimals.png"
+    if p.exists():
+        return FileResponse(p)
+    raise HTTPException(status_code=404)
+
+
+@app.get("/api/health")
+def health():
+    return {"ok": True, "service": "lanimals-nexus", "version": "2.0.0"}
 
 
 @app.get("/api/graph")
@@ -23,23 +246,18 @@ def get_graph():
 @app.get("/api/node/{node_id:path}")
 def get_node(node_id: str):
     snapshot = build_snapshot()
-
     node = next((n for n in snapshot.nodes if n.id == node_id), None)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
-
     related_edges = [e for e in snapshot.edges if e.source == node_id or e.target == node_id]
-
     neighbor_ids = set()
     for e in related_edges:
         if e.source != node_id:
             neighbor_ids.add(e.source)
         if e.target != node_id:
             neighbor_ids.add(e.target)
-
     neighbors = [n for n in snapshot.nodes if n.id in neighbor_ids]
     related_events = [evt for evt in snapshot.events if evt.node_id == node_id]
-
     return JSONResponse({
         "node": node.model_dump(),
         "neighbors": [n.model_dump() for n in neighbors],
@@ -54,47 +272,82 @@ def get_reports():
     if REPORTS_DIR.exists():
         for path in sorted(REPORTS_DIR.glob("report_*.json"), reverse=True):
             stat = path.stat()
-            files.append({
-                "name": path.name,
-                "size": stat.st_size,
-                "modified": stat.st_mtime,
-            })
+            files.append({"name": path.name, "size": stat.st_size, "modified": stat.st_mtime})
     return {"reports": files[:20]}
 
 
-@app.post("/api/scan/ping")
-def run_ping_scan():
-    data = collect_all(cidr="192.168.0.0/24")
-    return {
-        "ok": True,
-        "message": "Collector refresh complete",
-        "counts": {
-            "arp_neighbors": len(data.get("arp_neighbors", [])),
-            "local_interfaces": len(data.get("local_interfaces", [])),
-            "nmap_hosts": len(data.get("nmap_hosts", [])),
-            "service_scan": len(data.get("service_scan", [])),
-        },
-        "targets": sorted({row.get("ip") for row in (
-            data.get("arp_neighbors", []) +
-            data.get("local_interfaces", []) +
-            data.get("nmap_hosts", [])
-        ) if row.get("ip")}),
-    }
+@app.get("/api/logs")
+def get_logs():
+    snap = build_snapshot()
+    return {"events": [e.model_dump() for e in snap.events[:30]]}
 
 
-@app.get("/api/health")
-def health():
-    return {"ok": True, "service": "lanimals-live-map"}
+@app.get("/api/sysinfo")
+def get_sysinfo():
+    return collect_sysinfo()
 
 
-@app.get("/favicon.ico")
-def favicon():
-    favicon_path = ROOT / "assets" / "LANimals.png"
-    if favicon_path.exists():
-        return FileResponse(favicon_path)
-    raise HTTPException(status_code=404, detail="No favicon")
+@app.get("/api/services/{ip}")
+def get_services(ip: str):
+    state = load_service_state()
+    services = state.get("services_by_ip", {}).get(ip, [])
+    return {"ip": ip, "services": services, "count": len(services)}
 
 
-@app.get("/")
-def ui():
-    return FileResponse(UI_FILE)
+# ── Scan endpoints ─────────────────────────────────────────────────────────────
+
+@app.post("/api/scan/discovery")
+def scan_discovery(cidr: str = Query(default="192.168.0.0/24")):
+    jid = _job_create("discovery", {"cidr": cidr})
+    threading.Thread(target=_run_discovery, args=(jid, cidr), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "discovery", "cidr": cidr}
+
+
+@app.post("/api/scan/arp")
+def scan_arp():
+    jid = _job_create("arp_refresh", {})
+    threading.Thread(target=_run_arp_refresh, args=(jid,), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "arp_refresh"}
+
+
+@app.post("/api/scan/hostmap")
+def scan_hostmap(cidr: str = Query(default="192.168.0.0/24")):
+    jid = _job_create("hostmap", {"cidr": cidr})
+    threading.Thread(target=_run_hostmap, args=(jid, cidr), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "hostmap", "cidr": cidr}
+
+
+@app.post("/api/scan/rogue")
+def scan_rogue(cidr: str = Query(default="192.168.0.0/24")):
+    jid = _job_create("rogue", {"cidr": cidr})
+    threading.Thread(target=_run_rogue, args=(jid, cidr), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "rogue", "cidr": cidr}
+
+
+@app.post("/api/scan/services/{ip}")
+def scan_services(ip: str):
+    jid = _job_create("service_scan", {"ip": ip})
+    threading.Thread(target=_run_service_scan, args=(jid, ip), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "service_scan", "ip": ip}
+
+
+@app.post("/api/scan/inventory")
+def scan_inventory():
+    jid = _job_create("inventory", {})
+    threading.Thread(target=_run_inventory, args=(jid,), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "inventory"}
+
+
+# ── Job endpoints ──────────────────────────────────────────────────────────────
+
+@app.get("/api/jobs")
+def list_jobs():
+    return {"jobs": _jobs_recent()}
+
+
+@app.get("/api/jobs/{jid}")
+def get_job(jid: str):
+    job = _job_get(jid)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
