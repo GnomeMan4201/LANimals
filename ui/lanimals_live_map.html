@@ -135,6 +135,22 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .bar-fg{height:100%;border-radius:2px;}
 .iface-row{font-size:10px;padding:2px 0;color:var(--muted);}
 .iface-row span{color:var(--text);}
+.trap-card{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;cursor:pointer;}
+.trap-card:hover{border-color:var(--red);}
+.trap-card.hit{border-color:var(--red);background:rgba(214,31,44,.06);}
+.trap-card .tc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.trap-card .tc-name{font-size:11px;font-weight:700;color:var(--text);}
+.trap-card .tc-port{font-size:10px;color:var(--muted);}
+.trap-card .tc-status{font-size:9px;padding:1px 5px;border-radius:3px;}
+.trap-card .tc-status.active{background:rgba(42,157,78,.2);color:var(--ok);}
+.trap-card .tc-status.hit{background:rgba(214,31,44,.2);color:var(--red3);}
+.trap-card .tc-status.stopped{background:rgba(120,120,120,.15);color:var(--muted);}
+.trap-card .tc-hits{font-size:10px;color:var(--muted);margin-top:2px;}
+.trap-card .tc-hit-entry{font-size:10px;color:var(--warn);padding:2px 0;}
+.trap-deploy-btn{width:100%;background:rgba(214,31,44,.1);border:1px solid var(--red2);border-radius:5px;color:var(--text);padding:7px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;margin-bottom:5px;}
+.trap-deploy-btn:hover{background:rgba(214,31,44,.2);}
+.trap-stop-btn{background:rgba(120,120,120,.15);border:1px solid var(--border);border-radius:3px;color:var(--muted);padding:2px 6px;cursor:pointer;font-family:var(--font);font-size:9px;margin-left:6px;}
+.trap-stop-btn:hover{border-color:var(--red);color:var(--red3);}
 .notes-area{width:100%;background:#0b0b0d;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-family:var(--font);font-size:11px;resize:vertical;min-height:52px;margin-top:4px;}
 .notes-area:focus{outline:none;border-color:var(--red);}
 .notes-save{width:100%;background:rgba(59,126,207,.15);border:1px solid rgba(59,126,207,.3);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
@@ -194,6 +210,10 @@ button{cursor:pointer;font-family:var(--font);}
         <button class="op-btn" id="btnRescore"><span class="icon">⊙</span><span class="lbl">Rescore Risks</span></button>
         <button class="op-btn" id="btnWatchdog"><span class="icon">◈</span><span class="lbl">Watchdog Check</span></button>
         <button class="op-btn" id="btnDiff"><span class="icon">≠</span><span class="lbl">Network Diff</span></button>
+        <button class="op-btn primary" id="btnDeployTraps" style="margin-top:4px;"><span class="icon">◈</span><span class="lbl">Deploy Trap Bundle</span></button>
+        <button class="op-btn" id="btnStopAllTraps"><span class="icon">◇</span><span class="lbl">Stop All Traps</span></button>
+        <button class="op-btn primary" id="btnDeployTraps" style="margin-top:4px;"><span class="icon">◈</span><span class="lbl">Deploy Trap Bundle</span></button>
+        <button class="op-btn" id="btnStopAllTraps"><span class="icon">◇</span><span class="lbl">Stop All Traps</span></button>
       </div>
     </div>
     <div class="rail-section" id="sec-stats">
@@ -262,6 +282,7 @@ button{cursor:pointer;font-family:var(--font);}
     <button class="tab-btn" data-tab="hosts">Hosts</button>
     <button class="tab-btn" data-tab="reports">Reports</button>
     <button class="tab-btn" data-tab="sysinfo">Sysinfo</button>
+    <button class="tab-btn" data-tab="traps">Traps</button>
   </div>
   <div class="bottom-content">
     <div class="tab-pane active" id="tab-scanout"><div id="scanOutput"></div></div>
@@ -269,6 +290,7 @@ button{cursor:pointer;font-family:var(--font);}
     <div class="tab-pane" id="tab-hosts"><div id="hostsTable"></div></div>
     <div class="tab-pane" id="tab-reports"><div id="reportsList"></div></div>
     <div class="tab-pane" id="tab-sysinfo"><div id="sysinfoContent"><p class="log-line muted">Click ≡ Sysinfo or run Inventory.</p></div></div>
+    <div class="tab-pane" id="tab-traps"><div id="trapsContent"><p class="log-line muted">No traps deployed. Use Operations rail to deploy.</p></div></div>
   </div>
 </div>
 
@@ -816,6 +838,53 @@ function renderDetail(node, neighbors, events, dbServices, notes='', cves=[]){
   }
 }
 
+function renderTrapDetail(node){
+  const meta=node.meta||{};
+  const hitCount=meta.hit_count||0;
+  $('detailTitle').textContent=node.label||'Trap';
+  $('btnDetailRefresh').style.display='';
+  $('btnDetailRefresh').onclick=async()=>{
+    await fetchTraps();
+    const snap=snapshot?.nodes?.find(n=>n.id===node.id);
+    if(snap) renderTrapDetail(snap);
+  };
+  apiGet('/api/traps/'+encodeURIComponent(meta.trap_id||'')).then(trap=>{
+    if(!trap||trap.detail) return;
+    const hits=(trap.hits||[]).slice().reverse();
+    $('detailBody').innerHTML=`
+      <div class="detail-section">
+        <h5>Trap Identity</h5>
+        <div class="kv"><div class="k">name</div><div class="v">${esc(trap.name||'')}</div></div>
+        <div class="kv"><div class="k">type</div><div class="v">${esc(trap.type||'')}</div></div>
+        <div class="kv"><div class="k">port</div><div class="v info">${esc(String(trap.port||''))}</div></div>
+        <div class="kv"><div class="k">banner</div><div class="v">${esc(trap.banner||'')}</div></div>
+        <div class="kv"><div class="k">status</div><div class="v ${trap.status==='active'?'ok':'muted'}">${esc(trap.status||'')}</div></div>
+        <div class="kv"><div class="k">deployed</div><div class="v">${esc((trap.deployed_at||'').slice(0,19).replace('T',' '))}</div></div>
+      </div>
+      <div class="detail-section">
+        <h5>Hit Counter</h5>
+        <div class="kv"><div class="k">total hits</div><div class="v ${hitCount>0?'red':'ok'}">${esc(String(hitCount))}</div></div>
+        <div class="kv"><div class="k">last hit</div><div class="v">${esc((trap.last_hit||'—').slice(0,19).replace('T',' '))}</div></div>
+        <div class="risk-bar"><div class="risk-fill" style="width:${Math.min(hitCount*10,100)}%;background:var(--red)"></div></div>
+      </div>
+      <div class="detail-section">
+        <h5>Connection Log (${hits.length})</h5>
+        ${hits.length?hits.slice(0,20).map(h=>`
+          <div class="evt-row">
+            <div class="et sev-warning">HIT — ${esc(h.source_ip)}:${esc(String(h.source_port))}</div>
+            <div class="es">${esc((h.ts||'').slice(0,19).replace('T',' '))}</div>
+            ${h.data?`<div class="es" style="color:var(--warn);font-size:9px;">${esc(h.data.slice(0,120))}</div>`:''}
+          </div>`).join(''):'<p class="empty-state">No connections yet. Trap is listening.</p>'}
+      </div>
+      <div class="detail-section">
+        <h5>Actions</h5>
+        <button class="scan-btn-node" onclick="stopTrap('${esc(trap.id)}')">✕ Stop This Trap</button>
+      </div>`;
+  }).catch(()=>{
+    $('detailBody').innerHTML='<div class="detail-section"><p class="empty-state">Trap data unavailable.</p></div>';
+  });
+}
+
 function clearDetail(){
   selectedNode=null; selectedCtx=null;
   $('detailTitle').textContent='No node selected';
@@ -871,7 +940,39 @@ function renderGraph(){
     const isDim=selectedNode&&!isSelected&&!isNeighbor;
     c.globalAlpha=isDim?.18:1;
 
-    if(n.node_type==='subnet'){
+    if(n.node_type==='trap'){
+      const hit=(n.meta?.hit_count||0)>0;
+      // Draw diamond shape
+      c.beginPath();
+      c.moveTo(sn.x, sn.y-r-2);
+      c.lineTo(sn.x+r+2, sn.y);
+      c.lineTo(sn.x, sn.y+r+2);
+      c.lineTo(sn.x-r-2, sn.y);
+      c.closePath();
+      c.fillStyle=hit?'rgba(214,31,44,.25)':'rgba(214,31,44,.08)';
+      c.fill();
+      c.strokeStyle=isSelected?'#ff4455':'#d61f2c';
+      c.lineWidth=isSelected?2:1.5;
+      c.setLineDash(hit?[]:[4,3]);
+      c.stroke();
+      c.setLineDash([]);
+      // Pulse ring on hit
+      if(hit){
+        const pulse=(Math.sin(Date.now()/300)+1)/2;
+        c.beginPath();
+        c.arc(sn.x,sn.y,(r+4)+(pulse*4),0,Math.PI*2);
+        c.strokeStyle=`rgba(214,31,44,${0.15+pulse*0.25})`;
+        c.lineWidth=1;
+        c.stroke();
+      }
+      // Hit count badge
+      if(hit){
+        c.fillStyle='#d61f2c';
+        c.beginPath(); c.arc(sn.x+r,sn.y-r,7,0,Math.PI*2); c.fill();
+        c.fillStyle='#fff'; c.font='bold 8px monospace'; c.textAlign='center';
+        c.fillText(String(n.meta.hit_count),sn.x+r,sn.y-r+3);
+      }
+    } else if(n.node_type==='subnet'){
       c.beginPath(); c.arc(sn.x,sn.y,r,0,Math.PI*2);
       c.fillStyle='rgba(42,42,64,.12)'; c.fill();
       c.setLineDash([5,4]);
@@ -913,7 +1014,15 @@ canvas.addEventListener('click',e=>{
   for(const sn of simNodes){
     if(Math.hypot(x-sn.x,y-sn.y)<nodeRadius(sn.data)+5){hit=sn.data;break;}
   }
-  if(hit){ selectedNode=hit; fetchNode(hit.id); renderGraph(); }
+  if(hit){
+    selectedNode=hit;
+    if(hit.node_type==='trap'){
+      renderTrapDetail(hit);
+    } else {
+      fetchNode(hit.id);
+    }
+    renderGraph();
+  }
   else clearDetail();
 });
 
@@ -927,6 +1036,112 @@ canvas.addEventListener('wheel',e=>{
 canvas.addEventListener('mousedown',e=>{ dragging=true; dragStartX=e.clientX-panX; dragStartY=e.clientY-panY; });
 window.addEventListener('mousemove',e=>{ if(!dragging) return; panX=e.clientX-dragStartX; panY=e.clientY-dragStartY; renderGraph(); });
 window.addEventListener('mouseup',()=>{ dragging=false; });
+
+// ── Traps ────────────────────────────────────────────────────────────────────
+async function fetchTraps(){
+  try{
+    const data=await apiGet('/api/traps');
+    renderTraps(data.traps||[]);
+    // Update trap node hit counts in snapshot
+    if(snapshot&&data.traps){
+      data.traps.forEach(trap=>{
+        const node=snapshot.nodes?.find(n=>n.id==='trap:'+trap.id);
+        if(node){ node.meta=node.meta||{}; node.meta.hit_count=trap.hit_count||0; }
+      });
+    }
+  } catch(e){}
+}
+
+function renderTraps(traps){
+  const wrap=$('trapsContent');
+  if(!traps.length){
+    wrap.innerHTML='<p class="log-line muted">No traps deployed.</p>';
+    return;
+  }
+  const active=traps.filter(t=>t.status==='active').length;
+  const hits=traps.reduce((s,t)=>s+(t.hit_count||0),0);
+  let html=`<div style="font-size:10px;color:var(--muted);padding:4px 0 8px;">${active} active traps &nbsp;|&nbsp; ${hits} total hits</div>`;
+  traps.forEach(t=>{
+    const hasHit=(t.hit_count||0)>0;
+    const statusCls=hasHit?'hit':t.status==='active'?'active':'stopped';
+    const recentHits=(t.hits||[]).slice(-3).reverse();
+    html+=`<div class="trap-card ${hasHit?'hit':''}" data-trap-id="${esc(t.id)}">
+      <div class="tc-hdr">
+        <span class="tc-name">◈ ${esc(t.name)}</span>
+        <span>
+          <span class="tc-status ${statusCls}">${esc(t.status)}</span>
+          <button class="trap-stop-btn" onclick="stopTrap('${esc(t.id)}')">✕ stop</button>
+        </span>
+      </div>
+      <div class="tc-port">port ${esc(String(t.port))}  ·  ${esc(t.type)}  ·  deployed ${esc((t.deployed_at||'').slice(0,19).replace('T',' '))}</div>
+      <div class="tc-hits">${t.hit_count||0} hit${t.hit_count!==1?'s':''}${t.last_hit?' · last: '+t.last_hit.slice(0,19).replace('T',' '):''}</div>
+      ${recentHits.map(h=>`<div class="tc-hit-entry">⚡ ${esc(h.source_ip)}:${esc(String(h.source_port))}  ${esc((h.ts||'').slice(11,19))}  ${esc((h.data||'').slice(0,50))}</div>`).join('')}
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
+
+async function stopTrap(trapId){
+  try{
+    await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE'});
+    await fetchTraps();
+    await fetchGraph();
+    addScanLine(`Trap ${trapId} stopped`,'muted');
+  } catch(e){ addScanLine('Error stopping trap: '+e,'err'); }
+}
+
+// ── Traps ────────────────────────────────────────────────────────────────────
+async function fetchTraps(){
+  try{
+    const data=await apiGet('/api/traps');
+    renderTraps(data.traps||[]);
+    // Update trap node hit counts in snapshot
+    if(snapshot&&data.traps){
+      data.traps.forEach(trap=>{
+        const node=snapshot.nodes?.find(n=>n.id==='trap:'+trap.id);
+        if(node){ node.meta=node.meta||{}; node.meta.hit_count=trap.hit_count||0; }
+      });
+    }
+  } catch(e){}
+}
+
+function renderTraps(traps){
+  const wrap=$('trapsContent');
+  if(!traps.length){
+    wrap.innerHTML='<p class="log-line muted">No traps deployed.</p>';
+    return;
+  }
+  const active=traps.filter(t=>t.status==='active').length;
+  const hits=traps.reduce((s,t)=>s+(t.hit_count||0),0);
+  let html=`<div style="font-size:10px;color:var(--muted);padding:4px 0 8px;">${active} active traps &nbsp;|&nbsp; ${hits} total hits</div>`;
+  traps.forEach(t=>{
+    const hasHit=(t.hit_count||0)>0;
+    const statusCls=hasHit?'hit':t.status==='active'?'active':'stopped';
+    const recentHits=(t.hits||[]).slice(-3).reverse();
+    html+=`<div class="trap-card ${hasHit?'hit':''}" data-trap-id="${esc(t.id)}">
+      <div class="tc-hdr">
+        <span class="tc-name">◈ ${esc(t.name)}</span>
+        <span>
+          <span class="tc-status ${statusCls}">${esc(t.status)}</span>
+          <button class="trap-stop-btn" onclick="stopTrap('${esc(t.id)}')">✕ stop</button>
+        </span>
+      </div>
+      <div class="tc-port">port ${esc(String(t.port))}  ·  ${esc(t.type)}  ·  deployed ${esc((t.deployed_at||'').slice(0,19).replace('T',' '))}</div>
+      <div class="tc-hits">${t.hit_count||0} hit${t.hit_count!==1?'s':''}${t.last_hit?' · last: '+t.last_hit.slice(0,19).replace('T',' '):''}</div>
+      ${recentHits.map(h=>`<div class="tc-hit-entry">⚡ ${esc(h.source_ip)}:${esc(String(h.source_port))}  ${esc((h.ts||'').slice(11,19))}  ${esc((h.data||'').slice(0,50))}</div>`).join('')}
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
+
+async function stopTrap(trapId){
+  try{
+    await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE'});
+    await fetchTraps();
+    await fetchGraph();
+    addScanLine(`Trap ${trapId} stopped`,'muted');
+  } catch(e){ addScanLine('Error stopping trap: '+e,'err'); }
+}
 
 // ── Wiring ────────────────────────────────────────────────────────────────────
 $('btnRefresh').onclick=fetchGraph;
@@ -956,6 +1171,28 @@ $('btnWatchdog').onclick=async()=>{
   addScanLine(`Watchdog: ${d.online_count} online, ${d.offline_count} offline of ${d.online_count+d.offline_count} baseline hosts`,'ok');
   d.offline?.forEach(o=>addScanLine(`  [OFFLINE] ${o.ip}  ${o.hostname}  mac=${o.mac}`,'warn'));
 };
+$('btnDeployTraps').onclick=async()=>{
+  addScanLine('→ Deploying default trap bundle…','muted'); activateTab('scanout');
+  try{
+    const d=await apiPost('/api/traps/bundle/default');
+    addScanLine(`Deployed ${d.active_count} traps:`,'ok');
+    d.deployed?.forEach(t=>{
+      if(t.error) addScanLine(`  [ERROR] ${t.name} port=${t.port}: ${t.error}`,'err');
+      else addScanLine(`  [◈] ${t.name}  port=${t.port}  status=${t.status}`,'ok');
+    });
+    await fetchGraph(); await fetchTraps(); activateTab('traps');
+  } catch(e){ addScanLine('Deploy error: '+e,'err'); }
+};
+$('btnStopAllTraps').onclick=async()=>{
+  try{
+    const data=await apiGet('/api/traps');
+    for(const t of data.traps||[]){
+      if(t.status==='active') await fetch('/api/traps/'+t.id,{method:'DELETE'});
+    }
+    addScanLine('All traps stopped','muted'); activateTab('scanout');
+    await fetchGraph(); await fetchTraps();
+  } catch(e){ addScanLine('Error: '+e,'err'); }
+};
 $('btnDiff').onclick=async()=>{
   addScanLine('→ GET /api/diff','muted'); activateTab('scanout');
   const d=await apiGet('/api/diff');
@@ -976,6 +1213,7 @@ document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='events') fetchEvents();
   if(b.dataset.tab==='hosts') fetchHosts();
   if(b.dataset.tab==='sysinfo') fetchSysinfo();
+  if(b.dataset.tab==='traps') fetchTraps();
 });
 window.addEventListener('resize',resizeCanvas);
 
@@ -989,6 +1227,12 @@ fetchSysinfo();
 setInterval(fetchGraph,25000);
 setInterval(fetchStats,10000);
 setInterval(fetchJobs,4000);
+setInterval(fetchTraps,3000);
+// Keep canvas animating for trap pulse effect
+(function animLoop(){requestAnimationFrame(animLoop);
+  const hasHitTraps=(snapshot?.nodes||[]).some(n=>n.node_type==='trap'&&(n.meta?.hit_count||0)>0);
+  if(hasHitTraps&&!simRunning) renderGraph();
+})();
 </script>
 </body>
 </html>

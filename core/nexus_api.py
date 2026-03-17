@@ -1010,3 +1010,94 @@ def get_audit():
         "cve_flagged": cve_hosts,
         "recent_alerts": [{"ts": e["ts"], "severity": e["severity"], "title": e["title"], "ip": e.get("ip","")} for e in alert_events],
     }
+
+
+# ── Trap endpoints ─────────────────────────────────────────────────────────────
+
+from core.nexus_traps import (
+    deploy_trap, stop_trap, get_all_traps, get_trap,
+    get_trap_hits, deploy_bundle, get_all_hits,
+)
+from pydantic import BaseModel as _TrapModel
+
+
+class TrapDeployPayload(_TrapModel):
+    type: str = "port"
+    port: int
+    name: str
+    banner: str = "generic"
+
+
+@app.get("/api/traps")
+def list_traps():
+    traps = get_all_traps()
+    active = [t for t in traps if t.get("status") == "active"]
+    total_hits = sum(t.get("hit_count", 0) for t in traps)
+    return {"traps": traps, "active_count": len(active), "total_hits": total_hits}
+
+
+@app.post("/api/traps")
+def create_trap(payload: TrapDeployPayload):
+    trap = deploy_trap(
+        trap_type=payload.type,
+        port=payload.port,
+        name=payload.name,
+        banner_key=payload.banner,
+    )
+    insert_events([{
+        "id": f"evt:trap_deploy:{trap['id']}",
+        "ts": _now_iso(),
+        "severity": "info",
+        "title": f"Trap deployed: {payload.name}",
+        "summary": f"{payload.type} trap on port {payload.port}",
+    }])
+    return {"ok": True, "trap": trap}
+
+
+@app.post("/api/traps/bundle/{bundle_name}")
+def deploy_trap_bundle(bundle_name: str):
+    deployed = deploy_bundle(bundle_name)
+    active = [t for t in deployed if "error" not in t]
+    insert_events([{
+        "id": f"evt:bundle:{bundle_name}:{_now_iso()}",
+        "ts": _now_iso(),
+        "severity": "info",
+        "title": f"Trap bundle deployed: {bundle_name}",
+        "summary": f"{len(active)} traps active",
+    }])
+    return {"ok": True, "bundle": bundle_name, "deployed": deployed, "active_count": len(active)}
+
+
+@app.delete("/api/traps/{trap_id}")
+def remove_trap(trap_id: str):
+    ok = stop_trap(trap_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Trap not found")
+    insert_events([{
+        "id": f"evt:trap_stop:{trap_id}:{_now_iso()}",
+        "ts": _now_iso(),
+        "severity": "info",
+        "title": f"Trap stopped: {trap_id}",
+        "summary": "Trap deactivated by operator",
+    }])
+    return {"ok": True, "trap_id": trap_id}
+
+
+@app.get("/api/traps/{trap_id}")
+def get_trap_detail(trap_id: str):
+    trap = get_trap(trap_id)
+    if not trap:
+        raise HTTPException(status_code=404, detail="Trap not found")
+    return trap
+
+
+@app.get("/api/traps/{trap_id}/hits")
+def trap_hits(trap_id: str):
+    hits = get_trap_hits(trap_id)
+    return {"trap_id": trap_id, "hits": hits, "count": len(hits)}
+
+
+@app.get("/api/traps/hits/all")
+def all_trap_hits():
+    hits = get_all_hits()
+    return {"hits": hits[:100], "count": len(hits)}

@@ -480,6 +480,35 @@ def build_snapshot() -> GraphSnapshot:
 
     all_events.extend(_generate_state_events(all_nodes))
 
+    # Inject trap nodes into graph
+    try:
+        from core.nexus_traps import get_all_traps
+        for trap in get_all_traps():
+            if trap.get("status") not in ("active", "starting"):
+                continue
+            tid = f"trap:{trap['id']}"
+            hit_count = trap.get("hit_count", 0)
+            _add_node(all_nodes, GraphNode(
+                id=tid,
+                node_type="trap",
+                label=trap.get("name", "Trap"),
+                status="critical" if hit_count > 0 else "normal",
+                risk_score=95 if hit_count > 0 else 10,
+                ip=None,
+                group="traps",
+                meta={
+                    "trap_id": trap["id"],
+                    "trap_type": trap.get("type", "port"),
+                    "port": str(trap.get("port", "")),
+                    "hit_count": hit_count,
+                    "last_hit": trap.get("last_hit"),
+                    "deployed_at": trap.get("deployed_at"),
+                    "source": "trap_engine",
+                },
+            ))
+    except Exception:
+        pass
+
     stats = {
         "total_nodes": len(all_nodes),
         "total_edges": len(all_edges),
