@@ -135,6 +135,15 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .bar-fg{height:100%;border-radius:2px;}
 .iface-row{font-size:10px;padding:2px 0;color:var(--muted);}
 .iface-row span{color:var(--text);}
+.notes-area{width:100%;background:#0b0b0d;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-family:var(--font);font-size:11px;resize:vertical;min-height:52px;margin-top:4px;}
+.notes-area:focus{outline:none;border-color:var(--red);}
+.notes-save{width:100%;background:rgba(59,126,207,.15);border:1px solid rgba(59,126,207,.3);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
+.notes-save:hover{background:rgba(59,126,207,.28);}
+.vt-btn{width:100%;background:rgba(42,157,78,.12);border:1px solid rgba(42,157,78,.3);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
+.vt-btn:hover{background:rgba(42,157,78,.22);}
+.vt-result{font-size:10px;padding:6px 0;color:var(--muted);}
+.vt-result .mal{color:var(--red3);}
+.vt-result .ok{color:var(--ok);}
 button{cursor:pointer;font-family:var(--font);}
 .btn{background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 10px;font-size:11px;font-weight:600;}
 .btn:hover{border-color:var(--red);}
@@ -448,12 +457,13 @@ async function fetchNode(id){
     selectedCtx=data;
     const node=data.node;
     // Fetch DB services and events for this IP
-    let dbServices=[], dbEvents=[];
+    let dbServices=[], dbEvents=[], dbNotes='';
     if(node.ip){
       try{ const sv=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/services'); dbServices=sv.services||[]; } catch(e){}
       try{ const ev=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/events'); dbEvents=ev.events||[]; } catch(e){}
+      try{ const nt=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/notes'); dbNotes=nt.notes||''; } catch(e){}
     }
-    renderDetail(node, data.neighbors||[], dbEvents, dbServices);
+    renderDetail(node, data.neighbors||[], dbEvents, dbServices, dbNotes);
     $('btnDetailRefresh').style.display='';
     $('btnDetailRefresh').onclick=()=>fetchNode(id);
   } catch(e){ console.error('fetchNode',e); }
@@ -637,7 +647,7 @@ function renderSysinfo(info){
   }
 }
 
-function renderDetail(node, neighbors, events, dbServices){
+function renderDetail(node, neighbors, events, dbServices, notes=''){
   $('detailTitle').textContent=node.label||node.id;
   const riskColor=node.risk_score>=70?'red':node.risk_score>=35?'warn':'ok';
   const riskHex=node.risk_score>=70?'#d61f2c':node.risk_score>=35?'#c97b00':'#2a9d4e';
@@ -709,7 +719,19 @@ function renderDetail(node, neighbors, events, dbServices){
     <div class="detail-section">
       <h5>Source Modules</h5>
       <div>${srcHtml}</div>
-    </div>`;
+    </div>
+    ${(node.node_type==='host'&&node.ip)?`
+    <div class="detail-section">
+      <h5>Notes</h5>
+      <textarea class="notes-area" id="notesArea" placeholder="Add operator notes…">${esc(notes)}</textarea>
+      <button class="notes-save" id="notesSave">Save Notes</button>
+    </div>
+    <div class="detail-section">
+      <h5>Threat Intel</h5>
+      <button class="vt-btn" id="vtLookup">⚡ VirusTotal Lookup</button>
+      <div id="vtResult"></div>
+    </div>`:''}
+  `
 
   document.querySelectorAll('.neighbor-chip').forEach(chip=>{
     chip.addEventListener('click',()=>{
@@ -725,6 +747,47 @@ function renderDetail(node, neighbors, events, dbServices){
       await runOp('/api/scan/services/'+encodeURIComponent(node.ip));
       ssBtn.disabled=false; ssBtn.textContent='▶ Scan Services on '+node.ip;
       await fetchNode(node.id);
+    });
+  }
+
+  const notesBtn=$('notesSave');
+  if(notesBtn){
+    notesBtn.addEventListener('click',async()=>{
+      const text=$('notesArea').value;
+      notesBtn.textContent='Saving…';
+      try{
+        await fetch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes',{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({notes:text})
+        });
+        notesBtn.textContent='Saved ✓';
+        setTimeout(()=>notesBtn.textContent='Save Notes',1500);
+      } catch(e){ notesBtn.textContent='Error'; }
+    });
+  }
+
+  const vtBtn=$('vtLookup');
+  if(vtBtn){
+    vtBtn.addEventListener('click',async()=>{
+      vtBtn.disabled=true; vtBtn.textContent='Looking up…';
+      const res=$('vtResult');
+      try{
+        const data=await apiGet('/api/enrich/vt/'+encodeURIComponent(node.ip));
+        if(data.error&&!data.available){
+          res.innerHTML=`<div class="vt-result">${esc(data.error)}</div>`;
+        } else {
+          const mal=data.malicious||0, sus=data.suspicious||0;
+          const cls=mal>0?'mal':sus>0?'warn':'ok';
+          res.innerHTML=`<div class="vt-result">
+            <span class="${cls}">malicious=${mal} suspicious=${sus}</span>
+            &nbsp;|&nbsp; reputation=${esc(String(data.reputation||0))}
+            &nbsp;|&nbsp; ${esc(data.as_owner||'unknown AS')}
+            &nbsp;|&nbsp; ${esc(data.country||'?')}
+          </div>`;
+        }
+      } catch(e){ res.innerHTML=`<div class="vt-result err">Error: ${esc(String(e))}</div>`; }
+      vtBtn.disabled=false; vtBtn.textContent='⚡ VirusTotal Lookup';
     });
   }
 }

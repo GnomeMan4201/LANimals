@@ -26,6 +26,7 @@ from core.nexus_db import (
     init_db, upsert_hosts, upsert_services, insert_events,
     get_all_hosts, get_services_for_ip, get_recent_events,
     get_db_stats, update_mac_baseline, get_mac_baseline,
+    get_host_notes, set_host_notes,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -544,3 +545,73 @@ def export_report():
 
     return HTMLResponse(content=html)
 
+
+
+# ── Notes endpoint ────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+class NotesPayload(_BaseModel):
+    notes: str
+
+
+@app.get("/api/hosts/{ip}/notes")
+def get_notes(ip: str):
+    return {"ip": ip, "notes": get_host_notes(ip)}
+
+
+@app.patch("/api/hosts/{ip}/notes")
+def patch_notes(ip: str, payload: NotesPayload):
+    set_host_notes(ip, payload.notes.strip())
+    insert_events([{
+        "id": f"evt:notes:{ip}:{_now_iso()}",
+        "ts": _now_iso(),
+        "severity": "info",
+        "title": f"Notes updated: {ip}",
+        "summary": payload.notes.strip()[:120],
+        "ip": ip,
+    }])
+    return {"ok": True, "ip": ip, "notes": payload.notes.strip()}
+
+
+# ── VirusTotal enrichment ─────────────────────────────────────────────────────
+
+@app.get("/api/enrich/vt/{ip}")
+def enrich_vt(ip: str):
+    """VirusTotal IP reputation. Requires VT_API_KEY env var."""
+    import os, urllib.request, json as _json
+    api_key = os.environ.get("VT_API_KEY", "")
+    if not api_key:
+        return {"ip": ip, "error": "VT_API_KEY not set", "available": False}
+    try:
+        req = urllib.request.Request(
+            f"https://www.virustotal.com/api/v3/ip_addresses/{ip}",
+            headers={"x-apikey": api_key, "User-Agent": "LANimals/2.0"}
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = _json.loads(resp.read())
+        attrs = data["data"]["attributes"]
+        stats = attrs.get("last_analysis_stats", {})
+        result = {
+            "ip": ip,
+            "available": True,
+            "reputation": attrs.get("reputation", 0),
+            "malicious": stats.get("malicious", 0),
+            "suspicious": stats.get("suspicious", 0),
+            "harmless": stats.get("harmless", 0),
+            "country": attrs.get("country", ""),
+            "as_owner": attrs.get("as_owner", ""),
+            "network": attrs.get("network", ""),
+        }
+        severity = "critical" if result["malicious"] > 0 else "warning" if result["suspicious"] > 0 else "info"
+        insert_events([{
+            "id": f"evt:vt:{ip}:{_now_iso()}",
+            "ts": _now_iso(),
+            "severity": severity,
+            "title": f"VT Lookup: {ip}",
+            "summary": f"malicious={result['malicious']} suspicious={result['suspicious']} reputation={result['reputation']} as={result['as_owner']}",
+            "ip": ip,
+        }])
+        return result
+    except Exception as e:
+        return {"ip": ip, "available": False, "error": str(e)}

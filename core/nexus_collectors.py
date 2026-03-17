@@ -294,6 +294,16 @@ def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
     state["mac_baseline"] = baseline
     save_state(state)
 
+    # Sync baseline to SQLite
+    try:
+        from core.nexus_db import update_mac_baseline as _upsert_baseline
+        for ip, info in current.items():
+            mac = info.get("mac")
+            if mac:
+                _upsert_baseline(ip, mac, info.get("hostname", ip))
+    except Exception:
+        pass
+
     return {
         "rogues": rogues,
         "known_count": len(baseline),

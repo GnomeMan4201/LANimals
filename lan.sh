@@ -59,6 +59,16 @@ for i in $(seq 1 12); do
     # Auto-run ARP refresh on boot
     curl -sf "${URL}/api/scan/arp" -X POST >/dev/null 2>&1 &
     echo "  [✓] ARP refresh queued"
+
+    # Background scheduler — ARP refresh every 5 minutes
+    (
+      while true; do
+        sleep 300
+        curl -sf "${URL}/api/scan/arp" -X POST >/dev/null 2>&1 || true
+      done
+    ) &
+    disown $!
+    echo "  [✓] Background scheduler started (ARP every 5m)"
     exit 0
   fi
 done
