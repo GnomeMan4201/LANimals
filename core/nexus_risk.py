@@ -75,7 +75,14 @@ def score_host(
 
     mac = host.get("mac") or ""
     vendor = host.get("vendor") or ""
-    arp_state = (host.get("meta") or {}).get("neighbor_state") or host.get("neighbor_state") or ""
+    # meta may be a JSON string (from DB) or a dict (from graph)
+    _meta = host.get("meta") or {}
+    if isinstance(_meta, str):
+        try:
+            import json as _j; _meta = _j.loads(_meta)
+        except Exception:
+            _meta = {}
+    arp_state = _meta.get("neighbor_state") or host.get("neighbor_state") or ""
 
     # ── MAC checks ──────────────────────────────────────────────────────────
     if not mac:
@@ -163,10 +170,11 @@ def rescore_all_hosts() -> List[Dict[str, Any]]:
         # Check meta for CVE count
         import json as _json
         try:
-            meta = _json.loads(h.get("meta") or "{}")
+            raw_meta = h.get("meta") or "{}"
+            meta = _json.loads(raw_meta) if isinstance(raw_meta, str) else (raw_meta or {})
         except Exception:
             meta = {}
-        cve_count = meta.get("cve_count", 0)
+        cve_count = int(meta.get("cve_count", 0))
 
         score, status, reasons = score_host(
             h, services,

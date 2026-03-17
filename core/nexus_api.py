@@ -27,7 +27,7 @@ from core.nexus_db import (
     init_db, upsert_hosts, upsert_services, insert_events,
     get_all_hosts, get_services_for_ip, get_recent_events,
     get_db_stats, update_mac_baseline, get_mac_baseline,
-    get_host_notes, set_host_notes,
+    get_host_notes, set_host_notes, get_host,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -731,7 +731,8 @@ def get_cves(ip: str):
     if not row:
         return {"ip": ip, "cves": [], "cve_count": 0}
     try:
-        meta = _json.loads(row.get("meta") or "{}")
+        raw = row.get("meta") or "{}"
+        meta = _json.loads(raw) if isinstance(raw, str) else (raw or {})
     except Exception:
         meta = {}
     return {"ip": ip, "cves": meta.get("cves", []), "cve_count": meta.get("cve_count", 0)}
