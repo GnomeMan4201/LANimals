@@ -1,9 +1,7 @@
-import os
 from __future__ import annotations
 
-import os
-
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -14,13 +12,66 @@ ROOT = Path(__file__).resolve().parent.parent
 TMP_DIR = ROOT / "tmp"
 TMP_DIR.mkdir(exist_ok=True)
 
+# ── Virtual interface filtering ───────────────────────────────────────────────
+_VIRTUAL_IFACE_PREFIXES = (
+    "docker", "veth", "virbr", "br-", "lxc", "lxd",
+    "vbox", "vmnet", "tun", "tap", "wg", "utun", "lxcbr",
+)
+_VIRTUAL_IP_PREFIXES = (
+    "172.17.", "172.18.", "172.19.", "172.20.", "172.21.", "172.22.",
+    "172.23.", "172.24.", "172.25.", "172.26.", "172.27.", "172.28.",
+    "172.29.", "172.30.", "172.31.", "10.0.3.", "10.0.2.",
+)
 
+
+def _is_virtual_iface(iface: str) -> bool:
+    return any(iface.lower().startswith(p) for p in _VIRTUAL_IFACE_PREFIXES)
+
+
+def _is_virtual_ip(ip: str) -> bool:
+    return any(ip.startswith(p) for p in _VIRTUAL_IP_PREFIXES)
+
+
+# ── OUI vendor lookup ─────────────────────────────────────────────────────────
+_OUI_TABLE: dict[str, str] = {
+    "C0C522": "TP-Link",      "C0C5C0": "TP-Link",      "C83A35": "TP-Link",
+    "6C6A77": "Intel",        "8086F2": "Intel",         "A4C3F0": "Intel",
+    "B827EB": "Raspberry Pi", "DCA632": "Raspberry Pi",  "E45F01": "Raspberry Pi",
+    "ACDE48": "Apple",        "F0DEF1": "Apple",         "A8BB50": "Apple",
+    "606BBD": "Apple",        "3C2EFF": "Apple",         "784F43": "Apple",
+    "001A11": "Google",       "F4F5E8": "Google",
+    "000C29": "VMware",       "005056": "VMware",
+    "080027": "VirtualBox",
+    "D8BB2C": "Netgear",      "20E52A": "Netgear",       "A40CCB": "Netgear",
+    "C80CC8": "Cisco",        "0026CB": "Cisco",         "70105C": "Cisco",
+    "18D6C7": "Cisco",        "F872EA": "Cisco",
+    "000000": "Xerox",        "00005E": "IANA",
+}
+
+
+def _lookup_vendor(mac: str | None) -> str:
+    if not mac:
+        return ""
+    prefix = mac.upper().replace(":", "").replace("-", "")[:6]
+    return _OUI_TABLE.get(prefix, "")
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def _run(cmd: list[str], timeout: int = 30) -> str:
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, check=False
+        )
         return (result.stdout + "\n" + result.stderr).strip()
     except Exception:
         return ""
+
+
+def _nmap_cmd(args: list[str]) -> list[str]:
+    """Prepend sudo if not root — needed for MAC/ARP data."""
+    if shutil.which("sudo") and os.geteuid() != 0:
+        return ["sudo"] + ["nmap"] + args
+    return ["nmap"] + args
 
 
 def _is_ipv4(ip: str | None) -> bool:
@@ -41,6 +92,18 @@ def _resolve(ip: str) -> str:
     except Exception:
         return ip
 
+
+def _get_iface_mac(iface: str) -> str | None:
+    try:
+        mac = Path(f"/sys/class/net/{iface}/address").read_text().strip()
+        if mac and mac != "00:00:00:00:00:00":
+            return mac.upper()
+    except Exception:
+        pass
+    return None
+
+
+# ── Collectors ────────────────────────────────────────────────────────────────
 
 def collect_arp_neighbors() -> List[Dict[str, Any]]:
     output = _run(["ip", "neigh"])
@@ -63,10 +126,12 @@ def collect_arp_neighbors() -> List[Dict[str, Any]]:
             idx = parts.index("dev")
             if idx + 1 < len(parts):
                 dev = parts[idx + 1]
+        if dev and _is_virtual_iface(dev):
+            continue
         hostname = _resolve(ip)
         rows.append({
             "ip": ip,
-            "hostname": hostname if hostname != ip else ip,
+            "hostname": hostname,
             "mac": mac,
             "vendor": _lookup_vendor(mac),
             "interface": dev,
@@ -74,57 +139,6 @@ def collect_arp_neighbors() -> List[Dict[str, Any]]:
             "source": "arp",
         })
     return rows
-
-
-# Interface prefixes that are virtual/bridge and should not appear as graph nodes
-_VIRTUAL_IFACE_PREFIXES = ("docker", "veth", "virbr", "br-", "lxc", "lxd", "vbox", "vmnet", "tun", "tap", "wg", "utun")
-# Private ranges that belong to virtual networks and should be excluded from local interfaces
-_VIRTUAL_IP_PREFIXES = ("172.17.", "172.18.", "172.19.", "172.20.", "172.21.", "172.22.", "172.23.",
-                         "172.24.", "172.25.", "172.26.", "172.27.", "172.28.", "172.29.", "172.30.", "172.31.",
-                         "10.0.3.", "10.0.2.")  # lxc/nat ranges
-
-
-def _is_virtual_iface(iface: str) -> bool:
-    return any(iface.lower().startswith(p) for p in _VIRTUAL_IFACE_PREFIXES)
-
-
-def _is_virtual_ip(ip: str) -> bool:
-    return any(ip.startswith(p) for p in _VIRTUAL_IP_PREFIXES)
-
-# Minimal OUI vendor prefix table (first 3 octets uppercase no colons)
-_OUI_TABLE = {
-    "C0C522": "TP-Link", "C0C5C0": "TP-Link", "C83A35": "TP-Link",
-    "6C6A77": "Intel", "8086F2": "Intel", "A4C3F0": "Intel",
-    "B827EB": "Raspberry Pi", "DC:A6:32": "Raspberry Pi", "E4:5F:01": "Raspberry Pi",
-    "000000": "Xerox", "ACDE48": "Apple", "F0DEF1": "Apple", "A8BB50": "Apple",
-    "606BBD": "Apple", "3C2EFF": "Apple", "784F43": "Apple",
-    "00005E": "IANA", "001A11": "Google", "F4F5E8": "Google",
-    "000C29": "VMware", "005056": "VMware", "000569": "VMware",
-    "080027": "VirtualBox", "0A0027": "VirtualBox",
-    "D8BB2C": "Netgear", "20E52A": "Netgear", "A40CCB": "Netgear",
-    "C80CC8": "Cisco", "0026CB": "Cisco", "70105C": "Cisco",
-    "00AABB": "Unknown",
-}
-
-
-def _lookup_vendor(mac: str | None) -> str:
-    if not mac:
-        return ""
-    prefix = mac.upper().replace(":", "").replace("-", "")[:6]
-    return _OUI_TABLE.get(prefix, "")
-
-
-
-
-def _get_iface_mac(iface: str) -> str | None:
-    """Read MAC address for an interface from /sys/class/net."""
-    try:
-        mac = Path(f"/sys/class/net/{iface}/address").read_text().strip()
-        if mac and mac != "00:00:00:00:00:00":
-            return mac.upper()
-    except Exception:
-        pass
-    return None
 
 
 def collect_local_interfaces() -> List[Dict[str, Any]]:
@@ -140,20 +154,23 @@ def collect_local_interfaces() -> List[Dict[str, Any]]:
         for addr in addrs:
             fam = getattr(addr.family, "name", str(addr.family))
             ip = str(addr.address)
-            if fam == "AF_INET" and not ip.startswith("127.") and not _is_virtual_ip(ip):
-                if ip not in seen_ips:
-                    seen_ips.add(ip)
-                    mac = _get_iface_mac(iface)
-                    rows.append({
-                        "ip": ip,
-                        "hostname": socket.gethostname(),
-                        "mac": mac,
-                        "vendor": _lookup_vendor(mac),
-                        "interface": iface,
-                        "state": "LOCAL",
-                        "vendor": _lookup_vendor(mac),
-                        "source": "local_interface",
-                    })
+            if (
+                fam == "AF_INET"
+                and not ip.startswith("127.")
+                and not _is_virtual_ip(ip)
+                and ip not in seen_ips
+            ):
+                seen_ips.add(ip)
+                mac = _get_iface_mac(iface)
+                rows.append({
+                    "ip": ip,
+                    "hostname": socket.gethostname(),
+                    "mac": mac,
+                    "vendor": _lookup_vendor(mac),
+                    "interface": iface,
+                    "state": "LOCAL",
+                    "source": "local_interface",
+                })
     return rows
 
 
@@ -161,12 +178,7 @@ def collect_nmap_ping_sweep(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]
     if shutil.which("nmap") is None:
         return []
     xml_path = TMP_DIR / "nexus_ping_scan.xml"
-    # Use sudo for nmap if available — needed for MAC/ARP data on most Linux systems
-    import shutil
-    nmap_cmd = ["nmap", "-sn", cidr, "-oX", str(xml_path)]
-    if shutil.which("sudo") and os.geteuid() != 0:
-        nmap_cmd = ["sudo"] + nmap_cmd
-    _run(nmap_cmd, timeout=90)
+    _run(_nmap_cmd(["-sn", cidr, "-oX", str(xml_path)]), timeout=90)
     if not xml_path.exists():
         return []
     try:
@@ -187,14 +199,14 @@ def collect_nmap_ping_sweep(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]
             continue
         mac_elem = host.find("address[@addrtype='mac']")
         mac = mac_elem.get("addr") if mac_elem is not None else None
-        vendor = mac_elem.get("vendor") if mac_elem is not None else None
+        vendor = mac_elem.get("vendor") if mac_elem is not None else _lookup_vendor(mac)
         hostname_elem = host.find(".//hostname")
-        hostname = hostname_elem.get("name") if hostname_elem is not None else ip
+        hostname = hostname_elem.get("name") if hostname_elem is not None else _resolve(ip)
         rows.append({
             "ip": ip,
             "hostname": hostname,
             "mac": mac,
-            "vendor": vendor,
+            "vendor": vendor or _lookup_vendor(mac),
             "interface": None,
             "state": "UP",
             "source": "nmap_ping",
@@ -203,7 +215,6 @@ def collect_nmap_ping_sweep(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]
 
 
 def collect_host_map(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]]:
-    """nmap -sn with full hostname resolution."""
     rows = collect_nmap_ping_sweep(cidr=cidr)
     for row in rows:
         if row.get("hostname") == row.get("ip") or not row.get("hostname"):
@@ -212,7 +223,6 @@ def collect_host_map(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]]:
 
 
 def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
-    """Compare current ARP/nmap results against saved baseline; flag new MACs."""
     from core.nexus_state import load_state, save_state
 
     current_arp = collect_arp_neighbors()
@@ -250,7 +260,6 @@ def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
                 "reason": "New host not in baseline",
             })
 
-    # Update baseline
     for ip, info in current.items():
         if ip not in baseline:
             baseline[ip] = {"mac": info.get("mac"), "first_seen": _now_str()}
@@ -328,7 +337,7 @@ def collect_service_scan(targets: List[str]) -> List[Dict[str, Any]]:
     if not ipv4:
         return []
     xml_path = TMP_DIR / "nexus_service_scan.xml"
-    _run(["nmap", "-sV", "-oX", str(xml_path)] + ipv4, timeout=180)
+    _run(_nmap_cmd(["-sV", "-oX", str(xml_path)] + ipv4), timeout=180)
     return _parse_nmap_services(xml_path, source="nmap_service")
 
 
@@ -336,15 +345,13 @@ def collect_services_for_ip(ip: str) -> List[Dict[str, Any]]:
     if shutil.which("nmap") is None or not _is_ipv4(ip):
         return []
     xml_path = TMP_DIR / f"nexus_svc_{ip.replace('.', '_')}.xml"
-    import shutil as _shutil
-    svc_cmd = ["nmap", "-Pn", "-sV", "-oX", str(xml_path), ip]
-    if _shutil.which("sudo") and os.geteuid() != 0:
-        svc_cmd = ["sudo"] + svc_cmd
-    _run(svc_cmd, timeout=120)
+    _run(_nmap_cmd(["-Pn", "-sV", "-oX", str(xml_path), ip]), timeout=120)
     return _parse_nmap_services(xml_path, source="nmap_service_targeted", filter_ip=ip)
 
 
-def _parse_nmap_services(xml_path: Path, source: str = "nmap", filter_ip: str | None = None) -> List[Dict[str, Any]]:
+def _parse_nmap_services(
+    xml_path: Path, source: str = "nmap", filter_ip: str | None = None
+) -> List[Dict[str, Any]]:
     if not xml_path.exists():
         return []
     try:
@@ -364,7 +371,7 @@ def _parse_nmap_services(xml_path: Path, source: str = "nmap", filter_ip: str | 
             continue
         mac_elem = host.find("address[@addrtype='mac']")
         mac = mac_elem.get("addr") if mac_elem is not None else None
-        vendor = mac_elem.get("vendor") if mac_elem is not None else None
+        vendor = mac_elem.get("vendor") if mac_elem is not None else _lookup_vendor(mac)
         for port in host.findall(".//port"):
             st = port.find("state")
             if st is not None and st.get("state") != "open":
