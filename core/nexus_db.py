@@ -105,8 +105,11 @@ def upsert_host(host: Dict[str, Any]) -> None:
                 hostname   = COALESCE(NULLIF(excluded.hostname,excluded.ip), hostname),
                 vendor     = COALESCE(NULLIF(excluded.vendor,''), vendor),
                 interface  = COALESCE(excluded.interface, interface),
-                status     = excluded.status,
-                risk_score = excluded.risk_score,
+                status     = CASE WHEN excluded.status != 'normal' THEN excluded.status
+                                  WHEN excluded.risk_score > 0 THEN excluded.status
+                                  ELSE status END,
+                risk_score = CASE WHEN excluded.risk_score > 0 THEN excluded.risk_score
+                                  ELSE risk_score END,
                 group_cidr = COALESCE(excluded.group_cidr, group_cidr),
                 last_seen  = excluded.last_seen,
                 meta       = excluded.meta
