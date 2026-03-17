@@ -26,10 +26,16 @@ def _safe_load_json(path: Path) -> Any:
         return {}
 
 
-def _latest_reports(limit: int = 4) -> List[Path]:
+def _latest_reports(limit: int = 4, max_age_days: int = 7) -> List[Path]:
     if not REPORTS_DIR.exists():
         return []
-    return sorted(REPORTS_DIR.glob("report_*.json"))[-limit:]
+    import time
+    cutoff = time.time() - max_age_days * 86400
+    files = [
+        p for p in REPORTS_DIR.glob("report_*.json")
+        if p.stat().st_mtime > cutoff
+    ]
+    return sorted(files)[-limit:]
 
 
 def _add_node(nodes: Dict[str, GraphNode], node: GraphNode) -> None:
@@ -85,6 +91,32 @@ def _ensure_subnet(nodes: Dict[str, GraphNode], ip: str | None) -> str:
     return subnet_id
 
 
+def _merge_threatenrich_report(items: List[dict]) -> List[dict]:
+    """Collapse {host, product, version, vulns, exploits} list into per-host dicts with services."""
+    by_host: Dict[str, dict] = {}
+    for item in items:
+        host = item.get("host") or item.get("ip")
+        if not host:
+            continue
+        if host not in by_host:
+            by_host[host] = {"ip": host, "hostname": host, "services": []}
+        product = item.get("product", "")
+        version = item.get("version", "")
+        vulns = item.get("vulns", "")
+        exploits = item.get("exploits", {})
+        if product:
+            svc: Dict[str, Any] = {"product": product, "version": version}
+            if vulns and "No ecosystem" not in str(vulns):
+                svc["vulns"] = vulns
+            if exploits:
+                svc["exploits"] = exploits
+            by_host[host]["services"].append(svc)
+        # Elevate risk if exploits found
+        if exploits and isinstance(exploits, dict) and any(exploits.values()):
+            by_host[host]["has_exploits"] = True
+    return list(by_host.values())
+
+
 def _extract_hosts_and_alerts(report: Any) -> Tuple[List[dict], List[dict]]:
     hosts: List[dict] = []
     alerts: List[dict] = []
@@ -99,6 +131,10 @@ def _extract_hosts_and_alerts(report: Any) -> Tuple[List[dict], List[dict]]:
                 alerts.extend([x for x in value if isinstance(x, dict)])
     elif isinstance(report, list):
         dict_items = [x for x in report if isinstance(x, dict)]
+        # Detect threatenrich format: list of {host, product, version, vulns, exploits}
+        if dict_items and all("host" in i and "product" in i for i in dict_items[:3]):
+            hosts.extend(_merge_threatenrich_report(dict_items))
+            return hosts, alerts
         for item in dict_items:
             keys = set(item.keys())
             if {"ip", "hostname"} & keys or {"ip", "mac"} & keys or {"host", "ports"} <= keys:
@@ -131,11 +167,17 @@ def _normalize_report_nodes(report: Any) -> Tuple[List[GraphNode], List[GraphEdg
         group = _host_group_from_ip(ip)
         subnet_id = _ensure_subnet(nodes, ip)
         node_id = f"host:{ip or hostname}"
+        report_services = host.get("services") or []
+        has_exploits = bool(host.get("has_exploits"))
+        if has_exploits:
+            risk = max(risk, 70)
+            status = "warning" if status == "normal" else status
         _add_node(nodes, GraphNode(
             id=node_id, node_type="host", label=hostname, hostname=hostname,
             ip=ip, mac=mac, status=status, risk_score=risk, group=group,
             meta={"open_ports": open_ports if isinstance(open_ports, list) else [],
-                  "source": "lanimals_report"},
+                  "source": "lanimals_report",
+                  "report_services": report_services},
         ))
         _add_edge(edges, GraphEdge(
             id=_edge_id(subnet_id, node_id, "contains"),
