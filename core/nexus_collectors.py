@@ -1,4 +1,7 @@
+import os
 from __future__ import annotations
+
+import os
 
 import json
 import shutil
@@ -65,6 +68,7 @@ def collect_arp_neighbors() -> List[Dict[str, Any]]:
             "ip": ip,
             "hostname": hostname if hostname != ip else ip,
             "mac": mac,
+            "vendor": _lookup_vendor(mac),
             "interface": dev,
             "state": state,
             "source": "arp",
@@ -86,6 +90,30 @@ def _is_virtual_iface(iface: str) -> bool:
 
 def _is_virtual_ip(ip: str) -> bool:
     return any(ip.startswith(p) for p in _VIRTUAL_IP_PREFIXES)
+
+# Minimal OUI vendor prefix table (first 3 octets uppercase no colons)
+_OUI_TABLE = {
+    "C0C522": "TP-Link", "C0C5C0": "TP-Link", "C83A35": "TP-Link",
+    "6C6A77": "Intel", "8086F2": "Intel", "A4C3F0": "Intel",
+    "B827EB": "Raspberry Pi", "DC:A6:32": "Raspberry Pi", "E4:5F:01": "Raspberry Pi",
+    "000000": "Xerox", "ACDE48": "Apple", "F0DEF1": "Apple", "A8BB50": "Apple",
+    "606BBD": "Apple", "3C2EFF": "Apple", "784F43": "Apple",
+    "00005E": "IANA", "001A11": "Google", "F4F5E8": "Google",
+    "000C29": "VMware", "005056": "VMware", "000569": "VMware",
+    "080027": "VirtualBox", "0A0027": "VirtualBox",
+    "D8BB2C": "Netgear", "20E52A": "Netgear", "A40CCB": "Netgear",
+    "C80CC8": "Cisco", "0026CB": "Cisco", "70105C": "Cisco",
+    "00AABB": "Unknown",
+}
+
+
+def _lookup_vendor(mac: str | None) -> str:
+    if not mac:
+        return ""
+    prefix = mac.upper().replace(":", "").replace("-", "")[:6]
+    return _OUI_TABLE.get(prefix, "")
+
+
 
 
 def _get_iface_mac(iface: str) -> str | None:
@@ -120,8 +148,10 @@ def collect_local_interfaces() -> List[Dict[str, Any]]:
                         "ip": ip,
                         "hostname": socket.gethostname(),
                         "mac": mac,
+                        "vendor": _lookup_vendor(mac),
                         "interface": iface,
                         "state": "LOCAL",
+                        "vendor": _lookup_vendor(mac),
                         "source": "local_interface",
                     })
     return rows
@@ -131,7 +161,12 @@ def collect_nmap_ping_sweep(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]
     if shutil.which("nmap") is None:
         return []
     xml_path = TMP_DIR / "nexus_ping_scan.xml"
-    _run(["nmap", "-sn", cidr, "-oX", str(xml_path)], timeout=90)
+    # Use sudo for nmap if available — needed for MAC/ARP data on most Linux systems
+    import shutil
+    nmap_cmd = ["nmap", "-sn", cidr, "-oX", str(xml_path)]
+    if shutil.which("sudo") and os.geteuid() != 0:
+        nmap_cmd = ["sudo"] + nmap_cmd
+    _run(nmap_cmd, timeout=90)
     if not xml_path.exists():
         return []
     try:
@@ -301,7 +336,11 @@ def collect_services_for_ip(ip: str) -> List[Dict[str, Any]]:
     if shutil.which("nmap") is None or not _is_ipv4(ip):
         return []
     xml_path = TMP_DIR / f"nexus_svc_{ip.replace('.', '_')}.xml"
-    _run(["nmap", "-Pn", "-sV", "-oX", str(xml_path), ip], timeout=120)
+    import shutil as _shutil
+    svc_cmd = ["nmap", "-Pn", "-sV", "-oX", str(xml_path), ip]
+    if _shutil.which("sudo") and os.geteuid() != 0:
+        svc_cmd = ["sudo"] + svc_cmd
+    _run(svc_cmd, timeout=120)
     return _parse_nmap_services(xml_path, source="nmap_service_targeted", filter_ip=ip)
 
 
