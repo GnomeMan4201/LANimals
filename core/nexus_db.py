@@ -33,6 +33,7 @@ def init_db() -> None:
             vendor      TEXT,
             interface   TEXT,
             status      TEXT DEFAULT 'normal',
+            notes       TEXT DEFAULT '',
             risk_score  INTEGER DEFAULT 15,
             group_cidr  TEXT,
             first_seen  TEXT,
@@ -72,6 +73,11 @@ def init_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_events_ip ON events(ip);
         CREATE INDEX IF NOT EXISTS idx_services_ip ON services(ip);
         """)
+        # Migrate: add notes column if upgrading from older DB
+        try:
+            c.execute("ALTER TABLE hosts ADD COLUMN notes TEXT DEFAULT \'\'"  )
+        except Exception:
+            pass  # column already exists
         c.commit()
         c.close()
 
@@ -255,6 +261,30 @@ def get_db_stats() -> Dict[str, Any]:
         }
         c.close()
     return stats
+
+
+
+
+def get_host_notes(ip: str) -> str:
+    with _lock:
+        c = _conn()
+        row = c.execute("SELECT notes FROM hosts WHERE ip=?", (ip,)).fetchone()
+        c.close()
+    return (row["notes"] or "") if row else ""
+
+
+def set_host_notes(ip: str, notes: str) -> None:
+    now = _now()
+    with _lock:
+        c = _conn()
+        c.execute(
+            "INSERT INTO hosts (ip, notes, first_seen, last_seen) "
+            "VALUES (?,?,?,?) "
+            "ON CONFLICT(ip) DO UPDATE SET notes=excluded.notes",
+            (ip, notes, now, now)
+        )
+        c.commit()
+        c.close()
 
 
 init_db()
