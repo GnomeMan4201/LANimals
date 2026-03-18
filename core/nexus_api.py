@@ -1101,3 +1101,76 @@ def trap_hits(trap_id: str):
 def all_trap_hits():
     hits = get_all_hits()
     return {"hits": hits[:100], "count": len(hits)}
+
+
+# ── WebSocket Terminal ────────────────────────────────────────────────────────
+
+import asyncio
+import ptyprocess
+from fastapi import WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
+
+
+@app.websocket("/ws/terminal")
+async def terminal_ws(websocket: WebSocket):
+    """
+    Real PTY terminal over WebSocket.
+    Spawns a bash shell in the LANimals directory.
+    xterm.js on the frontend connects here.
+    """
+    await websocket.accept()
+
+    # Spawn shell in LANimals root
+    shell = ptyprocess.PtyProcessUnicode.spawn(
+        ["/usr/bin/bash", "--login"],
+        cwd=str(ROOT),
+        env={
+            "TERM": "xterm-256color",
+            "HOME": str(Path.home()),
+            "USER": "bad_banana",
+            "SHELL": "/usr/bin/bash",
+            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:"
+                    + str(Path.home() / ".local/bin"),
+            "LANIMALS_ROOT": str(ROOT),
+            "PS1": r"\[\033[01;31m\]LANimals\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ",
+        },
+    )
+
+    async def read_shell():
+        """Read from PTY and send to browser."""
+        loop = asyncio.get_event_loop()
+        while True:
+            try:
+                data = await loop.run_in_executor(None, shell.read, 4096)
+                if websocket.client_state == WebSocketState.CONNECTED:
+                    await websocket.send_text(data)
+            except EOFError:
+                break
+            except Exception:
+                break
+
+    read_task = asyncio.create_task(read_shell())
+
+    try:
+        while True:
+            msg = await websocket.receive_text()
+            try:
+                import json as _json
+                pkt = _json.loads(msg)
+                if pkt.get("type") == "input":
+                    shell.write(pkt.get("data", ""))
+                elif pkt.get("type") == "resize":
+                    rows = int(pkt.get("rows", 24))
+                    cols = int(pkt.get("cols", 80))
+                    shell.setwinsize(rows, cols)
+            except Exception:
+                # Raw input fallback
+                shell.write(msg)
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
+        read_task.cancel()
+        try:
+            shell.terminate()
+        except Exception:
+            pass

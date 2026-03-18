@@ -8,27 +8,46 @@
 :root{
   --bg:#0b0b0d;--panel:#111115;--panel2:#17171d;--border:#252530;
   --text:#f0f1f3;--muted:#7a8090;--red:#d61f2c;--red2:#a6111b;--red3:#ff4455;
-  --warn:#c97b00;--ok:#2a9d4e;--info:#3b7ecf;
+  --warn:#c97b00;--ok:#2a9d4e;--info:#3b7ecf;--purple:#8b3dd6;
+  --trap:#ff6b35;--trap2:#cc4400;
   --font:'JetBrains Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;overflow:hidden;}
-body{display:grid;grid-template-rows:48px 1fr 200px;}
-.topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--border);background:#0d0d11;z-index:10;}
+body{display:grid;grid-template-rows:48px 1fr 190px;transition:grid-template-rows .2s ease;}
+body.bottom-collapsed{grid-template-rows:48px 1fr 22px;}
+
+/* ── TOP BAR ── */
+.topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--border);background:#0d0d11;z-index:20;}
 .brand{font-size:20px;font-weight:900;letter-spacing:.04em;user-select:none;white-space:nowrap;}
 .brand span.LA{color:var(--red);}
 .brand span.Nimals{color:var(--text);}
-.topbar-center{display:flex;align-items:center;gap:10px;min-width:0;}
+.topbar-center{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
 .scope-label{color:var(--muted);font-size:10px;white-space:nowrap;}
-#cidrInput{background:#0b0b0d;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 9px;width:150px;font-family:var(--font);font-size:12px;}
+#cidrInput{background:#0b0b0d;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 9px;width:148px;font-family:var(--font);font-size:12px;}
 #cidrInput:focus{outline:none;border-color:var(--red);}
-.topbar-right{display:flex;gap:6px;align-items:center;}
 .status-pip{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;}
 .status-pip.scanning{background:var(--warn);animation:pulse .8s infinite;}
 .status-pip.error{background:var(--red3);}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 #statusLabel{color:var(--muted);font-size:10px;}
-.main{display:grid;grid-template-columns:240px 1fr 340px;min-height:0;overflow:hidden;}
+.overlay-bar{display:flex;gap:2px;margin-left:8px;}
+.ov-btn{background:none;border:1px solid transparent;border-radius:4px;color:var(--muted);padding:3px 8px;cursor:pointer;font-family:var(--font);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;transition:all .12s;}
+.ov-btn:hover{color:var(--text);border-color:var(--border);}
+.ov-btn.active{color:var(--text);background:rgba(255,255,255,.06);border-color:var(--border);}
+.ov-btn.active.ov-risk{color:var(--warn);border-color:rgba(201,123,0,.4);background:rgba(201,123,0,.08);}
+.ov-btn.active.ov-honeypot{color:var(--trap);border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.08);}
+.ov-btn.active.ov-diff{color:var(--ok);border-color:rgba(42,157,78,.4);background:rgba(42,157,78,.08);}
+.ov-btn.active.ov-services{color:var(--info);border-color:rgba(59,126,207,.4);background:rgba(59,126,207,.08);}
+.topbar-right{display:flex;gap:5px;align-items:center;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+/* ── MAIN ── */
+.main{display:grid;grid-template-columns:230px 1fr 340px;min-height:0;overflow:hidden;transition:grid-template-columns .2s ease;}
+.main.left-collapsed{grid-template-columns:22px 1fr 340px;}
+.main.right-collapsed{grid-template-columns:230px 1fr 22px;}
+.main.left-collapsed.right-collapsed{grid-template-columns:22px 1fr 22px;}
+
+/* ── LEFT RAIL ── */
 .rail{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .rail-section{border-bottom:1px solid var(--border);padding:10px 12px;}
 .rail-section.collapsed .rail-body{display:none;}
@@ -36,20 +55,29 @@ body{display:grid;grid-template-rows:48px 1fr 200px;}
 .rail-hdr h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
 .rail-hdr .toggle{font-size:10px;color:var(--muted);}
 .rail-section.collapsed .rail-hdr{margin-bottom:0;}
-.op-btn{display:flex;align-items:center;gap:7px;width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:7px 9px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:600;margin-bottom:5px;transition:border-color .12s,background .12s;text-align:left;}
+
+/* Playbook buttons */
+.pb-section{margin-bottom:8px;}
+.pb-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;padding-left:2px;}
+.op-btn{display:flex;align-items:center;gap:7px;width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:7px 9px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:600;margin-bottom:4px;transition:border-color .12s,background .12s;text-align:left;}
 .op-btn:last-child{margin-bottom:0;}
 .op-btn:hover{border-color:var(--red);}
 .op-btn:disabled{opacity:.35;cursor:not-allowed;}
 .op-btn.primary{background:rgba(214,31,44,.14);border-color:var(--red2);}
 .op-btn.primary:hover{background:rgba(214,31,44,.24);}
+.op-btn.trap-btn{background:rgba(255,107,53,.08);border-color:rgba(255,107,53,.3);}
+.op-btn.trap-btn:hover{border-color:var(--trap);}
 .op-btn.active{border-color:var(--info);background:rgba(59,126,207,.1);}
-.op-btn .icon{font-size:13px;flex-shrink:0;width:16px;text-align:center;}
+.op-btn .icon{font-size:12px;flex-shrink:0;width:15px;text-align:center;}
 .op-btn .lbl{flex:1;}
 .op-btn .badge{font-size:9px;background:var(--border);border-radius:3px;padding:1px 4px;color:var(--muted);}
 .op-btn .badge.warn{background:rgba(201,123,0,.2);color:var(--warn);}
 .op-btn .badge.ok{background:rgba(42,157,78,.2);color:var(--ok);}
 .op-btn .badge.run{background:rgba(59,126,207,.2);color:var(--info);}
 .op-btn .badge.err{background:rgba(214,31,44,.2);color:var(--red3);}
+.op-btn .badge.trap{background:rgba(255,107,53,.2);color:var(--trap);}
+
+/* Stats */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
 .stat{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:7px 9px;}
 .stat .sv{font-size:18px;font-weight:800;line-height:1;}
@@ -57,57 +85,120 @@ body{display:grid;grid-template-rows:48px 1fr 200px;}
 .stat .sv.red{color:var(--red3);}
 .stat .sv.warn{color:var(--warn);}
 .stat .sv.ok{color:var(--ok);}
-.canvas-wrap{position:relative;background:radial-gradient(ellipse at center,rgba(214,31,44,.035),transparent 65%),var(--bg);min-height:0;overflow:hidden;}
+.stat .sv.trap{color:var(--trap);}
+
+/* Recommended actions */
+.rec-item{display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer;}
+.rec-item:last-child{border-bottom:none;}
+.rec-item:hover .rec-text{color:var(--text);}
+.rec-pri{font-size:8px;font-weight:800;padding:2px 4px;border-radius:3px;flex-shrink:0;margin-top:1px;}
+.rec-pri.high{background:rgba(214,31,44,.2);color:var(--red3);}
+.rec-pri.med{background:rgba(201,123,0,.2);color:var(--warn);}
+.rec-pri.low{background:rgba(59,126,207,.15);color:var(--info);}
+.rec-text{font-size:10px;color:var(--muted);line-height:1.4;}
+
+/* Active ops */
+.active-op{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:10px;}
+.active-op .op-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.active-op .op-dot.running{background:var(--info);animation:pulse .8s infinite;}
+.active-op .op-dot.done{background:var(--ok);}
+.active-op .op-dot.error{background:var(--red3);}
+.active-op .op-dot.trap{background:var(--trap);}
+
+/* ── GRAPH ── */
+.canvas-wrap{position:relative;background:radial-gradient(ellipse at center,rgba(214,31,44,.03),transparent 65%),var(--bg);min-height:0;overflow:hidden;}
 canvas#graphCanvas{width:100%;height:100%;display:block;}
-.graph-tools{position:absolute;bottom:10px;right:10px;display:flex;gap:5px;}
-.gt-btn{background:rgba(17,17,21,.88);border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:5px 9px;cursor:pointer;font-family:var(--font);font-size:11px;backdrop-filter:blur(4px);}
+.graph-tools{position:absolute;bottom:10px;right:10px;display:flex;gap:4px;}
+.gt-btn{background:rgba(17,17,21,.9);border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:5px 9px;cursor:pointer;font-family:var(--font);font-size:11px;backdrop-filter:blur(4px);}
 .gt-btn:hover{border-color:var(--red);color:var(--text);}
 .graph-search{position:absolute;top:10px;left:10px;display:flex;gap:5px;}
-.graph-search input,.graph-search select{background:rgba(17,17,21,.9);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-family:var(--font);font-size:11px;backdrop-filter:blur(4px);}
-.graph-search input{width:140px;}
+.graph-search input,.graph-search select{background:rgba(17,17,21,.92);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-family:var(--font);font-size:11px;backdrop-filter:blur(4px);}
+.graph-search input{width:130px;}
 .graph-search input:focus,.graph-search select:focus{outline:none;border-color:var(--red);}
+
+/* Tooltip */
+#tooltip{
+  position:fixed;pointer-events:none;z-index:100;
+  background:#0d0d11;border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;font-size:10px;font-family:var(--font);
+  display:none;max-width:220px;box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+#tooltip .tt-ip{color:var(--text);font-weight:700;margin-bottom:3px;}
+#tooltip .tt-row{color:var(--muted);margin-bottom:1px;}
+#tooltip .tt-row span{color:var(--text);}
+#tooltip .tt-risk{margin-top:4px;padding-top:4px;border-top:1px solid var(--border);}
+
+/* ── RIGHT PANEL — INVESTIGATION CARD ── */
 .detail-panel{background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;}
 .dp-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--panel);z-index:1;flex-shrink:0;}
-.dp-hdr h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
-.dp-hdr-actions{display:flex;gap:4px;}
+.dp-hdr-left{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.dp-hdr h4{font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dp-hdr .dp-sub{font-size:9px;color:var(--muted);}
+.dp-hdr-actions{display:flex;gap:4px;flex-shrink:0;}
 .dp-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .detail-section{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04);}
-.detail-section h5{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;}
-.kv{display:grid;grid-template-columns:88px 1fr;gap:2px 6px;align-items:baseline;margin-bottom:1px;}
+.detail-section h5{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.detail-section h5 .section-badge{font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(59,126,207,.15);color:var(--info);}
+.kv{display:grid;grid-template-columns:86px 1fr;gap:2px 6px;align-items:baseline;margin-bottom:1px;}
 .kv .k{color:var(--muted);font-size:10px;}
 .kv .v{color:var(--text);font-size:11px;word-break:break-all;}
 .kv .v.red{color:var(--red3);}
 .kv .v.warn{color:var(--warn);}
 .kv .v.ok{color:var(--ok);}
 .kv .v.info{color:var(--info);}
+.kv .v.trap{color:var(--trap);}
 .risk-bar{height:3px;border-radius:2px;background:var(--border);margin-top:5px;}
-.risk-fill{height:100%;border-radius:2px;transition:width .3s;}
+.risk-fill{height:100%;border-radius:2px;transition:width .4s;}
+.risk-reason{font-size:10px;color:var(--muted);padding:2px 0;padding-left:10px;position:relative;}
+.risk-reason::before{content:'›';position:absolute;left:0;color:var(--warn);}
+.risk-reason.critical::before{color:var(--red3);}
+.risk-reason.trap-reason{color:var(--trap);}
+.risk-reason.trap-reason::before{color:var(--trap);}
+
+/* Suggested actions */
+.action-btn{display:flex;align-items:center;gap:7px;width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:6px 9px;cursor:pointer;font-family:var(--font);font-size:10px;font-weight:600;margin-bottom:4px;text-align:left;transition:border-color .12s;}
+.action-btn:hover{border-color:var(--red);}
+.action-btn.primary-action{background:rgba(214,31,44,.12);border-color:var(--red2);}
+.action-btn .act-icon{font-size:11px;flex-shrink:0;}
+.action-btn .act-lbl{flex:1;}
+.action-btn .act-why{font-size:9px;color:var(--muted);margin-top:1px;}
+
+/* Trap interaction section */
+.trap-hit-row{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);}
+.trap-hit-row .th-trap{font-size:9px;font-weight:700;color:var(--trap);text-transform:uppercase;margin-bottom:2px;}
+.trap-hit-row .th-detail{font-size:10px;color:var(--muted);}
+
 .svc-table{width:100%;border-collapse:collapse;font-size:10px;}
 .svc-table th{color:var(--muted);font-weight:600;text-align:left;padding:2px 3px;border-bottom:1px solid var(--border);}
-.svc-table td{padding:2px 3px;border-bottom:1px solid rgba(255,255,255,.025);font-family:var(--font);}
+.svc-table td{padding:2px 3px;border-bottom:1px solid rgba(255,255,255,.025);}
 .svc-table tr:hover td{background:rgba(255,255,255,.025);}
 .neighbor-chip{display:inline-flex;align-items:center;gap:3px;background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:2px 6px;font-size:10px;cursor:pointer;margin:2px;}
 .neighbor-chip:hover{border-color:var(--red);}
-.evt-row{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.025);}
-.evt-row .et{font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:1px;}
-.evt-row .es{color:var(--muted);font-size:10px;}
-.sev-info{color:var(--info);}
-.sev-warning{color:var(--warn);}
-.sev-critical,.sev-high{color:var(--red3);}
-.sev-ok,.sev-normal{color:var(--ok);}
-.scan-btn-node{width:100%;background:rgba(214,31,44,.12);border:1px solid var(--red2);border-radius:5px;color:var(--text);padding:7px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;margin-top:5px;}
-.scan-btn-node:hover{background:rgba(214,31,44,.22);}
-.scan-btn-node:disabled{opacity:.4;cursor:not-allowed;}
-.empty-state{color:var(--muted);font-size:11px;padding:4px 0;}
-.src-tag{display:inline-block;background:rgba(59,126,207,.15);border:1px solid rgba(59,126,207,.3);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--info);margin:1px;}
+.neighbor-chip.trap-neighbor{border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.06);}
 .timeline-row{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.025);font-size:10px;}
 .timeline-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:3px;}
-.timeline-dot.info{background:var(--info);}
-.timeline-dot.warning{background:var(--warn);}
 .timeline-dot.critical,.timeline-dot.high{background:var(--red3);}
-.timeline-dot.normal,.timeline-dot.ok{background:var(--ok);}
+.timeline-dot.warning{background:var(--warn);}
+.timeline-dot.info{background:var(--info);}
+.timeline-dot.trap{background:var(--trap);}
 .timeline-ts{color:var(--muted);white-space:nowrap;font-size:9px;}
 .timeline-title{color:var(--text);flex:1;}
+.empty-state{color:var(--muted);font-size:11px;padding:4px 0;}
+.src-tag{display:inline-block;background:rgba(59,126,207,.12);border:1px solid rgba(59,126,207,.25);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--info);margin:1px;}
+.scan-btn-node{width:100%;background:rgba(214,31,44,.12);border:1px solid var(--red2);border-radius:5px;color:var(--text);padding:7px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;margin-top:5px;}
+.scan-btn-node:hover{background:rgba(214,31,44,.22);}
+.cve-btn{width:100%;background:rgba(201,123,0,.1);border:1px solid rgba(201,123,0,.3);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
+.cve-btn:hover{background:rgba(201,123,0,.2);}
+.notes-area{width:100%;background:#0b0b0d;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-family:var(--font);font-size:11px;resize:vertical;min-height:52px;margin-top:4px;}
+.notes-area:focus{outline:none;border-color:var(--red);}
+.notes-save{width:100%;background:rgba(59,126,207,.15);border:1px solid rgba(59,126,207,.3);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
+.notes-save:hover{background:rgba(59,126,207,.28);}
+.vt-btn{width:100%;background:rgba(42,157,78,.1);border:1px solid rgba(42,157,78,.25);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
+.vt-btn:hover{background:rgba(42,157,78,.2);}
+.vt-result{font-size:10px;padding:4px 0;color:var(--muted);}
+.cve-row{font-size:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.025);}
+
+/* ── BOTTOM — INTELLIGENCE FEED ── */
 .bottom{border-top:1px solid var(--border);background:#0d0d11;display:grid;grid-template-rows:32px 1fr;min-height:0;}
 .bottom-tabs{display:flex;align-items:stretch;border-bottom:1px solid var(--border);padding:0 12px;gap:2px;flex-shrink:0;}
 .tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;font-family:var(--font);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;padding:0 9px;}
@@ -121,10 +212,44 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .log-line.warn{color:var(--warn);}
 .log-line.ok{color:var(--ok);}
 .log-line.muted{color:var(--muted);}
-.feed-row{padding:4px 0;border-bottom:1px solid rgba(255,255,255,.025);}
-.feed-row .fhdr{display:flex;align-items:baseline;gap:7px;margin-bottom:1px;}
-.feed-row .ft{font-size:9px;color:var(--muted);}
-.feed-row .fs{font-size:10px;color:var(--muted);}
+
+/* Intelligence feed */
+.intel-row{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer;transition:background .1s;}
+.intel-row:hover{background:rgba(255,255,255,.02);}
+.intel-pri{font-size:8px;font-weight:800;padding:2px 5px;border-radius:3px;flex-shrink:0;margin-top:1px;min-width:34px;text-align:center;}
+.intel-pri.HIGH{background:rgba(214,31,44,.25);color:var(--red3);}
+.intel-pri.MED{background:rgba(201,123,0,.22);color:var(--warn);}
+.intel-pri.LOW{background:rgba(59,126,207,.15);color:var(--info);}
+.intel-pri.TRAP{background:rgba(255,107,53,.25);color:var(--trap);}
+.intel-body{flex:1;min-width:0;}
+.intel-title{font-size:11px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.intel-sub{font-size:10px;color:var(--muted);}
+.intel-ts{font-size:9px;color:var(--muted);flex-shrink:0;margin-top:2px;}
+
+/* Hosts table */
+.hosts-table{width:100%;border-collapse:collapse;font-size:10px;}
+.hosts-table th{color:var(--muted);font-weight:600;text-align:left;padding:3px 5px;border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.06em;}
+.hosts-table td{padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.025);}
+.hosts-table tr{cursor:pointer;}
+.hosts-table tr:hover td{background:rgba(255,255,255,.025);}
+.status-dot-sm{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+
+/* Trap cards */
+.trap-card{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:5px;}
+.trap-card.hit{border-color:rgba(255,107,53,.5);background:rgba(255,107,53,.04);}
+.trap-card .tc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.trap-card .tc-name{font-size:11px;font-weight:700;}
+.trap-card .tc-port{font-size:10px;color:var(--muted);}
+.trap-card .tc-status{font-size:9px;padding:1px 5px;border-radius:3px;}
+.trap-card .tc-status.active{background:rgba(42,157,78,.2);color:var(--ok);}
+.trap-card .tc-status.hit{background:rgba(255,107,53,.2);color:var(--trap);}
+.trap-card .tc-status.stopped{background:rgba(120,120,120,.15);color:var(--muted);}
+.trap-card .tc-hits{font-size:10px;color:var(--muted);margin-top:2px;}
+.trap-card .tc-hit-entry{font-size:10px;color:var(--warn);padding:2px 0;}
+.trap-stop-btn{background:rgba(120,120,120,.15);border:1px solid var(--border);border-radius:3px;color:var(--muted);padding:2px 6px;cursor:pointer;font-family:var(--font);font-size:9px;margin-left:6px;}
+.trap-stop-btn:hover{border-color:var(--red);color:var(--red3);}
+
+/* Sysinfo */
 .sysinfo-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px 0;}
 .sysinfo-card{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 10px;}
 .sysinfo-card .sc-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
@@ -135,50 +260,119 @@ canvas#graphCanvas{width:100%;height:100%;display:block;}
 .bar-fg{height:100%;border-radius:2px;}
 .iface-row{font-size:10px;padding:2px 0;color:var(--muted);}
 .iface-row span{color:var(--text);}
-.trap-card{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;cursor:pointer;}
-.trap-card:hover{border-color:var(--red);}
-.trap-card.hit{border-color:var(--red);background:rgba(214,31,44,.06);}
-.trap-card .tc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-.trap-card .tc-name{font-size:11px;font-weight:700;color:var(--text);}
-.trap-card .tc-port{font-size:10px;color:var(--muted);}
-.trap-card .tc-status{font-size:9px;padding:1px 5px;border-radius:3px;}
-.trap-card .tc-status.active{background:rgba(42,157,78,.2);color:var(--ok);}
-.trap-card .tc-status.hit{background:rgba(214,31,44,.2);color:var(--red3);}
-.trap-card .tc-status.stopped{background:rgba(120,120,120,.15);color:var(--muted);}
-.trap-card .tc-hits{font-size:10px;color:var(--muted);margin-top:2px;}
-.trap-card .tc-hit-entry{font-size:10px;color:var(--warn);padding:2px 0;}
-.trap-deploy-btn{width:100%;background:rgba(214,31,44,.1);border:1px solid var(--red2);border-radius:5px;color:var(--text);padding:7px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;margin-bottom:5px;}
-.trap-deploy-btn:hover{background:rgba(214,31,44,.2);}
-.trap-stop-btn{background:rgba(120,120,120,.15);border:1px solid var(--border);border-radius:3px;color:var(--muted);padding:2px 6px;cursor:pointer;font-family:var(--font);font-size:9px;margin-left:6px;}
-.trap-stop-btn:hover{border-color:var(--red);color:var(--red3);}
-.notes-area{width:100%;background:#0b0b0d;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-family:var(--font);font-size:11px;resize:vertical;min-height:52px;margin-top:4px;}
-.notes-area:focus{outline:none;border-color:var(--red);}
-.notes-save{width:100%;background:rgba(59,126,207,.15);border:1px solid rgba(59,126,207,.3);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
-.notes-save:hover{background:rgba(59,126,207,.28);}
-.vt-btn{width:100%;background:rgba(42,157,78,.12);border:1px solid rgba(42,157,78,.3);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
-.vt-btn:hover{background:rgba(42,157,78,.22);}
-.vt-result{font-size:10px;padding:6px 0;color:var(--muted);}
-.vt-result .mal{color:var(--red3);}
-.vt-result .ok{color:var(--ok);}
-.cve-btn{width:100%;background:rgba(214,31,44,.12);border:1px solid var(--red2);border-radius:5px;color:var(--text);padding:6px;cursor:pointer;font-family:var(--font);font-size:11px;margin-top:4px;}
-.cve-btn:hover{background:rgba(214,31,44,.22);}
-.cve-row{font-size:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.025);}
-.risk-reason{font-size:10px;color:var(--muted);padding:1px 0;}
-.risk-reason::before{content:'• ';color:var(--warn);}
 button{cursor:pointer;font-family:var(--font);}
+
+/* ── PANEL COLLAPSE ── */
+.panel-collapse-btn{
+  position:absolute;top:8px;right:8px;
+  background:none;border:1px solid transparent;border-radius:4px;
+  color:var(--muted);cursor:pointer;font-family:var(--font);
+  font-size:10px;padding:2px 6px;z-index:10;transition:all .15s;
+}
+.panel-collapse-btn:hover{border-color:var(--border);color:var(--text);}
+.panel-collapsed{display:none!important;}
+.panel-sliver{
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel);border-right:1px solid var(--border);
+  cursor:pointer;writing-mode:vertical-rl;color:var(--muted);
+  font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:12px 6px;user-select:none;transition:color .15s;width:22px;
+}
+.panel-sliver:hover{color:var(--text);}
+.panel-sliver.right{border-right:none;border-left:1px solid var(--border);writing-mode:vertical-rl;}
+.bottom-sliver{
+  display:none;align-items:center;justify-content:center;
+  background:#0d0d11;border-top:1px solid var(--border);
+  cursor:pointer;color:var(--muted);font-size:9px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;height:22px;
+}
+.bottom-sliver:hover{color:var(--text);}
+
+/* ── LIVE ALERT FEED ── */
+.alert-feed-panel{
+  position:absolute;top:0;right:0;bottom:0;width:260px;
+  background:rgba(11,11,13,.95);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:15;
+  backdrop-filter:blur(8px);transform:translateX(100%);
+  transition:transform .25s ease;pointer-events:none;
+}
+.alert-feed-panel.open{transform:translateX(0);pointer-events:all;}
+.alert-feed-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.alert-feed-hdr h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.alert-feed-badge{
+  font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px;
+  background:rgba(214,31,44,.25);color:var(--red3);min-width:18px;text-align:center;
+}
+.alert-feed-badge.trap{background:rgba(255,107,53,.25);color:var(--trap);}
+.alert-feed-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.alert-entry{
+  padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);
+  cursor:pointer;transition:background .1s;
+}
+.alert-entry:hover{background:rgba(255,255,255,.025);}
+.alert-entry.new{animation:alertFlash .8s ease;}
+@keyframes alertFlash{0%{background:rgba(214,31,44,.2);}100%{background:transparent;}}
+.alert-entry.trap-entry{border-left:2px solid var(--trap);}
+.alert-entry.crit-entry{border-left:2px solid var(--red3);}
+.alert-pri{font-size:8px;font-weight:800;text-transform:uppercase;margin-bottom:2px;}
+.alert-pri.CRIT{color:var(--red3);}
+.alert-pri.TRAP{color:var(--trap);}
+.alert-pri.WARN{color:var(--warn);}
+.alert-title{font-size:11px;color:var(--text);margin-bottom:1px;font-weight:600;}
+.alert-sub{font-size:10px;color:var(--muted);}
+.alert-ts{font-size:9px;color:var(--muted);margin-top:2px;}
+.alert-toggle-btn{
+  position:absolute;top:50%;right:0;transform:translateY(-50%);
+  background:var(--panel);border:1px solid var(--border);border-right:none;
+  border-radius:5px 0 0 5px;color:var(--muted);cursor:pointer;
+  font-family:var(--font);font-size:9px;font-weight:700;
+  padding:6px 5px;writing-mode:vertical-rl;letter-spacing:.1em;
+  z-index:16;transition:color .15s,border-color .15s;
+}
+.alert-toggle-btn:hover{color:var(--text);border-color:var(--red);}
+.alert-toggle-btn.has-alerts{color:var(--red3);border-color:rgba(214,31,44,.4);}
+.alert-toggle-btn.has-traps{color:var(--trap);border-color:rgba(255,107,53,.4);}
+
+/* ── TERMINAL ── */
+.terminal-wrap{
+  width:100%;height:100%;background:#0b0b0d;position:relative;
+  display:flex;flex-direction:column;
+}
+.terminal-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 12px;background:#0d0d11;border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.terminal-hdr-left{display:flex;align-items:center;gap:8px;}
+.terminal-dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.terminal-dot.red{background:#ff5f57;}
+.terminal-dot.yellow{background:#ffbd2e;}
+.terminal-dot.green{background:#28c840;}
+.terminal-title{font-size:10px;color:var(--muted);font-weight:600;}
+.terminal-status{font-size:9px;color:var(--muted);}
+#xterm-container{flex:1;overflow:hidden;padding:4px;}
 .btn{background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 10px;font-size:11px;font-weight:600;}
 .btn:hover{border-color:var(--red);}
 .btn.sm{padding:3px 7px;font-size:10px;}
-/* hosts table */
-.hosts-table{width:100%;border-collapse:collapse;font-size:10px;}
-.hosts-table th{color:var(--muted);font-weight:600;text-align:left;padding:3px 5px;border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.06em;}
-.hosts-table td{padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.025);}
-.hosts-table tr{cursor:pointer;}
-.hosts-table tr:hover td{background:rgba(255,255,255,.03);}
-.hosts-table .status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;}
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 </head>
 <body>
+
+<div id="tooltip">
+  <div class="tt-ip" id="tt-ip"></div>
+  <div class="tt-row" id="tt-type"></div>
+  <div class="tt-row" id="tt-mac"></div>
+  <div class="tt-row" id="tt-vendor"></div>
+  <div class="tt-risk" id="tt-risk"></div>
+</div>
+
+<!-- TOP BAR -->
 <div class="topbar">
   <div class="brand"><span class="LA">LAN</span><span class="Nimals">imals</span></div>
   <div class="topbar-center">
@@ -186,39 +380,75 @@ button{cursor:pointer;font-family:var(--font);}
     <input id="cidrInput" value="192.168.0.0/24" placeholder="192.168.0.0/24"/>
     <div class="status-pip" id="statusDot"></div>
     <span id="statusLabel">ready</span>
+    <div class="overlay-bar">
+      <button class="ov-btn active" data-mode="relationships">Relationships</button>
+      <button class="ov-btn ov-risk" data-mode="risk">Risk</button>
+      <button class="ov-btn ov-diff" data-mode="diff">Diff</button>
+      <button class="ov-btn ov-services" data-mode="services">Services</button>
+      <button class="ov-btn ov-honeypot" data-mode="honeypot">Honeypot</button>
+    </div>
   </div>
   <div class="topbar-right">
-    <button class="btn sm" id="btnRefresh">↻ Refresh</button>
-    <button class="btn sm" id="btnCenter">⊕ Center</button>
-    <button class="btn sm" id="btnSysinfo">≡ Sysinfo</button>
-    <button class="btn sm" id="btnReport" title="Export HTML report">⬇ Report</button>
+    <button class="btn sm" id="btnRefresh">↻</button>
+    <button class="btn sm" id="btnCenter">⊕</button>
+    <button class="btn sm" id="btnSysinfo">≡ Sys</button>
+    <button class="btn sm" id="btnReport">⬇ Report</button>
   </div>
 </div>
+
+<!-- MAIN -->
 <div class="main">
-  <div class="rail">
-    <div class="rail-section" id="sec-ops">
-      <div class="rail-hdr" onclick="toggleSection('sec-ops')">
-        <h4>Operations</h4><span class="toggle" id="tog-sec-ops">▾</span>
+
+  <!-- LEFT RAIL — PLAYBOOKS -->
+  <div class="rail" id="leftRail">
+    <button class="panel-collapse-btn" id="collapseLeft" title="Collapse panel">◂</button>
+
+    <div class="rail-section" id="sec-discovery">
+      <div class="rail-hdr" onclick="toggleSection('sec-discovery')">
+        <h4>Discovery</h4><span class="toggle" id="tog-sec-discovery">▾</span>
       </div>
       <div class="rail-body">
-        <button class="op-btn primary" id="btnDiscovery"><span class="icon">◎</span><span class="lbl">Discovery Scan</span></button>
+        <button class="op-btn primary" id="btnDiscovery"><span class="icon">◎</span><span class="lbl">Full Discovery</span></button>
         <button class="op-btn" id="btnArp"><span class="icon">⬡</span><span class="lbl">ARP Refresh</span></button>
         <button class="op-btn" id="btnHostmap"><span class="icon">⬡</span><span class="lbl">Host Mapping</span></button>
+      </div>
+    </div>
+
+    <div class="rail-section" id="sec-threat">
+      <div class="rail-hdr" onclick="toggleSection('sec-threat')">
+        <h4>Threat Hunting</h4><span class="toggle" id="tog-sec-threat">▾</span>
+      </div>
+      <div class="rail-body">
         <button class="op-btn" id="btnRogue"><span class="icon">⚑</span><span class="lbl">Rogue Detection</span></button>
-        <button class="op-btn" id="btnInventory"><span class="icon">≡</span><span class="lbl">Inventory</span></button>
         <button class="op-btn" id="btnAnomaly"><span class="icon">⚡</span><span class="lbl">Anomaly Scan</span></button>
-        <button class="op-btn" id="btnRescore"><span class="icon">⊙</span><span class="lbl">Rescore Risks</span></button>
-        <button class="op-btn" id="btnWatchdog"><span class="icon">◈</span><span class="lbl">Watchdog Check</span></button>
+        <button class="op-btn" id="btnWatchdog"><span class="icon">◈</span><span class="lbl">Watchdog</span></button>
         <button class="op-btn" id="btnDiff"><span class="icon">≠</span><span class="lbl">Network Diff</span></button>
-        <button class="op-btn primary" id="btnDeployTraps" style="margin-top:4px;"><span class="icon">◈</span><span class="lbl">Deploy Trap Bundle</span></button>
-        <button class="op-btn" id="btnStopAllTraps"><span class="icon">◇</span><span class="lbl">Stop All Traps</span></button>
-        <button class="op-btn primary" id="btnDeployTraps" style="margin-top:4px;"><span class="icon">◈</span><span class="lbl">Deploy Trap Bundle</span></button>
+      </div>
+    </div>
+
+    <div class="rail-section" id="sec-enrich">
+      <div class="rail-hdr" onclick="toggleSection('sec-enrich')">
+        <h4>Enrichment</h4><span class="toggle" id="tog-sec-enrich">▾</span>
+      </div>
+      <div class="rail-body">
+
+        <button class="op-btn" id="btnRescore"><span class="icon">⊙</span><span class="lbl">Rescore Risks</span></button>
+      </div>
+    </div>
+
+    <div class="rail-section" id="sec-traps">
+      <div class="rail-hdr" onclick="toggleSection('sec-traps')">
+        <h4>Honeypot</h4><span class="toggle" id="tog-sec-traps">▾</span>
+      </div>
+      <div class="rail-body">
+        <button class="op-btn trap-btn primary" id="btnDeployTraps"><span class="icon">◈</span><span class="lbl">Deploy Bundle</span></button>
         <button class="op-btn" id="btnStopAllTraps"><span class="icon">◇</span><span class="lbl">Stop All Traps</span></button>
       </div>
     </div>
+
     <div class="rail-section" id="sec-stats">
       <div class="rail-hdr" onclick="toggleSection('sec-stats')">
-        <h4>Network Stats</h4><span class="toggle" id="tog-sec-stats">▾</span>
+        <h4>Network State</h4><span class="toggle" id="tog-sec-stats">▾</span>
       </div>
       <div class="rail-body">
         <div class="stat-grid">
@@ -226,29 +456,36 @@ button{cursor:pointer;font-family:var(--font);}
           <div class="stat"><div class="sv" id="statSvc">—</div><div class="sl">Services</div></div>
           <div class="stat"><div class="sv warn" id="statWarn">—</div><div class="sl">Warnings</div></div>
           <div class="stat"><div class="sv red" id="statCrit">—</div><div class="sl">Critical</div></div>
+          <div class="stat"><div class="sv trap" id="statTraps">—</div><div class="sl">Traps</div></div>
+          <div class="stat"><div class="sv trap" id="statTrapHits">—</div><div class="sl">Trap Hits</div></div>
         </div>
       </div>
     </div>
-    <div class="rail-section" id="sec-jobs">
-      <div class="rail-hdr" onclick="toggleSection('sec-jobs')">
-        <h4>Recent Jobs</h4><span class="toggle" id="tog-sec-jobs">▾</span>
+
+    <div class="rail-section" id="sec-rec" style="flex:1;">
+      <div class="rail-hdr" onclick="toggleSection('sec-rec')">
+        <h4>Recommended</h4><span class="toggle" id="tog-sec-rec">▾</span>
       </div>
-      <div class="rail-body">
-        <div id="jobsList" style="display:grid;gap:3px;"></div>
+      <div class="rail-body" id="recActions">
+        <p class="empty-state" style="font-size:10px;">Loading…</p>
       </div>
     </div>
+
   </div>
 
-  <div class="canvas-wrap" id="graphWrap">
+  <!-- LEFT SLIVER (collapsed state) -->
+  <div class="panel-sliver" id="leftSliver" style="display:none;" onclick="expandPanel('left')">LANimals ◂</div>
+
+  <!-- GRAPH -->
+  <div class="canvas-wrap" id="graphWrap" style="position:relative;">
     <canvas id="graphCanvas"></canvas>
     <div class="graph-search">
-      <input id="searchInput" placeholder="Search nodes…"/>
+      <input id="searchInput" placeholder="Search…"/>
       <select id="typeFilter">
         <option value="">All</option>
         <option value="host">Hosts</option>
-        <option value="router">Routers</option>
+        <option value="trap">Traps</option>
         <option value="service">Services</option>
-        <option value="alert">Alerts</option>
         <option value="subnet">Subnets</option>
       </select>
     </div>
@@ -260,39 +497,80 @@ button{cursor:pointer;font-family:var(--font);}
     </div>
   </div>
 
+  <!-- RIGHT SLIVER (collapsed state) -->
+  <div class="panel-sliver right" id="rightSliver" style="display:none;" onclick="expandPanel('right')">▸ DETAILS</div>
+
+  <!-- RIGHT — INVESTIGATION CARD -->
   <div class="detail-panel" id="detailPanel">
+    <button class="panel-collapse-btn" id="collapseRight" title="Collapse panel">▸</button>
     <div class="dp-hdr">
-      <h4 id="detailTitle">No node selected</h4>
+      <div class="dp-hdr-left">
+        <h4 id="detailTitle">No node selected</h4>
+        <div class="dp-sub" id="detailSub">Click a node to investigate</div>
+      </div>
       <div class="dp-hdr-actions">
         <button class="btn sm" id="btnDetailRefresh" style="display:none">↻</button>
       </div>
     </div>
     <div class="dp-scroll" id="detailBody">
       <div class="detail-section">
-        <p class="empty-state">Click a node to inspect it.</p>
+        <p class="empty-state">Select a node on the graph to open its investigation card.</p>
       </div>
     </div>
   </div>
 </div>
 
-<div class="bottom">
-  <div class="bottom-tabs">
-    <button class="tab-btn active" data-tab="scanout">Scan Output</button>
-    <button class="tab-btn" data-tab="events">Events</button>
+<!-- BOTTOM SLIVER (collapsed) -->
+<div class="bottom-sliver" id="bottomSliver" onclick="expandPanel('bottom')">▲ TERMINAL · INTELLIGENCE · LOGS</div>
+
+<!-- BOTTOM -->
+<div class="bottom" id="bottomPanel">
+  <div class="bottom-tabs" style="position:relative;">
+    <button class="tab-btn active" data-tab="terminal">⬛ Terminal</button>
+    <button class="tab-btn" data-tab="intel">Intelligence</button>
+    <button class="tab-btn" data-tab="scanout">Scan Output</button>
     <button class="tab-btn" data-tab="hosts">Hosts</button>
+    <button class="tab-btn" data-tab="traps">Traps</button>
     <button class="tab-btn" data-tab="reports">Reports</button>
     <button class="tab-btn" data-tab="sysinfo">Sysinfo</button>
-    <button class="tab-btn" data-tab="traps">Traps</button>
+    <button class="panel-collapse-btn" id="collapseBottom" style="position:static;margin-left:auto;" title="Collapse panel">▾</button>
   </div>
   <div class="bottom-content">
-    <div class="tab-pane active" id="tab-scanout"><div id="scanOutput"></div></div>
-    <div class="tab-pane" id="tab-events"><div id="eventFeed"></div></div>
+    <div class="tab-pane active" id="tab-terminal">
+      <div class="terminal-wrap">
+        <div class="terminal-hdr">
+          <div class="terminal-hdr-left">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title">LANimals Shell — bash</span>
+          </div>
+          <span class="terminal-status" id="termStatus">connecting…</span>
+        </div>
+        <div id="xterm-container"></div>
+      </div>
+    </div>
+    <div class="tab-pane" id="tab-intel"><div id="intelFeed"><p class="log-line muted">Loading intelligence feed…</p></div></div>
+    <div class="tab-pane" id="tab-scanout"><div id="scanOutput"></div></div>
     <div class="tab-pane" id="tab-hosts"><div id="hostsTable"></div></div>
+    <div class="tab-pane" id="tab-traps"><div id="trapsContent"></div></div>
     <div class="tab-pane" id="tab-reports"><div id="reportsList"></div></div>
-    <div class="tab-pane" id="tab-sysinfo"><div id="sysinfoContent"><p class="log-line muted">Click ≡ Sysinfo or run Inventory.</p></div></div>
-    <div class="tab-pane" id="tab-traps"><div id="trapsContent"><p class="log-line muted">No traps deployed. Use Operations rail to deploy.</p></div></div>
+    <div class="tab-pane" id="tab-sysinfo"><div id="sysinfoContent"><p class="log-line muted">Click ≡ Sys or run Inventory.</p></div></div>
   </div>
 </div>
+
+<!-- LIVE ALERT FEED PANEL -->
+<div class="alert-feed-panel" id="alertPanel">
+  <div class="alert-feed-hdr">
+    <h4>⚠ Live Alerts</h4>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="alert-feed-badge" id="alertBadge">0</span>
+      <button class="btn sm" onclick="toggleAlertPanel()" style="font-size:9px;padding:2px 6px;">✕</button>
+    </div>
+  </div>
+  <div class="alert-feed-scroll" id="alertFeedScroll"></div>
+</div>
+<button class="alert-toggle-btn" id="alertToggleBtn" onclick="toggleAlertPanel()" title="Live Alerts">ALERTS</button>
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -302,18 +580,21 @@ let selectedCtx = null;
 let panX = 0, panY = 0, scale = 1;
 let dragging = false, dragStartX = 0, dragStartY = 0;
 let jobPollTimer = null;
+let overlayMode = 'relationships'; // relationships|risk|diff|services|honeypot
+let diffData = null;
+let trapData = [];
+let baselineIps = new Set();
 
-// Force simulation state
-let simNodes = [];   // {id, x, y, vx, vy, data}
-let simEdges = [];   // {source, target}
+// Force sim
+let simNodes = [];
+let simEdges = [];
 let simRunning = false;
-let simTimer = null;
-const SIM_ALPHA_START = 1.0;
-const SIM_ALPHA_DECAY = 0.012;
 let simAlpha = 0;
+const SIM_ALPHA_DECAY = 0.012;
 
 const canvas = document.getElementById('graphCanvas');
 const ctx2d = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
 
 // ── Util ──────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -321,9 +602,8 @@ function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 function cidr(){ return $('cidrInput').value.trim()||'192.168.0.0/24'; }
 
 function setStatus(label, state='ready'){
-  $('statusLabel').textContent = label;
-  const dot = $('statusDot');
-  dot.className = 'status-pip'+(state==='scanning'?' scanning':state==='error'?' error':'');
+  $('statusLabel').textContent=label;
+  $('statusDot').className='status-pip'+(state==='scanning'?' scanning':state==='error'?' error':'');
 }
 
 function addScanLine(text, cls=''){
@@ -346,102 +626,19 @@ function toggleSection(id){
   if(tog) tog.textContent=sec.classList.contains('collapsed')?'▸':'▾';
 }
 
-// ── Force Simulation ──────────────────────────────────────────────────────────
-function nodeRadius(n){
-  if(n.node_type==='subnet') return 28;
-  if(n.node_type==='router') return 18;
-  if(n.node_type==='alert')  return 14;
-  if(n.node_type==='service') return 9;
-  return 13;
-}
-
-function nodeColor(n){
-  if(n.node_type==='alert'||n.status==='critical') return{fill:'#d61f2c',stroke:'#a00'};
-  if(n.status==='warning') return{fill:'#c97b00',stroke:'#a06000'};
-  if(n.node_type==='router') return{fill:'#8b3dd6',stroke:'#6b2db0'};
-  if(n.node_type==='service') return{fill:'#2a7a4e',stroke:'#1a5a3a'};
-  if(n.node_type==='subnet') return{fill:'rgba(42,42,64,.2)',stroke:'#2a2a50'};
-  return{fill:'#3b7ecf',stroke:'#2a5fa0'};
-}
-
-function initSimulation(nodes, edges){
-  const w=canvas.width/scale, h=canvas.height/scale;
-  const cx=w/2, cy=h/2;
-  simNodes = nodes.map((n,i)=>{
-    const existing = simNodes.find(s=>s.id===n.id);
-    if(existing) return{...existing, data:n};
-    const angle=(Math.PI*2*i)/Math.max(nodes.length,1);
-    const r=Math.min(w,h)*0.3;
-    return{id:n.id, x:cx+Math.cos(angle)*r, y:cy+Math.sin(angle)*r, vx:0, vy:0, data:n};
+// ── Overlay mode ──────────────────────────────────────────────────────────────
+function setOverlay(mode){
+  overlayMode=mode;
+  document.querySelectorAll('.ov-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.mode===mode);
   });
-  simEdges = edges.map(e=>({source:e.source, target:e.target, data:e}));
-  simAlpha = SIM_ALPHA_START;
-  if(!simRunning) runSim();
-}
-
-function runSim(){
-  simRunning = true;
-  const step = () => {
-    if(simAlpha < 0.01){ simRunning=false; renderGraph(); return; }
-    simAlpha *= (1-SIM_ALPHA_DECAY);
-    tickForces();
-    renderGraph();
-    simTimer = requestAnimationFrame(step);
-  };
-  simTimer = requestAnimationFrame(step);
-}
-
-function tickForces(){
-  const w=canvas.width/scale, h=canvas.height/scale;
-  const cx=w/2, cy=h/2;
-  const nodeMap=new Map(simNodes.map(n=>[n.id,n]));
-
-  // Link forces
-  for(const e of simEdges){
-    const a=nodeMap.get(e.source), b=nodeMap.get(e.target);
-    if(!a||!b) continue;
-    const dx=b.x-a.x, dy=b.y-a.y;
-    const dist=Math.sqrt(dx*dx+dy*dy)||1;
-    const targetDist = (a.data.node_type==='subnet'||b.data.node_type==='subnet') ? 160 : 120;
-    const force=(dist-targetDist)/dist * 0.08 * simAlpha;
-    a.vx+=dx*force; a.vy+=dy*force;
-    b.vx-=dx*force; b.vy-=dy*force;
-  }
-
-  // Repulsion
-  for(let i=0;i<simNodes.length;i++){
-    for(let j=i+1;j<simNodes.length;j++){
-      const a=simNodes[i], b=simNodes[j];
-      const dx=b.x-a.x, dy=b.y-a.y;
-      const dist2=dx*dx+dy*dy||1;
-      const strength=4000/dist2;
-      const fx=dx/Math.sqrt(dist2)*strength;
-      const fy=dy/Math.sqrt(dist2)*strength;
-      a.vx-=fx; a.vy-=fy;
-      b.vx+=fx; b.vy+=fy;
-    }
-  }
-
-  // Gravity toward center
-  for(const n of simNodes){
-    n.vx += (cx-n.x)*0.01*simAlpha;
-    n.vy += (cy-n.y)*0.01*simAlpha;
-  }
-
-  // Integrate + dampen
-  for(const n of simNodes){
-    n.vx*=0.7; n.vy*=0.7;
-    n.x+=n.vx; n.y+=n.vy;
-    // Boundary
-    const r=nodeRadius(n.data)+8;
-    n.x=Math.max(r,Math.min(w-r,n.x));
-    n.y=Math.max(r,Math.min(h-r,n.y));
-  }
+  if(mode==='diff' && !diffData) fetchDiff();
+  renderGraph();
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
 async function apiGet(path){ const r=await fetch(path); if(!r.ok) throw new Error(r.status); return r.json(); }
-async function apiPost(path){ const r=await fetch(path,{method:'POST'}); if(!r.ok) throw new Error(r.status); return r.json(); }
+async function apiPost(path,body){ const r=await fetch(path,{method:'POST',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}); if(!r.ok) throw new Error(r.status); return r.json(); }
 
 async function fetchGraph(){
   try{
@@ -455,11 +652,12 @@ async function fetchGraph(){
       if(t&&n.node_type!==t) return false;
       return true;
     });
-    initSimulation(filtered, (data.edges||[]).filter(e=>{
+    initSimulation(filtered,(data.edges||[]).filter(e=>{
       const vis=new Set(filtered.map(n=>n.id));
       return vis.has(e.source)&&vis.has(e.target);
     }));
     setStatus('ready','ready');
+    updateRecommendations();
   } catch(e){ setStatus('error','error'); }
 }
 
@@ -474,10 +672,34 @@ async function fetchStats(){
   } catch(e){}
 }
 
-async function fetchReports(){
+async function fetchTraps(){
   try{
-    const data=await apiGet('/api/reports');
-    renderReports(data.reports||[]);
+    const data=await apiGet('/api/traps');
+    trapData=data.traps||[];
+    $('statTraps').textContent=data.active_count??'—';
+    $('statTrapHits').textContent=data.total_hits??'—';
+    renderTraps(trapData);
+    // Sync hit counts into snapshot nodes
+    if(snapshot){
+      trapData.forEach(trap=>{
+        const node=snapshot.nodes?.find(n=>n.id==='trap:'+trap.id);
+        if(node){ node.meta=node.meta||{}; node.meta.hit_count=trap.hit_count||0; }
+      });
+    }
+  } catch(e){}
+}
+
+async function fetchDiff(){
+  try{ diffData=await apiGet('/api/diff'); } catch(e){}
+}
+
+async function fetchIntelFeed(){
+  try{
+    const [evts,trapsResp]=await Promise.all([
+      apiGet('/api/events?limit=60'),
+      apiGet('/api/traps'),
+    ]);
+    renderIntelFeed(evts.events||[], trapsResp.traps||[]);
   } catch(e){}
 }
 
@@ -486,15 +708,13 @@ async function fetchNode(id){
     const data=await apiGet('/api/node/'+encodeURIComponent(id));
     selectedCtx=data;
     const node=data.node;
-    // Fetch DB services and events for this IP
-    let dbServices=[], dbEvents=[], dbNotes='';
+    let dbServices=[],dbEvents=[],dbNotes='',dbCves=[];
     if(node.ip){
       try{ const sv=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/services'); dbServices=sv.services||[]; } catch(e){}
       try{ const ev=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/events'); dbEvents=ev.events||[]; } catch(e){}
       try{ const nt=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/notes'); dbNotes=nt.notes||''; } catch(e){}
+      try{ const cv=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/cves'); dbCves=cv.cves||[]; } catch(e){}
     }
-    let dbCves=[];
-    if(node.ip){ try{ const cv=await apiGet('/api/hosts/'+encodeURIComponent(node.ip)+'/cves'); dbCves=cv.cves||[]; } catch(e){} }
     renderDetail(node, data.neighbors||[], dbEvents, dbServices, dbNotes, dbCves);
     $('btnDetailRefresh').style.display='';
     $('btnDetailRefresh').onclick=()=>fetchNode(id);
@@ -504,30 +724,20 @@ async function fetchNode(id){
 async function fetchJobs(){
   try{
     const data=await apiGet('/api/jobs');
-    renderJobsList(data.jobs||[]);
-  } catch(e){}
-}
-
-async function fetchEvents(){
-  try{
-    const data=await apiGet('/api/events?limit=80');
-    renderEvents(data.events||[]);
+    renderActiveOps(data.jobs||[]);
   } catch(e){}
 }
 
 async function fetchHosts(){
-  try{
-    const data=await apiGet('/api/hosts');
-    renderHostsTable(data.hosts||[]);
-  } catch(e){}
+  try{ const data=await apiGet('/api/hosts'); renderHostsTable(data.hosts||[]); } catch(e){}
+}
+
+async function fetchReports(){
+  try{ const data=await apiGet('/api/reports'); renderReports(data.reports||[]); } catch(e){}
 }
 
 async function fetchSysinfo(){
-  try{
-    const data=await apiGet('/api/sysinfo');
-    renderSysinfo(data);
-    activateTab('sysinfo');
-  } catch(e){}
+  try{ const data=await apiGet('/api/sysinfo'); renderSysinfo(data); activateTab('sysinfo'); } catch(e){}
 }
 
 async function pollJob(jid){
@@ -537,9 +747,10 @@ async function pollJob(jid){
     const pane=$('scanOutput');
     pane.innerHTML='';
     lines.forEach(l=>{
-      const cls=l.includes('ERROR')?'err':l.includes('ROGUE')||l.includes('rogue')?'warn':
+      const cls=l.includes('ERROR')?'err':
+               l.includes('ROGUE')||l.includes('[ROGUE]')?'warn':
                l.includes('complete')||l.includes('done')?'ok':
-               l.includes('→')||l.includes('Starting')||l.includes('scan:')?'muted':'';
+               l.includes('→')||l.includes('scan:')||l.includes('Starting')?'muted':'';
       const d=document.createElement('div');
       d.className='log-line'+(cls?' '+cls:'');
       d.textContent=l; pane.appendChild(d);
@@ -549,80 +760,162 @@ async function pollJob(jid){
     if(job.status==='running'){
       jobPollTimer=setTimeout(()=>pollJob(jid),700);
     } else {
-      setStatus(job.status==='done'?'done':'error', job.status==='done'?'ready':'error');
+      setStatus(job.status==='done'?'done':'error',job.status==='done'?'ready':'error');
       if(job.status==='done'){
-        setTimeout(()=>{ fetchGraph(); fetchStats(); fetchEvents(); fetchHosts(); }, 500);
+        setTimeout(()=>{ fetchGraph(); fetchStats(); fetchIntelFeed(); fetchHosts(); fetchTraps(); },600);
       }
       if(job.op==='inventory'&&job.result) renderSysinfo(job.result);
     }
   } catch(e){ clearTimeout(jobPollTimer); setStatus('error','error'); }
 }
 
-async function runOp(endpoint){
+async function runOp(endpoint,postBody){
   if(jobPollTimer) clearTimeout(jobPollTimer);
   $('scanOutput').innerHTML='';
   activateTab('scanout');
   setStatus('scanning…','scanning');
-  addScanLine('→ POST '+endpoint,'muted');
+  addScanLine('→ '+endpoint,'muted');
   try{
-    const res=await apiPost(endpoint);
+    const res=await apiPost(endpoint,postBody||undefined);
     if(res.job_id) jobPollTimer=setTimeout(()=>pollJob(res.job_id),500);
+    else if(res.summary||res.rescored||res.anomalies||res.offline_count!==undefined){
+      // Inline results (not a job)
+      const lines=[];
+      if(res.summary) lines.push(res.summary);
+      if(res.rescored) lines.push(`Rescored ${res.rescored} hosts, ${res.flagged} flagged`);
+      if(res.anomalies) { lines.push(`${res.anomalies.length} external connections`); res.anomalies.forEach(a=>lines.push(`  ${a.ip}:${a.port} ${a.status}`)); }
+      if(res.offline_count!==undefined) lines.push(`Watchdog: ${res.online_count} online, ${res.offline_count} offline`);
+      lines.forEach(l=>addScanLine(l,l.includes('[GONE]')||l.includes('offline')?'warn':''));
+      setStatus('done','ready');
+      setTimeout(()=>{ fetchGraph(); fetchStats(); fetchIntelFeed(); },400);
+    }
   } catch(e){ addScanLine('ERROR: '+e,'err'); setStatus('error','error'); }
 }
 
-async function runAnomaly(){
-  try{
-    addScanLine('→ GET /api/scan/anomaly','muted');
-    activateTab('scanout');
-    const data=await apiGet('/api/scan/anomaly');
-    if(data.anomalies&&data.anomalies.length){
-      addScanLine(`[!] ${data.anomalies.length} external connections detected:`,'warn');
-      data.anomalies.forEach(a=>{
-        addScanLine(`  ${a.ip}:${a.port}  status=${a.status}  pid=${a.pid||'?'}  known=${a.known}`,'warn');
+// ── Intelligence Feed ─────────────────────────────────────────────────────────
+function _eventToPriority(e){
+  if(e.title.includes('TRAP HIT')) return 'TRAP';
+  if(e.severity==='critical'||e.severity==='high') return 'HIGH';
+  if(e.severity==='warning') return 'MED';
+  return 'LOW';
+}
+
+function renderIntelFeed(events, traps){
+  const wrap=$('intelFeed');
+  const items=[];
+
+  // Trap hits → TRAP priority
+  traps.forEach(trap=>{
+    (trap.hits||[]).slice(-3).forEach(hit=>{
+      items.push({
+        pri:'TRAP',
+        title:`Trap Hit: ${trap.name} ← ${hit.source_ip}`,
+        sub:`port ${trap.port} · ${(hit.ts||'').slice(11,19)} · ${hit.data?hit.data.slice(0,40):'(no data)'}`,
+        ts:hit.ts||'',
+        ip:hit.source_ip,
+        action:()=>{ selectIpOnGraph(hit.source_ip); activateTab('intel'); },
       });
-    } else {
-      addScanLine('[ OK ] No anomalous external connections detected.','ok');
-    }
-  } catch(e){ addScanLine('ERROR: '+e,'err'); }
-}
-
-// ── Render ────────────────────────────────────────────────────────────────────
-function renderJobsList(jobs){
-  const wrap=$('jobsList');
-  wrap.innerHTML='';
-  if(!jobs.length){ wrap.innerHTML='<div class="log-line muted" style="font-size:10px;padding:2px 0;">No jobs yet.</div>'; return; }
-  jobs.slice(0,7).forEach(j=>{
-    const d=document.createElement('button');
-    d.className='op-btn'+(j.status==='running'?' active':'');
-    const bc=j.status==='running'?'run':j.status==='done'?'ok':j.status==='error'?'err':'';
-    d.innerHTML=`<span class="lbl" style="font-size:10px;">${esc(j.op)}</span><span class="badge ${bc}">${esc(j.status)}</span>`;
-    d.onclick=()=>{ if(jobPollTimer) clearTimeout(jobPollTimer); jobPollTimer=setTimeout(()=>pollJob(j.id),0); activateTab('scanout'); };
-    wrap.appendChild(d);
+    });
   });
-}
 
-function renderEvents(events){
-  const wrap=$('eventFeed');
-  wrap.innerHTML='';
-  if(!events.length){ wrap.innerHTML='<p class="log-line muted">No events yet.</p>'; return; }
+  // Events
   events.forEach(e=>{
-    const d=document.createElement('div');
-    d.className='feed-row';
-    const ts=(e.ts||'').replace('T',' ').replace('Z','').slice(0,19);
-    d.innerHTML=`<div class="fhdr"><span class="et sev-${esc(e.severity)}">${esc(e.severity)}</span><span class="ft">${esc(ts)}</span><strong style="font-size:11px;">${esc(e.title)}</strong></div><div class="fs">${esc(e.summary||'')}</div>`;
-    wrap.appendChild(d);
+    const pri=_eventToPriority(e);
+    items.push({
+      pri,
+      title:e.title,
+      sub:e.summary||'',
+      ts:e.ts||'',
+      ip:e.ip||null,
+      action:e.ip?()=>selectIpOnGraph(e.ip):null,
+    });
+  });
+
+  // Sort: TRAP > HIGH > MED > LOW, then by ts
+  const priOrder={TRAP:0,HIGH:1,MED:2,LOW:3};
+  items.sort((a,b)=>(priOrder[a.pri]??4)-(priOrder[b.pri]??4)||b.ts.localeCompare(a.ts));
+
+  if(!items.length){ wrap.innerHTML='<p class="log-line muted">No intelligence yet. Run a scan.</p>'; return; }
+
+  wrap.innerHTML=items.slice(0,60).map((item,i)=>`
+    <div class="intel-row" data-idx="${i}" style="${item.action?'cursor:pointer':''}">
+      <span class="intel-pri ${item.pri}">${item.pri}</span>
+      <div class="intel-body">
+        <div class="intel-title">${esc(item.title)}</div>
+        <div class="intel-sub">${esc(item.sub)}</div>
+      </div>
+      <div class="intel-ts">${esc((item.ts||'').slice(11,19))}</div>
+    </div>`).join('');
+
+  wrap.querySelectorAll('.intel-row').forEach((row,i)=>{
+    if(items[i]?.action) row.addEventListener('click',items[i].action);
   });
 }
 
+function selectIpOnGraph(ip){
+  if(!snapshot) return;
+  const node=snapshot.nodes?.find(n=>n.ip===ip||n.id==='host:'+ip);
+  if(node){ selectedNode=node; fetchNode(node.id); renderGraph(); }
+}
+
+// ── Recommendations ───────────────────────────────────────────────────────────
+function updateRecommendations(){
+  if(!snapshot) return;
+  const nodes=snapshot.nodes||[];
+  const recs=[];
+
+  const trapHits=trapData.reduce((s,t)=>s+(t.hit_count||0),0);
+  if(trapHits>0){
+    recs.push({pri:'high',text:`${trapHits} trap hit(s) — investigate attacker IPs`,action:()=>setOverlay('honeypot')});
+  }
+
+  const critical=nodes.filter(n=>n.status==='critical'&&n.node_type==='host');
+  if(critical.length){
+    recs.push({pri:'high',text:`${critical.length} critical host(s) — run CVE scan`,action:()=>{ if(critical[0].ip) runOp('/api/scan/cve/'+critical[0].ip); }});
+  }
+
+  const warned=nodes.filter(n=>n.status==='warning'&&n.node_type==='host');
+  if(warned.length){
+    recs.push({pri:'med',text:`${warned.length} warning host(s) — run rogue detection`,action:()=>runOp('/api/scan/rogue?cidr='+encodeURIComponent(cidr()))});
+  }
+
+  const noServices=nodes.filter(n=>n.node_type==='host'&&!(n.meta?.services?.length));
+  if(noServices.length>0){
+    recs.push({pri:'low',text:`${noServices.length} host(s) without service data — scan services`,action:()=>{}});
+  }
+
+  if(trapData.filter(t=>t.status==='active').length===0){
+    recs.push({pri:'med',text:'No honeypot traps active — deploy bundle',action:()=>deployTrapBundle()});
+  }
+
+  const wrap=$('recActions');
+  if(!recs.length){ wrap.innerHTML='<p class="empty-state" style="font-size:10px;">No recommendations. System looks clean.</p>'; return; }
+  wrap.innerHTML=recs.map((r,i)=>`
+    <div class="rec-item" data-rec="${i}">
+      <span class="rec-pri ${r.pri}">${r.pri.toUpperCase()}</span>
+      <span class="rec-text">${esc(r.text)}</span>
+    </div>`).join('');
+  wrap.querySelectorAll('.rec-item').forEach((el,i)=>{
+    if(recs[i].action) el.addEventListener('click',recs[i].action);
+  });
+}
+
+// ── Render Jobs (Active Ops) ──────────────────────────────────────────────────
+function renderActiveOps(jobs){
+  // Update badge on active jobs in the scan button area
+  // No dedicated panel — jobs show in intelligence feed as context
+}
+
+// ── Render Hosts ──────────────────────────────────────────────────────────────
 function renderHostsTable(hosts){
   const wrap=$('hostsTable');
-  if(!hosts.length){ wrap.innerHTML='<p class="log-line muted" style="padding:8px 0;">No hosts in database yet. Run Discovery Scan.</p>'; return; }
+  if(!hosts.length){ wrap.innerHTML='<p class="log-line muted" style="padding:8px 0;">No hosts in DB. Run Discovery Scan.</p>'; return; }
   let rows='';
   hosts.forEach(h=>{
-    const sc=h.status==='critical'?'#ff4455':h.status==='warning'?'#c97b00':'#2a9d4e';
-    const ls=(h.last_seen||'').replace('T',' ').replace('Z','').slice(0,19)||'—';
-    rows+=`<tr onclick="selectHostByIp('${esc(h.ip)}')">
-      <td><span class="status-dot" style="background:${sc}"></span>${esc(h.ip)}</td>
+    const sc=h.status==='critical'?'var(--red3)':h.status==='warning'?'var(--warn)':'var(--ok)';
+    const ls=(h.last_seen||'').slice(11,19)||'—';
+    rows+=`<tr onclick="selectIpOnGraph('${esc(h.ip)}')">
+      <td><span class="status-dot-sm" style="background:${sc}"></span>${esc(h.ip)}</td>
       <td>${esc(h.hostname||'—')}</td>
       <td>${esc(h.mac||'—')}</td>
       <td>${esc(h.vendor||'—')}</td>
@@ -636,140 +929,213 @@ function renderHostsTable(hosts){
     <tbody>${rows}</tbody></table>`;
 }
 
-function selectHostByIp(ip){
-  const node=snapshot?.nodes?.find(n=>n.ip===ip||n.id==='host:'+ip);
-  if(node){ selectedNode=node; fetchNode(node.id); renderGraph(); }
+// ── Render Traps ──────────────────────────────────────────────────────────────
+function renderTraps(traps){
+  const wrap=$('trapsContent');
+  if(!traps.length){ wrap.innerHTML='<p class="log-line muted">No traps deployed.</p>'; return; }
+  const active=traps.filter(t=>t.status==='active').length;
+  const hits=traps.reduce((s,t)=>s+(t.hit_count||0),0);
+  let html=`<div style="font-size:10px;color:var(--muted);padding:4px 0 8px;">${active} active · ${hits} total hits</div>`;
+  traps.forEach(t=>{
+    const hasHit=(t.hit_count||0)>0;
+    html+=`<div class="trap-card ${hasHit?'hit':''}">
+      <div class="tc-hdr">
+        <span class="tc-name" style="color:${hasHit?'var(--trap)':'var(--text)'}">◈ ${esc(t.name)}</span>
+        <span>
+          <span class="tc-status ${hasHit?'hit':t.status==='active'?'active':'stopped'}">${hasHit?'HIT':esc(t.status)}</span>
+          <button class="trap-stop-btn" onclick="stopTrap('${esc(t.id)}')">✕</button>
+        </span>
+      </div>
+      <div class="tc-port">port ${esc(String(t.port))} · ${esc(t.type)} · ${esc((t.deployed_at||'').slice(11,19))}</div>
+      <div class="tc-hits">${t.hit_count||0} hit${t.hit_count!==1?'s':''}</div>
+      ${(t.hits||[]).slice(-2).reverse().map(h=>`<div class="tc-hit-entry">⚡ ${esc(h.source_ip)}:${esc(String(h.source_port))} ${esc((h.ts||'').slice(11,19))}</div>`).join('')}
+    </div>`;
+  });
+  wrap.innerHTML=html;
 }
 
+async function stopTrap(trapId){
+  await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE'});
+  await fetchTraps(); await fetchGraph();
+}
+
+async function deployTrapBundle(){
+  addScanLine('→ Deploying trap bundle…','muted'); activateTab('scanout');
+  const d=await apiPost('/api/traps/bundle/default');
+  addScanLine(`${d.active_count} traps deployed`,'ok');
+  d.deployed?.forEach(t=>addScanLine(`  ◈ ${t.name} port=${t.port} ${t.status}`,'ok'));
+  await fetchTraps(); await fetchGraph(); activateTab('traps');
+}
+
+// ── Render Reports ────────────────────────────────────────────────────────────
 function renderReports(reports){
   const wrap=$('reportsList');
-  wrap.innerHTML='';
   if(!reports.length){ wrap.innerHTML='<div class="log-line muted">No reports.</div>'; return; }
   reports.forEach(r=>{
-    const d=document.createElement('div');
-    d.className='log-line';
+    const d=document.createElement('div'); d.className='log-line';
     d.textContent=`${r.name}  ${(r.size/1024).toFixed(1)}kb  ${new Date(r.modified*1000).toLocaleString()}`;
     wrap.appendChild(d);
   });
 }
 
+// ── Render Sysinfo ────────────────────────────────────────────────────────────
 function renderSysinfo(info){
   const wrap=$('sysinfoContent');
-  const cpu=info.cpu_percent??null, ram=info.ram_percent??null, disk=info.disk_percent??null;
-  const cc=cpu>85?'warn':cpu>60?'warn':'ok', rc=ram>85?'warn':ram>60?'warn':'ok', dc=disk>90?'warn':disk>75?'warn':'ok';
+  const cpu=info.cpu_percent??null,ram=info.ram_percent??null,disk=info.disk_percent??null;
+  const cc=cpu>85?'warn':'ok',rc=ram>85?'warn':'ok',dc=disk>90?'warn':'ok';
   const ifaces=info.interfaces||{};
   const ifHtml=Object.entries(ifaces).map(([i,ips])=>`<div class="iface-row">${esc(i)}: <span>${esc(ips.join(', '))}</span></div>`).join('')||'<div class="iface-row">—</div>';
   wrap.innerHTML=`<div class="sysinfo-grid">
     <div class="sysinfo-card"><div class="sc-label">Hostname</div><div class="sc-value" style="font-size:12px;">${esc(info.hostname||'—')}</div></div>
-    <div class="sysinfo-card"><div class="sc-label">CPU</div><div class="sc-value ${cc}">${cpu!==null?cpu+'%':'—'}</div>${cpu!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${cpu}%;background:${cpu>85?'var(--warn)':'var(--ok)'}"></div></div>`:''}</div>
-    <div class="sysinfo-card"><div class="sc-label">RAM</div><div class="sc-value ${rc}">${ram!==null?info.ram_used_mb+'mb / '+info.ram_total_mb+'mb':'—'}</div>${ram!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${ram}%;background:${ram>85?'var(--warn)':'var(--ok)'}"></div></div>`:''}</div>
-    <div class="sysinfo-card"><div class="sc-label">Disk /</div><div class="sc-value ${dc}">${disk!==null?info.disk_used_gb+'gb / '+info.disk_total_gb+'gb':'—'}</div>${disk!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${disk}%;background:${disk>90?'var(--warn)':'var(--ok)'}"></div></div>`:''}</div>
+    <div class="sysinfo-card"><div class="sc-label">CPU</div><div class="sc-value ${cc}">${cpu!==null?cpu+'%':'—'}</div>${cpu!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${cpu}%;background:var(--ok)"></div></div>`:''}</div>
+    <div class="sysinfo-card"><div class="sc-label">RAM</div><div class="sc-value ${rc}">${ram!==null?info.ram_used_mb+'mb':'—'}</div>${ram!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${ram}%;background:var(--ok)"></div></div>`:''}</div>
+    <div class="sysinfo-card"><div class="sc-label">Disk</div><div class="sc-value ${dc}">${disk!==null?info.disk_used_gb+'gb':'—'}</div>${disk!==null?`<div class="bar-bg"><div class="bar-fg" style="width:${disk}%;background:var(--ok)"></div></div>`:''}</div>
   </div>
-  <div style="padding:6px 0 4px;"><div class="sc-label" style="font-size:9px;color:var(--muted);margin-bottom:4px;">INTERFACES</div>${ifHtml}</div>
+  <div style="padding:6px 0 4px;"><div style="font-size:9px;color:var(--muted);margin-bottom:4px;">INTERFACES</div>${ifHtml}</div>
   ${info.uname?`<div class="log-line muted" style="padding:4px 0;">${esc(info.uname)}</div>`:''}`;
-  // Auto-fill CIDR
-  const ips=Object.values(ifaces).flat();
-  for(const ip of ips){
-    if(ip&&!ip.startsWith('127.')){
-      const p=ip.split('.');
-      if(p.length===4&&$('cidrInput').value.startsWith('192.168.0')){
-        $('cidrInput').value=p.slice(0,3).join('.')+'.0/24';
-      }
-    }
-  }
 }
 
-function renderDetail(node, neighbors, events, dbServices, notes='', cves=[]){
+// ── Investigation Card ────────────────────────────────────────────────────────
+function renderDetail(node, neighbors, events, dbServices, notes, cves){
   $('detailTitle').textContent=node.label||node.id;
-  const riskColor=node.risk_score>=70?'red':node.risk_score>=35?'warn':'ok';
-  const riskHex=node.risk_score>=70?'#d61f2c':node.risk_score>=35?'#c97b00':'#2a9d4e';
 
-  // Services — prefer DB, fall back to graph meta
+  // Subheader
+  const sub=node.node_type==='trap'?`Honeypot Trap · port ${node.meta?.port||'?'}`
+    :node.ip?`${node.ip} · ${node.node_type}`
+    :node.node_type;
+  $('detailSub').textContent=sub;
+
+  const riskColor=node.risk_score>=65?'red':node.risk_score>=25?'warn':'ok';
+  const riskHex=node.risk_score>=65?'var(--red3)':node.risk_score>=25?'var(--warn)':'var(--ok)';
+
   const services=dbServices.length>0?dbServices:(node.meta?.services||[]);
-  let svcHtml='<p class="empty-state">No service data. Run service scan.</p>';
+  const mac=node.mac||node.meta?.mac||null;
+  const vendor=node.meta?.vendor||null;
+
+  // Risk reasons from meta
+  let metaObj={};
+  try{ metaObj=typeof node.meta==='string'?JSON.parse(node.meta):node.meta||{}; } catch(e){}
+  const reasons=metaObj.risk_reasons||[];
+  const honeypotHits=parseInt(metaObj.honeypot_hits||0);
+
+  // Check if this host has trap interactions
+  const myTrapHits=trapData.filter(t=>(t.hits||[]).some(h=>h.source_ip===node.ip));
+
+  // Suggested actions
+  const actions=[];
+  if(node.node_type==='host'&&node.ip){
+    if(honeypotHits>0){
+      actions.push({label:`Investigate: ${honeypotHits} honeypot hit(s)`,icon:'◈',why:'This host triggered a trap',cls:'primary-action',fn:()=>setOverlay('honeypot')});
+    }
+    if(!services.length){
+      actions.push({label:'Scan Services',icon:'▶',why:'No service data available',cls:'primary-action',fn:()=>runOp('/api/scan/services/'+encodeURIComponent(node.ip))});
+    }
+    if(node.risk_score>=25&&!cves.length){
+      actions.push({label:'CVE Scan',icon:'☠',why:'Elevated risk — check for known vulnerabilities',cls:'',fn:()=>runOp('/api/scan/cve/'+encodeURIComponent(node.ip))});
+    }
+    if(honeypotHits===0&&!metaObj.vt_checked){
+      actions.push({label:'VirusTotal Lookup',icon:'⚡',why:'Check IP reputation',cls:'',fn:async()=>{ const d=await apiGet('/api/enrich/vt/'+encodeURIComponent(node.ip)); addScanLine(JSON.stringify(d),''); }});
+    }
+  }
+
+  // Build sections
+  let html='';
+
+  // Identity
+  html+=`<div class="detail-section">
+    <h5>Identity</h5>
+    <div class="kv"><div class="k">type</div><div class="v">${esc(node.node_type)}</div></div>
+    ${node.ip?`<div class="kv"><div class="k">ip</div><div class="v">${esc(node.ip)}</div></div>`:''}
+    ${node.hostname&&node.hostname!==node.ip?`<div class="kv"><div class="k">hostname</div><div class="v">${esc(node.hostname)}</div></div>`:''}
+    ${mac?`<div class="kv"><div class="k">mac</div><div class="v">${esc(mac)}</div></div>`:''}
+    ${vendor?`<div class="kv"><div class="k">vendor</div><div class="v info">${esc(vendor)}</div></div>`:''}
+    ${node.meta?.interface?`<div class="kv"><div class="k">interface</div><div class="v">${esc(node.meta.interface)}</div></div>`:''}
+    ${node.meta?.neighbor_state?`<div class="kv"><div class="k">arp state</div><div class="v ${node.meta.neighbor_state==='STALE'?'warn':''}">${esc(node.meta.neighbor_state)}</div></div>`:''}
+  </div>`;
+
+  // Risk + reasons
+  html+=`<div class="detail-section">
+    <h5>Risk Assessment</h5>
+    <div class="kv"><div class="k">score</div><div class="v ${riskColor}" style="font-size:14px;font-weight:800;">${node.risk_score??0} <span style="font-size:10px;font-weight:400;color:var(--muted)">/ 100</span></div></div>
+    <div class="kv"><div class="k">level</div><div class="v ${riskColor}">${node.status||'normal'}</div></div>
+    <div class="risk-bar"><div class="risk-fill" style="width:${node.risk_score||0}%;background:${riskHex}"></div></div>
+    ${reasons.length?`<div style="margin-top:8px;">`+reasons.map(r=>`<div class="risk-reason ${r.toLowerCase().includes('honeypot')?'trap-reason':r.toLowerCase().includes('cve')||r.toLowerCase().includes('critical')?'critical':''}">${esc(r)}</div>`).join('')+`</div>`:''}
+  </div>`;
+
+  // Honeypot interactions
+  if(honeypotHits>0||myTrapHits.length>0){
+    html+=`<div class="detail-section">
+      <h5>Honeypot Interactions <span class="section-badge">THREAT</span></h5>
+      <div class="kv"><div class="k">hits</div><div class="v trap">${honeypotHits}</div></div>
+      ${metaObj.trap_name?`<div class="kv"><div class="k">last trap</div><div class="v trap">${esc(metaObj.trap_name)}</div></div>`:''}
+      ${myTrapHits.map(trap=>(trap.hits||[]).filter(h=>h.source_ip===node.ip).slice(-3).map(h=>`
+        <div class="trap-hit-row">
+          <div class="th-trap">◈ ${esc(trap.name)} port ${esc(String(trap.port))}</div>
+          <div class="th-detail">${esc((h.ts||'').slice(0,19).replace('T',' '))}${h.data?' · '+esc(h.data.slice(0,60)):''}</div>
+        </div>`).join('')).join('')}
+    </div>`;
+  }
+
+  // Suggested actions
+  if(actions.length){
+    html+=`<div class="detail-section">
+      <h5>Suggested Actions</h5>
+      ${actions.map((a,i)=>`<button class="action-btn ${a.cls}" data-act="${i}">
+        <span class="act-icon">${a.icon}</span>
+        <div><div class="act-lbl">${esc(a.label)}</div><div class="act-why">${esc(a.why)}</div></div>
+      </button>`).join('')}
+    </div>`;
+  }
+
+  // Services
+  let svcHtml='<p class="empty-state">No data — run service scan.</p>';
   if(services.length){
     svcHtml=`<table class="svc-table"><thead><tr><th>Port</th><th>Proto</th><th>Service</th><th>Product</th><th>Ver</th></tr></thead><tbody>`
       +services.map(s=>`<tr><td>${esc(s.port)}</td><td>${esc((s.protocol||'tcp').toUpperCase())}</td><td>${esc(s.service_name||'')}</td><td>${esc(s.product||'')}</td><td>${esc(s.version||'')}</td></tr>`).join('')
-      +`</tbody></table>`;
+      +'</tbody></table>';
+  }
+  html+=`<div class="detail-section"><h5>Services (${services.length})</h5>${svcHtml}</div>`;
+
+  // CVEs
+  if(cves.length){
+    html+=`<div class="detail-section"><h5>CVEs (${cves.length})</h5>
+      ${cves.slice(0,8).map(c=>`<div class="cve-row"><span style="color:var(--red3)">${esc(c.cve)}</span> CVSS ${esc(c.score)} port ${esc(c.port)}</div>`).join('')}
+    </div>`;
   }
 
-  let neighborHtml='<p class="empty-state">No neighbors.</p>';
-  if(neighbors.length) neighborHtml=neighbors.map(n=>`<span class="neighbor-chip" data-id="${esc(n.id)}">${esc(n.label)}</span>`).join('');
-
-  // Timeline from DB events
+  // Timeline
   let timelineHtml='<p class="empty-state">No history.</p>';
   if(events.length){
-    timelineHtml=events.slice(0,15).map(e=>{
-      const ts=(e.ts||'').replace('T',' ').replace('Z','').slice(0,19);
+    timelineHtml=events.slice(0,12).map(e=>{
+      const isTrap=e.title.includes('TRAP');
       return `<div class="timeline-row">
-        <div class="timeline-dot ${esc(e.severity)}"></div>
-        <div class="timeline-ts">${esc(ts)}</div>
-        <div class="timeline-title">${esc(e.title)} — <span style="color:var(--muted)">${esc(e.summary||'')}</span></div>
+        <div class="timeline-dot ${isTrap?'trap':e.severity}"></div>
+        <div class="timeline-ts">${esc((e.ts||'').slice(11,19))}</div>
+        <div class="timeline-title">${esc(e.title)}<span style="color:var(--muted);font-size:9px;"> — ${esc((e.summary||'').slice(0,60))}</span></div>
       </div>`;
     }).join('');
   }
+  html+=`<div class="detail-section"><h5>Timeline</h5>${timelineHtml}</div>`;
 
-  // Source modules
-  const sources=new Set();
-  const src=node.meta?.source;
-  if(src) sources.add(src);
-  services.forEach(s=>{ if(s.source) sources.add(s.source); });
-  const srcHtml=sources.size?[...sources].map(s=>`<span class="src-tag">${esc(s)}</span>`).join('')
-    :'<span class="src-tag" style="background:rgba(120,120,120,.1);border-color:rgba(120,120,120,.2);color:var(--muted);">unknown</span>';
+  // Neighbors
+  const neighborHtml=neighbors.length
+    ?neighbors.map(n=>{
+        const isTrap=n.node_type==='trap';
+        return `<span class="neighbor-chip ${isTrap?'trap-neighbor':''}" data-id="${esc(n.id)}">${esc(n.label)}</span>`;
+      }).join('')
+    :'<p class="empty-state">No neighbors.</p>';
+  html+=`<div class="detail-section"><h5>Neighbors</h5><div id="neighborChips">${neighborHtml}</div></div>`;
 
-  $('detailBody').innerHTML=`
-    <div class="detail-section">
-      <h5>Identity</h5>
-      <div class="kv"><div class="k">type</div><div class="v">${esc(node.node_type)}</div></div>
-      <div class="kv"><div class="k">ip</div><div class="v">${esc(node.ip||'—')}</div></div>
-      <div class="kv"><div class="k">hostname</div><div class="v">${esc(node.hostname||'—')}</div></div>
-      <div class="kv"><div class="k">mac</div><div class="v">${esc(node.mac||node.meta?.mac||'—')}</div></div>
-      ${node.meta?.vendor?`<div class="kv"><div class="k">vendor</div><div class="v info">${esc(node.meta.vendor)}</div></div>`:''}
-      ${node.meta?.interface?`<div class="kv"><div class="k">interface</div><div class="v">${esc(node.meta.interface)}</div></div>`:''}
-      ${node.meta?.neighbor_state?`<div class="kv"><div class="k">arp state</div><div class="v ${node.meta.neighbor_state==='STALE'?'warn':''}">${esc(node.meta.neighbor_state)}</div></div>`:''}
-      <div class="kv"><div class="k">group</div><div class="v">${esc(node.group||'—')}</div></div>
-    </div>
-    <div class="detail-section">
-      <h5>Risk</h5>
-      <div class="kv"><div class="k">score</div><div class="v ${riskColor}">${esc(String(node.risk_score??0))} / 100</div></div>
-      <div class="kv"><div class="k">status</div><div class="v ${riskColor}">${esc(node.status)}</div></div>
-      <div class="risk-bar"><div class="risk-fill" style="width:${node.risk_score||0}%;background:${riskHex}"></div></div>
-      ${(()=>{const reasons=(node.meta?.risk_reasons)||[];return reasons.length?'<div style="margin-top:6px;">'+reasons.map(r=>'<div class="risk-reason">'+esc(r)+'</div>').join('')+'</div>':''})()}
-    </div>
-    ${cves.length?`<div class="detail-section">
-      <h5>CVEs (${cves.length})</h5>
-      ${cves.slice(0,10).map(c=>'<div class="cve-row"><span style="color:var(--red3)">${esc(c.cve)}</span> CVSS ${esc(c.score)} port ${esc(c.port)}</div>').join('')}
-    </div>`:''}
-    <div class="detail-section">
-      <h5>Services (${services.length})</h5>
-      ${svcHtml}
-      ${(node.node_type==='host'&&node.ip)?`<button class="scan-btn-node" id="btnScanSvcNode">▶ Scan Services on ${esc(node.ip)}</button><button class="cve-btn" id="btnScanCve">☠ CVE Scan on ${esc(node.ip)}</button>`:''}
-    </div>
-    <div class="detail-section">
-      <h5>Host Timeline (${events.length})</h5>
-      <div>${timelineHtml}</div>
-    </div>
-    <div class="detail-section">
-      <h5>Neighbors (${neighbors.length})</h5>
-      <div id="neighborChips">${neighborHtml}</div>
-    </div>
-    <div class="detail-section">
-      <h5>Source Modules</h5>
-      <div>${srcHtml}</div>
-    </div>
-    ${(node.node_type==='host'&&node.ip)?`
-    <div class="detail-section">
-      <h5>Notes</h5>
-      <textarea class="notes-area" id="notesArea" placeholder="Add operator notes…">${esc(notes)}</textarea>
-      <button class="notes-save" id="notesSave">Save Notes</button>
-    </div>
-    <div class="detail-section">
-      <h5>Threat Intel</h5>
-      <button class="vt-btn" id="vtLookup">⚡ VirusTotal Lookup</button>
-      <div id="vtResult"></div>
-    </div>`:''}
-  `
+  // Notes
+  html+=`<div class="detail-section">
+    <h5>Notes</h5>
+    <textarea class="notes-area" id="notesArea" placeholder="Operator notes…">${esc(notes)}</textarea>
+    <button class="notes-save" id="notesSave">Save Notes</button>
+  </div>`;
 
+  $('detailBody').innerHTML=html;
+
+  // Bind neighbors
   document.querySelectorAll('.neighbor-chip').forEach(chip=>{
     chip.addEventListener('click',()=>{
       const n=snapshot?.nodes?.find(x=>x.id===chip.dataset.id);
@@ -777,120 +1143,197 @@ function renderDetail(node, neighbors, events, dbServices, notes='', cves=[]){
     });
   });
 
-  const ssBtn=$('btnScanSvcNode');
-  if(ssBtn){
-    ssBtn.addEventListener('click',async()=>{
-      ssBtn.disabled=true; ssBtn.textContent='Scanning…';
-      await runOp('/api/scan/services/'+encodeURIComponent(node.ip));
-      ssBtn.disabled=false; ssBtn.textContent='▶ Scan Services on '+node.ip;
-      await fetchNode(node.id);
-    });
-  }
-  const cveBtn=$('btnScanCve');
-  if(cveBtn){
-    cveBtn.addEventListener('click',async()=>{
-      cveBtn.disabled=true; cveBtn.textContent='Scanning CVEs…';
-      await runOp('/api/scan/cve/'+encodeURIComponent(node.ip));
-      cveBtn.disabled=false; cveBtn.textContent='☠ CVE Scan on '+node.ip;
-      await fetchNode(node.id);
-    });
+  // Bind action buttons
+  document.querySelectorAll('.action-btn[data-act]').forEach(btn=>{
+    const idx=parseInt(btn.dataset.act);
+    if(actions[idx]) btn.addEventListener('click',actions[idx].fn);
+  });
+
+  // Bind service scan button if present
+  if(node.node_type==='host'&&node.ip){
+    const ssBtn=document.querySelector('.action-btn[data-act="0"]');
+    // already bound above
   }
 
+  // Bind notes save
   const notesBtn=$('notesSave');
-  if(notesBtn){
+  if(notesBtn&&node.ip){
     notesBtn.addEventListener('click',async()=>{
-      const text=$('notesArea').value;
       notesBtn.textContent='Saving…';
-      try{
-        await fetch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes',{
-          method:'PATCH',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({notes:text})
-        });
-        notesBtn.textContent='Saved ✓';
-        setTimeout(()=>notesBtn.textContent='Save Notes',1500);
-      } catch(e){ notesBtn.textContent='Error'; }
-    });
-  }
-
-  const vtBtn=$('vtLookup');
-  if(vtBtn){
-    vtBtn.addEventListener('click',async()=>{
-      vtBtn.disabled=true; vtBtn.textContent='Looking up…';
-      const res=$('vtResult');
-      try{
-        const data=await apiGet('/api/enrich/vt/'+encodeURIComponent(node.ip));
-        if(data.error&&!data.available){
-          res.innerHTML=`<div class="vt-result">${esc(data.error)}</div>`;
-        } else {
-          const mal=data.malicious||0, sus=data.suspicious||0;
-          const cls=mal>0?'mal':sus>0?'warn':'ok';
-          res.innerHTML=`<div class="vt-result">
-            <span class="${cls}">malicious=${mal} suspicious=${sus}</span>
-            &nbsp;|&nbsp; reputation=${esc(String(data.reputation||0))}
-            &nbsp;|&nbsp; ${esc(data.as_owner||'unknown AS')}
-            &nbsp;|&nbsp; ${esc(data.country||'?')}
-          </div>`;
-        }
-      } catch(e){ res.innerHTML=`<div class="vt-result err">Error: ${esc(String(e))}</div>`; }
-      vtBtn.disabled=false; vtBtn.textContent='⚡ VirusTotal Lookup';
+      await fetch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:$('notesArea').value})});
+      notesBtn.textContent='Saved ✓';
+      setTimeout(()=>notesBtn.textContent='Save Notes',1500);
     });
   }
 }
 
+// ── Trap detail ───────────────────────────────────────────────────────────────
 function renderTrapDetail(node){
   const meta=node.meta||{};
-  const hitCount=meta.hit_count||0;
   $('detailTitle').textContent=node.label||'Trap';
+  $('detailSub').textContent=`Honeypot · port ${meta.port||'?'}`;
   $('btnDetailRefresh').style.display='';
-  $('btnDetailRefresh').onclick=async()=>{
-    await fetchTraps();
-    const snap=snapshot?.nodes?.find(n=>n.id===node.id);
-    if(snap) renderTrapDetail(snap);
-  };
-  apiGet('/api/traps/'+encodeURIComponent(meta.trap_id||'')).then(trap=>{
+  $('btnDetailRefresh').onclick=async()=>{ await fetchTraps(); const sn=snapshot?.nodes?.find(n=>n.id===node.id); if(sn) renderTrapDetail(sn); };
+
+  apiGet('/api/traps/'+(meta.trap_id||'')).then(trap=>{
     if(!trap||trap.detail) return;
     const hits=(trap.hits||[]).slice().reverse();
+    const hitCount=trap.hit_count||0;
     $('detailBody').innerHTML=`
       <div class="detail-section">
         <h5>Trap Identity</h5>
-        <div class="kv"><div class="k">name</div><div class="v">${esc(trap.name||'')}</div></div>
-        <div class="kv"><div class="k">type</div><div class="v">${esc(trap.type||'')}</div></div>
-        <div class="kv"><div class="k">port</div><div class="v info">${esc(String(trap.port||''))}</div></div>
-        <div class="kv"><div class="k">banner</div><div class="v">${esc(trap.banner||'')}</div></div>
-        <div class="kv"><div class="k">status</div><div class="v ${trap.status==='active'?'ok':'muted'}">${esc(trap.status||'')}</div></div>
+        <div class="kv"><div class="k">name</div><div class="v">${esc(trap.name)}</div></div>
+        <div class="kv"><div class="k">type</div><div class="v">${esc(trap.type)}</div></div>
+        <div class="kv"><div class="k">port</div><div class="v info">${esc(String(trap.port))}</div></div>
+        <div class="kv"><div class="k">banner</div><div class="v">${esc(trap.banner||'—')}</div></div>
+        <div class="kv"><div class="k">status</div><div class="v ${trap.status==='active'?'ok':'muted'}">${esc(trap.status)}</div></div>
         <div class="kv"><div class="k">deployed</div><div class="v">${esc((trap.deployed_at||'').slice(0,19).replace('T',' '))}</div></div>
       </div>
       <div class="detail-section">
         <h5>Hit Counter</h5>
-        <div class="kv"><div class="k">total hits</div><div class="v ${hitCount>0?'red':'ok'}">${esc(String(hitCount))}</div></div>
-        <div class="kv"><div class="k">last hit</div><div class="v">${esc((trap.last_hit||'—').slice(0,19).replace('T',' '))}</div></div>
-        <div class="risk-bar"><div class="risk-fill" style="width:${Math.min(hitCount*10,100)}%;background:var(--red)"></div></div>
+        <div class="kv"><div class="k">total hits</div><div class="v trap" style="font-size:18px;font-weight:800;">${hitCount}</div></div>
+        ${trap.last_hit?`<div class="kv"><div class="k">last hit</div><div class="v">${esc(trap.last_hit.slice(0,19).replace('T',' '))}</div></div>`:''}
+        <div class="risk-bar"><div class="risk-fill" style="width:${Math.min(hitCount*10,100)}%;background:var(--trap)"></div></div>
       </div>
       <div class="detail-section">
         <h5>Connection Log (${hits.length})</h5>
-        ${hits.length?hits.slice(0,20).map(h=>`
-          <div class="evt-row">
-            <div class="et sev-warning">HIT — ${esc(h.source_ip)}:${esc(String(h.source_port))}</div>
-            <div class="es">${esc((h.ts||'').slice(0,19).replace('T',' '))}</div>
-            ${h.data?`<div class="es" style="color:var(--warn);font-size:9px;">${esc(h.data.slice(0,120))}</div>`:''}
-          </div>`).join(''):'<p class="empty-state">No connections yet. Trap is listening.</p>'}
+        ${hits.length?hits.slice(0,15).map(h=>`
+          <div class="trap-hit-row">
+            <div class="th-trap">${esc(h.source_ip)}:${esc(String(h.source_port))}</div>
+            <div class="th-detail">${esc((h.ts||'').slice(0,19).replace('T',' '))}${h.data?' · '+esc(h.data.slice(0,80)):''}</div>
+          </div>`).join(''):'<p class="empty-state">Listening. No connections yet.</p>'}
       </div>
       <div class="detail-section">
         <h5>Actions</h5>
         <button class="scan-btn-node" onclick="stopTrap('${esc(trap.id)}')">✕ Stop This Trap</button>
       </div>`;
-  }).catch(()=>{
-    $('detailBody').innerHTML='<div class="detail-section"><p class="empty-state">Trap data unavailable.</p></div>';
-  });
+  }).catch(()=>{});
 }
 
 function clearDetail(){
   selectedNode=null; selectedCtx=null;
   $('detailTitle').textContent='No node selected';
+  $('detailSub').textContent='Click a node to investigate';
   $('btnDetailRefresh').style.display='none';
-  $('detailBody').innerHTML='<div class="detail-section"><p class="empty-state">Click a node to inspect it.</p></div>';
+  $('detailBody').innerHTML='<div class="detail-section"><p class="empty-state">Select a node on the graph to open its investigation card.</p></div>';
   renderGraph();
+}
+
+// ── Force Simulation ──────────────────────────────────────────────────────────
+function nodeRadius(n){
+  if(n.node_type==='subnet')  return 28;
+  if(n.node_type==='router')  return 18;
+  if(n.node_type==='alert')   return 14;
+  if(n.node_type==='trap')    return 14;
+  if(n.node_type==='service') return 9;
+  return 13;
+}
+
+function nodeColor(n){
+  // Overlay-aware coloring
+  if(overlayMode==='risk'){
+    if(n.node_type==='trap') return{fill:'rgba(255,107,53,.2)',stroke:'#ff6b35'};
+    if(n.risk_score>=65) return{fill:'#d61f2c',stroke:'#a00'};
+    if(n.risk_score>=45) return{fill:'#c97b00',stroke:'#a06000'};
+    if(n.risk_score>=25) return{fill:'rgba(201,123,0,.4)',stroke:'#a06000'};
+    return{fill:'rgba(42,157,78,.3)',stroke:'#1a5a3a'};
+  }
+  if(overlayMode==='honeypot'){
+    if(n.node_type==='trap') return{fill:'rgba(255,107,53,.3)',stroke:'#ff6b35'};
+    const hits=parseInt(n.meta?.honeypot_hits||0);
+    if(hits>0) return{fill:'#d61f2c',stroke:'#a00'};
+    return{fill:'rgba(40,40,50,.3)',stroke:'#252530'};
+  }
+  if(overlayMode==='services'){
+    if(n.node_type==='service') return{fill:'#2a7a4e',stroke:'#1a5a3a'};
+    if(n.node_type==='host'||n.node_type==='router'){
+      const svcCount=n.meta?.services?.length||0;
+      if(svcCount>=5) return{fill:'#d61f2c',stroke:'#a00'};
+      if(svcCount>=2) return{fill:'#c97b00',stroke:'#a06000'};
+      if(svcCount>=1) return{fill:'#3b7ecf',stroke:'#2a5fa0'};
+    }
+    return{fill:'rgba(40,40,50,.3)',stroke:'#252530'};
+  }
+  if(overlayMode==='diff'){
+    if(!diffData) return _defaultNodeColor(n);
+    const appeared=diffData.appeared?.find(h=>h.ip===n.ip);
+    const changed=diffData.changed?.find(h=>h.ip===n.ip);
+    if(appeared) return{fill:'#2a9d4e',stroke:'#1a7a38'};
+    if(changed) return{fill:'#c97b00',stroke:'#a06000'};
+    return{fill:'rgba(40,40,50,.25)',stroke:'#252530'};
+  }
+  return _defaultNodeColor(n);
+}
+
+function _defaultNodeColor(n){
+  if(n.node_type==='trap'){
+    const hit=parseInt(n.meta?.hit_count||0)>0;
+    return hit?{fill:'rgba(255,107,53,.3)',stroke:'#ff6b35'}:{fill:'rgba(255,107,53,.08)',stroke:'rgba(255,107,53,.5)'};
+  }
+  if(n.node_type==='alert'||n.status==='critical') return{fill:'#d61f2c',stroke:'#a00'};
+  if(n.status==='warning') return{fill:'#c97b00',stroke:'#a06000'};
+  if(n.node_type==='router') return{fill:'#8b3dd6',stroke:'#6b2db0'};
+  if(n.node_type==='service') return{fill:'#2a7a4e',stroke:'#1a5a3a'};
+  if(n.node_type==='subnet') return{fill:'rgba(42,42,64,.2)',stroke:'#2a2a50'};
+  return{fill:'#3b7ecf',stroke:'#2a5fa0'};
+}
+
+function initSimulation(nodes, edges){
+  const w=canvas.width/scale, h=canvas.height/scale;
+  const cx=w/2, cy=h/2;
+  simNodes=nodes.map((n,i)=>{
+    const existing=simNodes.find(s=>s.id===n.id);
+    if(existing) return{...existing,data:n};
+    const angle=(Math.PI*2*i)/Math.max(nodes.length,1);
+    const r=Math.min(w,h)*0.28;
+    return{id:n.id,x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r,vx:0,vy:0,data:n};
+  });
+  simEdges=edges.map(e=>({source:e.source,target:e.target,data:e}));
+  simAlpha=1.0;
+  if(!simRunning) runSim();
+}
+
+function runSim(){
+  simRunning=true;
+  const step=()=>{
+    if(simAlpha<0.008){simRunning=false;renderGraph();return;}
+    simAlpha*=(1-SIM_ALPHA_DECAY);
+    tickForces();
+    renderGraph();
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function tickForces(){
+  const w=canvas.width/scale,h=canvas.height/scale,cx=w/2,cy=h/2;
+  const nodeMap=new Map(simNodes.map(n=>[n.id,n]));
+  for(const e of simEdges){
+    const a=nodeMap.get(e.source),b=nodeMap.get(e.target);
+    if(!a||!b) continue;
+    const dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
+    const target=(a.data.node_type==='subnet'||b.data.node_type==='subnet')?160:110;
+    const force=(dist-target)/dist*0.08*simAlpha;
+    a.vx+=dx*force;a.vy+=dy*force;b.vx-=dx*force;b.vy-=dy*force;
+  }
+  for(let i=0;i<simNodes.length;i++){
+    for(let j=i+1;j<simNodes.length;j++){
+      const a=simNodes[i],b=simNodes[j];
+      const dx=b.x-a.x,dy=b.y-a.y,dist2=dx*dx+dy*dy||1;
+      const f=3800/dist2,d=Math.sqrt(dist2);
+      const fx=dx/d*f,fy=dy/d*f;
+      a.vx-=fx;a.vy-=fy;b.vx+=fx;b.vy+=fy;
+    }
+  }
+  for(const n of simNodes){
+    n.vx+=(cx-n.x)*0.01*simAlpha;
+    n.vy+=(cy-n.y)*0.01*simAlpha;
+    n.vx*=0.7;n.vy*=0.7;
+    n.x+=n.vx;n.y+=n.vy;
+    const r=nodeRadius(n.data)+6;
+    n.x=Math.max(r,Math.min(w-r,n.x));
+    n.y=Math.max(r,Math.min(h-r,n.y));
+  }
 }
 
 // ── Graph rendering ───────────────────────────────────────────────────────────
@@ -901,13 +1344,25 @@ function resizeCanvas(){
   renderGraph();
 }
 
+function _nodeAlpha(n){
+  if(!selectedNode) return 1;
+  const isSelected=selectedNode.id===n.id;
+  const isNeighbor=(selectedCtx?.neighbors||[]).some(nb=>nb.id===n.id);
+  if(overlayMode==='honeypot'){
+    const hasHit=parseInt(n.meta?.honeypot_hits||0)>0||n.node_type==='trap';
+    if(!isSelected&&!isNeighbor&&!hasHit) return 0.1;
+  }
+  if(isSelected||isNeighbor) return 1;
+  return 0.18;
+}
+
 function renderGraph(){
   if(!canvas.width||!canvas.height) return;
   const c=ctx2d;
   c.clearRect(0,0,canvas.width,canvas.height);
   if(!simNodes.length) return;
 
-  const neighborIds=new Set(selectedCtx?.neighbors?.map(n=>n.id)||[]);
+  const now=Date.now();
   const nodeMap=new Map(simNodes.map(n=>[n.id,n]));
 
   c.save();
@@ -916,115 +1371,166 @@ function renderGraph(){
 
   // Edges
   for(const e of simEdges){
-    const sp=nodeMap.get(e.source), tp=nodeMap.get(e.target);
+    const sp=nodeMap.get(e.source),tp=nodeMap.get(e.target);
     if(!sp||!tp) continue;
     const isHighlight=selectedNode&&(e.source===selectedNode.id||e.target===selectedNode.id);
     const isDim=selectedNode&&!isHighlight;
-    c.beginPath(); c.moveTo(sp.x,sp.y); c.lineTo(tp.x,tp.y);
+    const isTrapEdge=sp.data.node_type==='trap'||tp.data.node_type==='trap';
+    c.beginPath();c.moveTo(sp.x,sp.y);c.lineTo(tp.x,tp.y);
     c.setLineDash(e.data?.edge_type==='contains'?[3,4]:[]);
-    c.strokeStyle=isDim?'rgba(42,42,64,.12)':isHighlight?'#d61f2c':
-      e.data?.status==='critical'?'rgba(214,31,44,.6)':
+    c.strokeStyle=isDim?'rgba(40,40,50,.1)':
+      isTrapEdge&&overlayMode!=='relationships'?'rgba(255,107,53,.4)':
+      isHighlight?'#d61f2c':
+      e.data?.status==='critical'?'rgba(214,31,44,.55)':
       e.data?.status==='warning'?'rgba(201,123,0,.4)':'#252538';
-    c.lineWidth=isHighlight?1.5:1;
-    c.globalAlpha=isDim?.1:1;
+    c.lineWidth=isHighlight?1.5:isTrapEdge?1.2:1;
+    c.globalAlpha=isDim?.08:1;
     c.stroke();
-    c.setLineDash([]); c.globalAlpha=1;
+    c.setLineDash([]);c.globalAlpha=1;
   }
 
   // Nodes
   for(const sn of simNodes){
     const n=sn.data;
-    const r=nodeRadius(n), col=nodeColor(n);
+    const r=nodeRadius(n);
+    const col=nodeColor(n);
+    const alpha=_nodeAlpha(n);
     const isSelected=selectedNode?.id===n.id;
-    const isNeighbor=neighborIds.has(n.id);
-    const isDim=selectedNode&&!isSelected&&!isNeighbor;
-    c.globalAlpha=isDim?.18:1;
+    c.globalAlpha=alpha;
 
     if(n.node_type==='trap'){
-      const hit=(n.meta?.hit_count||0)>0;
-      // Draw diamond shape
-      c.beginPath();
-      c.moveTo(sn.x, sn.y-r-2);
-      c.lineTo(sn.x+r+2, sn.y);
-      c.lineTo(sn.x, sn.y+r+2);
-      c.lineTo(sn.x-r-2, sn.y);
-      c.closePath();
-      c.fillStyle=hit?'rgba(214,31,44,.25)':'rgba(214,31,44,.08)';
-      c.fill();
-      c.strokeStyle=isSelected?'#ff4455':'#d61f2c';
-      c.lineWidth=isSelected?2:1.5;
-      c.setLineDash(hit?[]:[4,3]);
-      c.stroke();
-      c.setLineDash([]);
-      // Pulse ring on hit
+      const hit=parseInt(n.meta?.hit_count||0)>0;
+      // Pulse
       if(hit){
-        const pulse=(Math.sin(Date.now()/300)+1)/2;
-        c.beginPath();
-        c.arc(sn.x,sn.y,(r+4)+(pulse*4),0,Math.PI*2);
-        c.strokeStyle=`rgba(214,31,44,${0.15+pulse*0.25})`;
-        c.lineWidth=1;
-        c.stroke();
+        const pulse=(Math.sin(now/280)+1)/2;
+        c.beginPath();c.arc(sn.x,sn.y,(r+5)+(pulse*5),0,Math.PI*2);
+        c.strokeStyle=`rgba(255,107,53,${0.12+pulse*0.2})`;c.lineWidth=1.5;c.stroke();
       }
-      // Hit count badge
+      // Glow on hit
+      if(hit&&overlayMode==='honeypot'){
+        c.shadowColor='rgba(255,107,53,.6)';c.shadowBlur=12;
+      }
+      // Diamond
+      c.beginPath();
+      c.moveTo(sn.x,sn.y-r-1);c.lineTo(sn.x+r+1,sn.y);
+      c.lineTo(sn.x,sn.y+r+1);c.lineTo(sn.x-r-1,sn.y);
+      c.closePath();
+      c.fillStyle=col.fill;c.fill();
+      c.strokeStyle=isSelected?'#ff4455':col.stroke;
+      c.lineWidth=isSelected?2:1.5;
+      c.setLineDash(hit?[]:[3,3]);c.stroke();c.setLineDash([]);
+      c.shadowBlur=0;
+      // Hit badge
       if(hit){
-        c.fillStyle='#d61f2c';
-        c.beginPath(); c.arc(sn.x+r,sn.y-r,7,0,Math.PI*2); c.fill();
-        c.fillStyle='#fff'; c.font='bold 8px monospace'; c.textAlign='center';
-        c.fillText(String(n.meta.hit_count),sn.x+r,sn.y-r+3);
+        const cnt=n.meta.hit_count;
+        c.fillStyle='#ff6b35';c.beginPath();c.arc(sn.x+r,sn.y-r,7,0,Math.PI*2);c.fill();
+        c.fillStyle='#fff';c.font='bold 8px monospace';c.textAlign='center';
+        c.fillText(String(cnt),sn.x+r,sn.y-r+3);
       }
     } else if(n.node_type==='subnet'){
-      c.beginPath(); c.arc(sn.x,sn.y,r,0,Math.PI*2);
-      c.fillStyle='rgba(42,42,64,.12)'; c.fill();
+      c.beginPath();c.arc(sn.x,sn.y,r,0,Math.PI*2);
+      c.fillStyle='rgba(42,42,64,.12)';c.fill();
       c.setLineDash([5,4]);
       c.strokeStyle=isSelected?'#d61f2c':'#2a2a50';
-      c.lineWidth=isSelected?2:1.5;
-      c.stroke(); c.setLineDash([]);
+      c.lineWidth=isSelected?2:1.5;c.stroke();c.setLineDash([]);
     } else {
-      if(isSelected){
-        c.beginPath(); c.arc(sn.x,sn.y,r+6,0,Math.PI*2);
-        c.strokeStyle='rgba(214,31,44,.3)'; c.lineWidth=1.5; c.stroke();
+      // Glow for honeypot-interacting hosts
+      const hasHoneypotHit=parseInt(n.meta?.honeypot_hits||0)>0;
+      if(hasHoneypotHit){
+        c.shadowColor='rgba(214,31,44,.5)';c.shadowBlur=8;
       }
-      c.beginPath(); c.arc(sn.x,sn.y,r,0,Math.PI*2);
-      c.fillStyle=col.fill; c.fill();
+      if(isSelected){
+        c.beginPath();c.arc(sn.x,sn.y,r+6,0,Math.PI*2);
+        c.strokeStyle='rgba(214,31,44,.3)';c.lineWidth=1.5;c.stroke();
+      }
+      c.beginPath();c.arc(sn.x,sn.y,r,0,Math.PI*2);
+      c.fillStyle=col.fill;c.fill();
       c.strokeStyle=isSelected?'#ff4455':col.stroke;
-      c.lineWidth=isSelected?2:1; c.stroke();
+      c.lineWidth=isSelected?2:1;c.stroke();
+      c.shadowBlur=0;
     }
 
-    c.globalAlpha=isDim?.15:1;
+    // Label
+    c.globalAlpha=alpha<0.5?alpha*0.5:alpha;
     c.fillStyle=isSelected?'#f0f1f3':'#7a8090';
     c.font=(isSelected?'700 ':'')+'9px JetBrains Mono,monospace';
     c.textAlign='center';
     const label=n.label.length>20?n.label.slice(0,18)+'…':n.label;
     c.fillText(label,sn.x,sn.y+r+11);
+
+    // Risk overlay labels
+    if(overlayMode==='risk'&&n.node_type!=='subnet'){
+      c.font='8px JetBrains Mono,monospace';
+      c.fillStyle=n.risk_score>=65?'var(--red3)':n.risk_score>=25?'var(--warn)':'#2a9d4e';
+      c.fillText(String(n.risk_score),sn.x,sn.y+r+20);
+    }
+
     c.globalAlpha=1;
   }
 
   c.restore();
 }
 
+// ── Hover tooltip ─────────────────────────────────────────────────────────────
+function showTooltip(sn, mx, my){
+  const n=sn.data;
+  $('tt-ip').textContent=n.ip||n.label||n.id;
+  $('tt-type').innerHTML=`type: <span>${n.node_type}</span>`;
+  const mac=n.mac||n.meta?.mac;
+  $('tt-mac').innerHTML=mac?`mac: <span>${mac}</span>`:'';
+  const vendor=n.meta?.vendor;
+  $('tt-vendor').innerHTML=vendor?`vendor: <span>${vendor}</span>`:'';
+  const riskColor=n.risk_score>=65?'var(--red3)':n.risk_score>=25?'var(--warn)':'var(--ok)';
+  const honeypotHits=parseInt(n.meta?.honeypot_hits||0);
+  const trapHits=parseInt(n.meta?.hit_count||0);
+  let riskHtml=`<span style="color:${riskColor}">risk ${n.risk_score??0}</span> · ${n.status||'normal'}`;
+  if(honeypotHits>0) riskHtml+=` <span style="color:var(--trap)">· ◈ ${honeypotHits} trap hit${honeypotHits!==1?'s':''}</span>`;
+  if(trapHits>0) riskHtml+=` <span style="color:var(--trap)">· ${trapHits} connection${trapHits!==1?'s':''}</span>`;
+  $('tt-risk').innerHTML=riskHtml;
+
+  const tt=tooltip;
+  tt.style.display='block';
+  tt.style.left=(mx+14)+'px';
+  tt.style.top=(my-10)+'px';
+}
+
+function hideTooltip(){
+  tooltip.style.display='none';
+}
+
 // ── Canvas events ─────────────────────────────────────────────────────────────
 function canvasXY(e){
   const rect=canvas.getBoundingClientRect();
-  return{x:(e.clientX-rect.left-panX)/scale, y:(e.clientY-rect.top-panY)/scale};
+  return{x:(e.clientX-rect.left-panX)/scale,y:(e.clientY-rect.top-panY)/scale};
+}
+
+function hitTest(x,y){
+  for(const sn of simNodes){
+    if(Math.hypot(x-sn.x,y-sn.y)<nodeRadius(sn.data)+5) return sn;
+  }
+  return null;
 }
 
 canvas.addEventListener('click',e=>{
   const{x,y}=canvasXY(e);
-  let hit=null;
-  for(const sn of simNodes){
-    if(Math.hypot(x-sn.x,y-sn.y)<nodeRadius(sn.data)+5){hit=sn.data;break;}
-  }
+  const hit=hitTest(x,y);
   if(hit){
-    selectedNode=hit;
-    if(hit.node_type==='trap'){
-      renderTrapDetail(hit);
-    } else {
-      fetchNode(hit.id);
-    }
+    selectedNode=hit.data;
+    if(hit.data.node_type==='trap') renderTrapDetail(hit.data);
+    else fetchNode(hit.data.id);
     renderGraph();
-  }
-  else clearDetail();
+  } else clearDetail();
 });
+
+canvas.addEventListener('mousemove',e=>{
+  if(dragging){panX=e.clientX-dragStartX;panY=e.clientY-dragStartY;renderGraph();return;}
+  const{x,y}=canvasXY(e);
+  const hit=hitTest(x,y);
+  if(hit){ showTooltip(hit,e.clientX,e.clientY); canvas.style.cursor='pointer'; }
+  else{ hideTooltip(); canvas.style.cursor='default'; }
+});
+
+canvas.addEventListener('mouseleave',()=>hideTooltip());
 
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();
@@ -1033,206 +1539,338 @@ canvas.addEventListener('wheel',e=>{
   renderGraph();
 },{passive:false});
 
-canvas.addEventListener('mousedown',e=>{ dragging=true; dragStartX=e.clientX-panX; dragStartY=e.clientY-panY; });
-window.addEventListener('mousemove',e=>{ if(!dragging) return; panX=e.clientX-dragStartX; panY=e.clientY-dragStartY; renderGraph(); });
-window.addEventListener('mouseup',()=>{ dragging=false; });
-
-// ── Traps ────────────────────────────────────────────────────────────────────
-async function fetchTraps(){
-  try{
-    const data=await apiGet('/api/traps');
-    renderTraps(data.traps||[]);
-    // Update trap node hit counts in snapshot
-    if(snapshot&&data.traps){
-      data.traps.forEach(trap=>{
-        const node=snapshot.nodes?.find(n=>n.id==='trap:'+trap.id);
-        if(node){ node.meta=node.meta||{}; node.meta.hit_count=trap.hit_count||0; }
-      });
-    }
-  } catch(e){}
-}
-
-function renderTraps(traps){
-  const wrap=$('trapsContent');
-  if(!traps.length){
-    wrap.innerHTML='<p class="log-line muted">No traps deployed.</p>';
-    return;
-  }
-  const active=traps.filter(t=>t.status==='active').length;
-  const hits=traps.reduce((s,t)=>s+(t.hit_count||0),0);
-  let html=`<div style="font-size:10px;color:var(--muted);padding:4px 0 8px;">${active} active traps &nbsp;|&nbsp; ${hits} total hits</div>`;
-  traps.forEach(t=>{
-    const hasHit=(t.hit_count||0)>0;
-    const statusCls=hasHit?'hit':t.status==='active'?'active':'stopped';
-    const recentHits=(t.hits||[]).slice(-3).reverse();
-    html+=`<div class="trap-card ${hasHit?'hit':''}" data-trap-id="${esc(t.id)}">
-      <div class="tc-hdr">
-        <span class="tc-name">◈ ${esc(t.name)}</span>
-        <span>
-          <span class="tc-status ${statusCls}">${esc(t.status)}</span>
-          <button class="trap-stop-btn" onclick="stopTrap('${esc(t.id)}')">✕ stop</button>
-        </span>
-      </div>
-      <div class="tc-port">port ${esc(String(t.port))}  ·  ${esc(t.type)}  ·  deployed ${esc((t.deployed_at||'').slice(0,19).replace('T',' '))}</div>
-      <div class="tc-hits">${t.hit_count||0} hit${t.hit_count!==1?'s':''}${t.last_hit?' · last: '+t.last_hit.slice(0,19).replace('T',' '):''}</div>
-      ${recentHits.map(h=>`<div class="tc-hit-entry">⚡ ${esc(h.source_ip)}:${esc(String(h.source_port))}  ${esc((h.ts||'').slice(11,19))}  ${esc((h.data||'').slice(0,50))}</div>`).join('')}
-    </div>`;
-  });
-  wrap.innerHTML=html;
-}
-
-async function stopTrap(trapId){
-  try{
-    await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE'});
-    await fetchTraps();
-    await fetchGraph();
-    addScanLine(`Trap ${trapId} stopped`,'muted');
-  } catch(e){ addScanLine('Error stopping trap: '+e,'err'); }
-}
-
-// ── Traps ────────────────────────────────────────────────────────────────────
-async function fetchTraps(){
-  try{
-    const data=await apiGet('/api/traps');
-    renderTraps(data.traps||[]);
-    // Update trap node hit counts in snapshot
-    if(snapshot&&data.traps){
-      data.traps.forEach(trap=>{
-        const node=snapshot.nodes?.find(n=>n.id==='trap:'+trap.id);
-        if(node){ node.meta=node.meta||{}; node.meta.hit_count=trap.hit_count||0; }
-      });
-    }
-  } catch(e){}
-}
-
-function renderTraps(traps){
-  const wrap=$('trapsContent');
-  if(!traps.length){
-    wrap.innerHTML='<p class="log-line muted">No traps deployed.</p>';
-    return;
-  }
-  const active=traps.filter(t=>t.status==='active').length;
-  const hits=traps.reduce((s,t)=>s+(t.hit_count||0),0);
-  let html=`<div style="font-size:10px;color:var(--muted);padding:4px 0 8px;">${active} active traps &nbsp;|&nbsp; ${hits} total hits</div>`;
-  traps.forEach(t=>{
-    const hasHit=(t.hit_count||0)>0;
-    const statusCls=hasHit?'hit':t.status==='active'?'active':'stopped';
-    const recentHits=(t.hits||[]).slice(-3).reverse();
-    html+=`<div class="trap-card ${hasHit?'hit':''}" data-trap-id="${esc(t.id)}">
-      <div class="tc-hdr">
-        <span class="tc-name">◈ ${esc(t.name)}</span>
-        <span>
-          <span class="tc-status ${statusCls}">${esc(t.status)}</span>
-          <button class="trap-stop-btn" onclick="stopTrap('${esc(t.id)}')">✕ stop</button>
-        </span>
-      </div>
-      <div class="tc-port">port ${esc(String(t.port))}  ·  ${esc(t.type)}  ·  deployed ${esc((t.deployed_at||'').slice(0,19).replace('T',' '))}</div>
-      <div class="tc-hits">${t.hit_count||0} hit${t.hit_count!==1?'s':''}${t.last_hit?' · last: '+t.last_hit.slice(0,19).replace('T',' '):''}</div>
-      ${recentHits.map(h=>`<div class="tc-hit-entry">⚡ ${esc(h.source_ip)}:${esc(String(h.source_port))}  ${esc((h.ts||'').slice(11,19))}  ${esc((h.data||'').slice(0,50))}</div>`).join('')}
-    </div>`;
-  });
-  wrap.innerHTML=html;
-}
-
-async function stopTrap(trapId){
-  try{
-    await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE'});
-    await fetchTraps();
-    await fetchGraph();
-    addScanLine(`Trap ${trapId} stopped`,'muted');
-  } catch(e){ addScanLine('Error stopping trap: '+e,'err'); }
-}
+canvas.addEventListener('mousedown',e=>{dragging=true;dragStartX=e.clientX-panX;dragStartY=e.clientY-panY;});
+window.addEventListener('mouseup',()=>{dragging=false;});
 
 // ── Wiring ────────────────────────────────────────────────────────────────────
 $('btnRefresh').onclick=fetchGraph;
-$('btnCenter').onclick=$('btnCenter2').onclick=()=>{ panX=0; panY=0; scale=1; renderGraph(); };
+$('btnCenter').onclick=$('btnCenter2').onclick=()=>{panX=0;panY=0;scale=1;renderGraph();};
 $('btnClearSel').onclick=clearDetail;
-$('btnZoomIn').onclick=()=>{ scale=Math.min(4,scale*1.2); renderGraph(); };
-$('btnZoomOut').onclick=()=>{ scale=Math.max(.25,scale/1.2); renderGraph(); };
+$('btnZoomIn').onclick=()=>{scale=Math.min(4,scale*1.2);renderGraph();};
+$('btnZoomOut').onclick=()=>{scale=Math.max(.25,scale/1.2);renderGraph();};
 $('btnDiscovery').onclick=()=>runOp('/api/scan/discovery?cidr='+encodeURIComponent(cidr()));
 $('btnArp').onclick=()=>runOp('/api/scan/arp');
 $('btnHostmap').onclick=()=>runOp('/api/scan/hostmap?cidr='+encodeURIComponent(cidr()));
 $('btnRogue').onclick=()=>runOp('/api/scan/rogue?cidr='+encodeURIComponent(cidr()));
-$('btnInventory').onclick=()=>runOp('/api/scan/inventory');
-$('btnAnomaly').onclick=()=>runAnomaly();
-$('btnRescore').onclick=async()=>{
-  addScanLine('→ POST /api/scan/rescore','muted'); activateTab('scanout');
-  const d=await apiPost('/api/scan/rescore');
-  addScanLine(`Rescored ${d.rescored} hosts. Flagged: ${d.flagged}`,'ok');
-  d.results?.filter(r=>r.status!=='normal').forEach(r=>{
-    addScanLine(`  [${r.status.toUpperCase()}] ${r.ip}  risk=${r.risk_score}`,'warn');
-    r.reasons?.forEach(reason=>addScanLine(`    - ${reason}`,'muted'));
-  });
-  fetchGraph(); fetchStats();
+$('btnAnomaly').onclick=async()=>{
+  addScanLine('→ GET /api/scan/anomaly','muted'); activateTab('scanout');
+  const d=await apiGet('/api/scan/anomaly');
+  if(d.anomalies?.length){ d.anomalies.forEach(a=>addScanLine(`  ${a.ip}:${a.port} ${a.status}`,'warn')); }
+  else addScanLine('[ OK ] No anomalies','ok');
+  fetchIntelFeed();
 };
 $('btnWatchdog').onclick=async()=>{
   addScanLine('→ GET /api/watchdog','muted'); activateTab('scanout');
   const d=await apiGet('/api/watchdog');
-  addScanLine(`Watchdog: ${d.online_count} online, ${d.offline_count} offline of ${d.online_count+d.offline_count} baseline hosts`,'ok');
-  d.offline?.forEach(o=>addScanLine(`  [OFFLINE] ${o.ip}  ${o.hostname}  mac=${o.mac}`,'warn'));
-};
-$('btnDeployTraps').onclick=async()=>{
-  addScanLine('→ Deploying default trap bundle…','muted'); activateTab('scanout');
-  try{
-    const d=await apiPost('/api/traps/bundle/default');
-    addScanLine(`Deployed ${d.active_count} traps:`,'ok');
-    d.deployed?.forEach(t=>{
-      if(t.error) addScanLine(`  [ERROR] ${t.name} port=${t.port}: ${t.error}`,'err');
-      else addScanLine(`  [◈] ${t.name}  port=${t.port}  status=${t.status}`,'ok');
-    });
-    await fetchGraph(); await fetchTraps(); activateTab('traps');
-  } catch(e){ addScanLine('Deploy error: '+e,'err'); }
-};
-$('btnStopAllTraps').onclick=async()=>{
-  try{
-    const data=await apiGet('/api/traps');
-    for(const t of data.traps||[]){
-      if(t.status==='active') await fetch('/api/traps/'+t.id,{method:'DELETE'});
-    }
-    addScanLine('All traps stopped','muted'); activateTab('scanout');
-    await fetchGraph(); await fetchTraps();
-  } catch(e){ addScanLine('Error: '+e,'err'); }
+  addScanLine(`Watchdog: ${d.online_count} online, ${d.offline_count} offline`,'ok');
+  d.offline?.forEach(o=>addScanLine(`  [OFFLINE] ${o.ip} ${o.hostname}`,'warn'));
+  fetchIntelFeed();
 };
 $('btnDiff').onclick=async()=>{
   addScanLine('→ GET /api/diff','muted'); activateTab('scanout');
-  const d=await apiGet('/api/diff');
-  addScanLine(d.summary,'ok');
-  d.appeared?.forEach(h=>addScanLine(`  [NEW]     ${h.ip}  ${h.hostname}  mac=${h.mac}  vendor=${h.vendor}`,'ok'));
-  d.disappeared?.forEach(h=>addScanLine(`  [GONE]    ${h.ip}  ${h.hostname}`,'warn'));
-  d.changed?.forEach(h=>{
-    addScanLine(`  [CHANGED] ${h.ip}  ${h.hostname}`,'warn');
-    h.changes?.forEach(c=>addScanLine(`    ${c}`,'muted'));
-  });
+  diffData=await apiGet('/api/diff');
+  addScanLine(diffData.summary,'ok');
+  diffData.appeared?.forEach(h=>addScanLine(`  [NEW] ${h.ip} ${h.hostname}`,'ok'));
+  diffData.disappeared?.forEach(h=>addScanLine(`  [GONE] ${h.ip}`,'warn'));
+  diffData.changed?.forEach(h=>{ addScanLine(`  [CHANGED] ${h.ip}`,'warn'); h.changes?.forEach(c=>addScanLine(`    ${c}`,'muted')); });
+  setOverlay('diff');
+};
+$('btnRescore').onclick=async()=>{
+  addScanLine('→ POST /api/scan/rescore','muted'); activateTab('scanout');
+  const d=await apiPost('/api/scan/rescore');
+  addScanLine(`Rescored ${d.rescored} hosts, ${d.flagged} flagged`,'ok');
+  d.results?.filter(r=>r.status!=='normal').forEach(r=>{ addScanLine(`  [${r.status.toUpperCase()}] ${r.ip} risk=${r.risk_score}`,'warn'); r.reasons?.slice(0,2).forEach(reason=>addScanLine(`    - ${reason}`,'muted')); });
+  fetchGraph(); fetchStats(); fetchIntelFeed();
+};
+$('btnDeployTraps').onclick=()=>deployTrapBundle();
+$('btnStopAllTraps').onclick=async()=>{
+  const data=await apiGet('/api/traps');
+  for(const t of data.traps||[]){ if(t.status==='active') await fetch('/api/traps/'+t.id,{method:'DELETE'}); }
+  addScanLine('All traps stopped','muted'); await fetchTraps(); await fetchGraph();
 };
 $('btnSysinfo').onclick=fetchSysinfo;
 $('btnReport').onclick=()=>window.open('/api/export/report','_blank');
 $('searchInput').oninput=fetchGraph;
 $('typeFilter').onchange=fetchGraph;
+
+document.querySelectorAll('.ov-btn').forEach(b=>b.onclick=()=>setOverlay(b.dataset.mode));
+
 document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
   activateTab(b.dataset.tab);
-  if(b.dataset.tab==='events') fetchEvents();
+  if(b.dataset.tab==='terminal'){ initTerminal(); setTimeout(()=>{ if(fitAddon) fitAddon.fit(); },100); }
   if(b.dataset.tab==='hosts') fetchHosts();
-  if(b.dataset.tab==='sysinfo') fetchSysinfo();
   if(b.dataset.tab==='traps') fetchTraps();
+  if(b.dataset.tab==='sysinfo') fetchSysinfo();
+  if(b.dataset.tab==='reports') fetchReports();
+  if(b.dataset.tab==='intel') fetchIntelFeed();
 });
+
 window.addEventListener('resize',resizeCanvas);
+
+// ── Animation loop for trap pulse ─────────────────────────────────────────────
+(function animLoop(){
+  requestAnimationFrame(animLoop);
+  const hasHitTraps=(snapshot?.nodes||[]).some(n=>n.node_type==='trap'&&parseInt(n.meta?.hit_count||0)>0);
+  if(hasHitTraps&&!simRunning) renderGraph();
+})();
+
+// ── Panel collapse ───────────────────────────────────────────────────────────
+const panelState = {left: true, right: true, bottom: true};
+
+function collapsePanel(side) {
+  panelState[side] = false;
+  const main = document.querySelector('.main');
+  const body = document.body;
+  if (side === 'left') {
+    document.getElementById('leftRail').classList.add('panel-collapsed');
+    document.getElementById('leftSliver').style.display = 'flex';
+    main.classList.add('left-collapsed');
+  } else if (side === 'right') {
+    document.getElementById('detailPanel').classList.add('panel-collapsed');
+    document.getElementById('rightSliver').style.display = 'flex';
+    main.classList.add('right-collapsed');
+  } else if (side === 'bottom') {
+    document.getElementById('bottomPanel').classList.add('panel-collapsed');
+    document.getElementById('bottomSliver').style.display = 'flex';
+    body.classList.add('bottom-collapsed');
+  }
+  resizeCanvas();
+  if (term && fitAddon) setTimeout(() => fitAddon.fit(), 220);
+}
+
+function expandPanel(side) {
+  panelState[side] = true;
+  const main = document.querySelector('.main');
+  const body = document.body;
+  if (side === 'left') {
+    document.getElementById('leftRail').classList.remove('panel-collapsed');
+    document.getElementById('leftSliver').style.display = 'none';
+    main.classList.remove('left-collapsed');
+  } else if (side === 'right') {
+    document.getElementById('detailPanel').classList.remove('panel-collapsed');
+    document.getElementById('rightSliver').style.display = 'none';
+    main.classList.remove('right-collapsed');
+  } else if (side === 'bottom') {
+    document.getElementById('bottomPanel').classList.remove('panel-collapsed');
+    document.getElementById('bottomSliver').style.display = 'none';
+    body.classList.remove('bottom-collapsed');
+    setTimeout(() => { if (term && fitAddon) fitAddon.fit(); }, 220);
+  }
+  resizeCanvas();
+}
+
+$('collapseLeft').onclick = () => collapsePanel('left');
+$('collapseRight').onclick = () => collapsePanel('right');
+$('collapseBottom').onclick = () => collapsePanel('bottom');
+
+// ── Live Alert Feed ───────────────────────────────────────────────────────────
+let alertPanelOpen = false;
+let knownAlertIds = new Set();
+let alertCount = 0;
+
+function toggleAlertPanel() {
+  alertPanelOpen = !alertPanelOpen;
+  document.getElementById('alertPanel').classList.toggle('open', alertPanelOpen);
+}
+
+async function pollAlerts() {
+  try {
+    const [evtsResp, trapsResp] = await Promise.all([
+      apiGet('/api/events?limit=40'),
+      apiGet('/api/traps'),
+    ]);
+    const events = evtsResp.events || [];
+    const traps = trapsResp.traps || [];
+
+    const newAlerts = [];
+
+    // Trap hits — highest priority
+    traps.forEach(trap => {
+      (trap.hits || []).forEach(hit => {
+        const id = `trap:${trap.id}:${hit.ts}`;
+        if (!knownAlertIds.has(id)) {
+          knownAlertIds.add(id);
+          newAlerts.push({
+            id, pri: 'TRAP', cls: 'trap-entry',
+            title: `Trap Hit: ${trap.name}`,
+            sub: `${hit.source_ip}:${hit.source_port} · port ${trap.port}${hit.data ? ' · ' + hit.data.slice(0, 40) : ''}`,
+            ts: hit.ts || '',
+            ip: hit.source_ip,
+          });
+        }
+      });
+    });
+
+    // Critical/warning events
+    events.filter(e => ['critical', 'high', 'warning'].includes(e.severity)).forEach(e => {
+      const id = `evt:${e.id || e.ts + e.title}`;
+      if (!knownAlertIds.has(id)) {
+        knownAlertIds.add(id);
+        const isCrit = e.severity === 'critical' || e.severity === 'high';
+        newAlerts.push({
+          id, pri: isCrit ? 'CRIT' : 'WARN',
+          cls: isCrit ? 'crit-entry' : '',
+          title: e.title,
+          sub: (e.summary || '').slice(0, 80),
+          ts: e.ts || '',
+          ip: e.ip || null,
+        });
+      }
+    });
+
+    if (newAlerts.length > 0) {
+      alertCount += newAlerts.length;
+      const badge = $('alertBadge');
+      badge.textContent = alertCount;
+
+      const hasTraps = newAlerts.some(a => a.pri === 'TRAP');
+      const toggleBtn = $('alertToggleBtn');
+      badge.className = 'alert-feed-badge' + (hasTraps ? ' trap' : '');
+      toggleBtn.className = 'alert-toggle-btn' + (hasTraps ? ' has-traps' : ' has-alerts');
+
+      // Auto-open panel on first trap hit
+      if (hasTraps && !alertPanelOpen) toggleAlertPanel();
+
+      const scroll = $('alertFeedScroll');
+      newAlerts.forEach(a => {
+        const div = document.createElement('div');
+        div.className = `alert-entry ${a.cls} new`;
+        div.innerHTML = `
+          <div class="alert-pri ${a.pri}">${a.pri}</div>
+          <div class="alert-title">${esc(a.title)}</div>
+          <div class="alert-sub">${esc(a.sub)}</div>
+          <div class="alert-ts">${esc((a.ts || '').slice(11, 19))}</div>`;
+        if (a.ip) div.onclick = () => selectIpOnGraph(a.ip);
+        scroll.prepend(div);
+        // Trim to 50 entries
+        while (scroll.children.length > 50) scroll.removeChild(scroll.lastChild);
+      });
+    }
+  } catch (e) {}
+}
+
+// ── Terminal ──────────────────────────────────────────────────────────────────
+let term = null;
+let fitAddon = null;
+let termSocket = null;
+let termReady = false;
+
+function initTerminal() {
+  if (term) return;
+  const container = $('xterm-container');
+  if (!container) return;
+
+  term = new Terminal({
+    cursorBlink: true,
+    theme: {
+      background: '#0b0b0d',
+      foreground: '#f0f1f3',
+      cursor: '#d61f2c',
+      cursorAccent: '#0b0b0d',
+      selectionBackground: 'rgba(214,31,44,.3)',
+      black: '#252530',
+      red: '#d61f2c',
+      green: '#2a9d4e',
+      yellow: '#c97b00',
+      blue: '#3b7ecf',
+      magenta: '#8b3dd6',
+      cyan: '#2a9d4e',
+      white: '#f0f1f3',
+      brightBlack: '#7a8090',
+      brightRed: '#ff4455',
+      brightGreen: '#3ab85e',
+      brightYellow: '#e8a000',
+      brightBlue: '#5b9ef7',
+      brightMagenta: '#a855d6',
+      brightCyan: '#3ab85e',
+      brightWhite: '#ffffff',
+    },
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontSize: 12,
+    lineHeight: 1.4,
+    scrollback: 2000,
+    allowTransparency: true,
+  });
+
+  fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(container);
+  fitAddon.fit();
+
+  connectTermSocket();
+
+  // Resize observer
+  const ro = new ResizeObserver(() => { if (fitAddon) fitAddon.fit(); });
+  ro.observe(container);
+}
+
+function connectTermSocket() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${proto}//${location.host}/ws/terminal`;
+  $('termStatus').textContent = 'connecting…';
+
+  termSocket = new WebSocket(wsUrl);
+
+  termSocket.onopen = () => {
+    $('termStatus').textContent = 'connected';
+    termReady = true;
+    // Send initial resize
+    if (fitAddon) {
+      fitAddon.fit();
+      termSocket.send(JSON.stringify({
+        type: 'resize',
+        rows: term.rows,
+        cols: term.cols,
+      }));
+    }
+  };
+
+  termSocket.onmessage = e => {
+    if (term) term.write(e.data);
+  };
+
+  termSocket.onclose = () => {
+    $('termStatus').textContent = 'disconnected — click to reconnect';
+    termReady = false;
+    $('termStatus').style.cursor = 'pointer';
+    $('termStatus').onclick = () => connectTermSocket();
+  };
+
+  termSocket.onerror = () => {
+    $('termStatus').textContent = 'connection error';
+    termReady = false;
+  };
+
+  // Input → shell
+  term.onData(data => {
+    if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+      termSocket.send(JSON.stringify({type: 'input', data}));
+    }
+  });
+
+  // Resize → shell
+  term.onResize(({rows, cols}) => {
+    if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+      termSocket.send(JSON.stringify({type: 'resize', rows, cols}));
+    }
+  });
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 resizeCanvas();
 fetchGraph();
 fetchStats();
+initTerminal();
+fetchTraps();
 fetchReports();
-fetchJobs();
+fetchIntelFeed();
 fetchSysinfo();
 setInterval(fetchGraph,25000);
 setInterval(fetchStats,10000);
-setInterval(fetchJobs,4000);
-setInterval(fetchTraps,3000);
-// Keep canvas animating for trap pulse effect
-(function animLoop(){requestAnimationFrame(animLoop);
-  const hasHitTraps=(snapshot?.nodes||[]).some(n=>n.node_type==='trap'&&(n.meta?.hit_count||0)>0);
-  if(hasHitTraps&&!simRunning) renderGraph();
-})();
+setInterval(fetchTraps,4000);
+setInterval(fetchIntelFeed,8000);
+setInterval(fetchJobs,5000);
+setInterval(pollAlerts,3000);
 </script>
 </body>
 </html>
