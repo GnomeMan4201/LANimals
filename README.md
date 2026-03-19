@@ -18,6 +18,32 @@ nmap tells you what's there right now. LANimals tells you what changed, what's n
 
 ---
 
+## Requirements
+
+- Python 3.10+
+- Linux (Pop!_OS / Ubuntu tested)
+- nmap: `sudo apt install nmap`
+- Optional: `export VT_API_KEY=your_key` for VirusTotal enrichment
+
+---
+
+## Install
+```bash
+git clone https://github.com/GnomeMan4201/LANimals.git
+cd LANimals
+pip install -r requirements.txt
+sudo apt install nmap
+```
+
+## Run
+```bash
+bash lan.sh
+```
+
+Opens at `http://127.0.0.1:8080` — auto-launches browser and starts background ARP refresh.
+
+---
+
 ## Operations
 
 | Operation | What runs |
@@ -52,26 +78,12 @@ GET  /api/hosts/{ip}/events
 GET  /api/events
 GET  /api/sysinfo
 GET  /api/export/report
-
 POST /api/scan/discovery?cidr=X
 POST /api/scan/arp
 POST /api/scan/rogue?cidr=X
 POST /api/scan/services/{ip}
 POST /api/hosts/{ip}/notes
 ```
-
----
-
-## Install
-```bash
-git clone https://github.com/GnomeMan4201/LANimals.git
-cd LANimals
-pip3 install fastapi uvicorn psutil
-./quickstart.sh
-```
-
-Requires Python 3.10+, `nmap`, Linux (Pop!_OS / Ubuntu tested).
-Optional: `export VT_API_KEY=your_key` for VirusTotal enrichment.
 
 ---
 
