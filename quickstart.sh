@@ -1,9 +1,14 @@
 #!/bin/bash
-echo "=== Quickstart Demo ==="
-echo "Repository: $(basename $(git rev-parse --show-toplevel))"
-echo "Safe demonstration mode"
-python --version 2>/dev/null || echo "Python check skipped"
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt >/dev/null 2>&1 && echo "Dependencies installed"
-fi
-echo "Demo completed - see README.md for full usage"
+# LANimals quickstart
+set -e
+
+echo "[*] Checking dependencies..."
+python3 -c "import fastapi, uvicorn, scapy, rich" 2>/dev/null || {
+    echo "[*] Installing dependencies..."
+    pip install -r requirements.txt
+}
+
+command -v nmap >/dev/null || echo "[!] nmap not found — install with: sudo apt install nmap"
+
+echo "[*] Starting LANimals..."
+exec bash lan.sh

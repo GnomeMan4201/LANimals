@@ -1,7 +1,12 @@
+fastapi
+uvicorn[standard]
+scapy
 psutil
-faker
-colorama
 requests
 rich
 flask
-scapy
+click
+python-nmap
+dpkt
+faker
+colorama
