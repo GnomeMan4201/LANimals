@@ -65,6 +65,7 @@ def score_host(
     in_baseline: bool = True,
     baseline_mac: str | None = None,
     cve_count: int = 0,
+    honeypot_hits: int = 0,
 ) -> tuple[int, str, list[str]]:
     """
     Returns (risk_score, status, reasons).
@@ -131,11 +132,27 @@ def score_host(
         score += 8
         reasons.append(f"Elevated port count ({port_count} open ports)")
 
+    # ── Honeypot interaction — highest weight signal ─────────────────────────
+    honeypot_hits: int = host.get("honeypot_hits", 0)
+    if isinstance(_meta, dict):
+        honeypot_hits = max(honeypot_hits, int(_meta.get("honeypot_hits", 0)))
+    if honeypot_hits > 0:
+        score += min(50 + honeypot_hits * 5, 70)
+        reasons.append(
+            f"Honeypot interaction observed ({honeypot_hits} hit{'s' if honeypot_hits != 1 else ''})"
+            " — no legitimate traffic should reach honeypot services"
+        )
+
     # ── CVE findings ─────────────────────────────────────────────────────────
     if cve_count > 0:
         cve_pts = min(cve_count * 8, 40)
         score += cve_pts
         reasons.append(f"{cve_count} CVE(s) found by vulners scan")
+
+    # ── Stability bonus — trusted known hosts get small risk reduction ────────
+    if in_baseline and not honeypot_hits and not cve_count and score < 30:
+        score = max(5, score - 5)
+        reasons.append("Known stable host (in baseline, no threats detected)")
 
     # ── Cap and classify ─────────────────────────────────────────────────────
     score = max(5, min(score, 100))
@@ -175,17 +192,23 @@ def rescore_all_hosts() -> List[Dict[str, Any]]:
         except Exception:
             meta = {}
         cve_count = int(meta.get("cve_count", 0))
+        honeypot_hits = int(meta.get("honeypot_hits", 0))
 
         score, status, reasons = score_host(
             h, services,
             in_baseline=in_baseline,
             baseline_mac=baseline_mac,
             cve_count=cve_count,
+            honeypot_hits=honeypot_hits,
         )
 
         h["risk_score"] = score
         h["status"] = status
-        h["meta"] = _json.dumps({**meta, "risk_reasons": reasons})
+        meta["risk_reasons"] = reasons[:20]
+        # Remove heavy fields before re-serializing
+        meta.pop("cves", None)
+        meta_str = _json.dumps(meta)
+        h["meta"] = meta_str
         upsert_host(h)
         results.append({"ip": ip, "risk_score": score, "status": status, "reasons": reasons})
 

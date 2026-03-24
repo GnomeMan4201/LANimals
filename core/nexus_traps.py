@@ -90,27 +90,47 @@ def _fire_event(trap_id: str, source_ip: str, source_port: int,
         })
 
         # Upsert the attacker as a host with elevated risk
-        baseline = get_mac_baseline()
-        in_baseline = source_ip in baseline
+        from core.nexus_db import get_host as _get_host
+        existing = _get_host(source_ip) or {}
+        existing_meta: dict = {}
+        try:
+            existing_meta = json.loads(existing.get("meta") or "{}") if existing else {}
+        except Exception:
+            pass
+
+        # Increment honeypot hit counter on this attacker
+        prev_hits = int(existing_meta.get("honeypot_hits", 0))
+        new_hits = prev_hits + 1
+
         upsert_host({
             "ip": source_ip,
-            "hostname": source_ip,
-            "mac": None,
-            "vendor": "",
+            "hostname": existing.get("hostname") or source_ip,
+            "mac": existing.get("mac"),
+            "vendor": existing.get("vendor") or "",
             "status": "critical",
-            "risk_score": 95,
+            "risk_score": min(95 + new_hits, 100),
             "group_cidr": _cidr_from_ip(source_ip),
+            "honeypot_hits": new_hits,
             "meta": json.dumps({
+                **existing_meta,
                 "source": "trap_hit",
+                "honeypot_hits": new_hits,
                 "trap_id": trap_id,
                 "trap_name": trap_name,
                 "trap_port": trap_port,
                 "risk_reasons": [
-                    f"Triggered honeypot trap '{trap_name}' on port {trap_port}",
-                    "No legitimate traffic should reach this service",
+                    f"Honeypot interaction observed ({new_hits} hit{'s' if new_hits != 1 else ''})",
+                    f"Triggered trap '{trap_name}' on port {trap_port}",
+                    "No legitimate traffic should reach honeypot services",
                 ],
             }),
         })
+        # Trigger rescore so graph reflects immediately
+        try:
+            from core.nexus_risk import rescore_all_hosts as _rescore
+            _rescore()
+        except Exception:
+            pass
 
     except Exception as e:
         print(f"[trap] event fire error: {e}")

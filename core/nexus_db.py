@@ -94,6 +94,12 @@ def upsert_host(host: Dict[str, Any]) -> None:
     meta = {k: v for k, v in host.items()
             if k not in ("ip","mac","hostname","vendor","interface",
                          "status","risk_score","group_cidr","first_seen","last_seen")}
+    # Trim CVEs list to avoid blob-too-big — keep max 10 CVEs
+    if "cves" in meta and isinstance(meta.get("cves"), list):
+        meta["cves"] = meta["cves"][:10]
+    # Trim risk_reasons to max 20
+    if "risk_reasons" in meta and isinstance(meta.get("risk_reasons"), list):
+        meta["risk_reasons"] = meta["risk_reasons"][:20]
     with _lock:
         c = _conn()
         c.execute("""
