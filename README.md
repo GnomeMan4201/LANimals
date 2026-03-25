@@ -1,4 +1,6 @@
 <p align="center">
+[![CI](https://github.com/GnomeMan4201/LANimals/actions/workflows/ci.yml/badge.svg)](https://github.com/GnomeMan4201/LANimals/actions/workflows/ci.yml)
+
   <img src="assets/logos/LANimals.png" alt="LANimals" width="380"/>
 </p>
 
