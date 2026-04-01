@@ -4,7 +4,6 @@ scapy
 psutil
 requests
 rich
-flask
 click
 python-nmap
 dpkt
