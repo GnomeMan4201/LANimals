@@ -9,3 +9,5 @@ python-nmap
 dpkt
 faker
 colorama
+pydantic
+requests

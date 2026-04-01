@@ -1,11 +1,11 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+#!/usr/bin/env python3
+"""
+LANimals kill chain analyzer.
+Runs nmap against a target, parses services, queries OSV for CVEs,
+fetches exploit URLs, and writes a timestamped JSON report.
+"""
 import datetime
 import json
-
-#!/usr/bin/env python3
 import os
 import subprocess
 import sys
@@ -13,23 +13,26 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core.cache_osv import cached_query_osv
+from core.ecosystem_guesser import guess_ecosystem
+from core.exploit_fetcher import fetch_exploit_urls
+from core.nmap_parser import parse_nmap
+from core.osv_scanner import query_osv
 
-from .ecosystem_guesser import guess_ecosystem
-from .exploit_fetcher import fetch_exploit_urls
-from .nmap_parser import parse_nmap
-from .osv_scanner import query_osv
 
-
-def run_nmap(target):
+def run_nmap(target: str) -> str | None:
     out_file = "/tmp/scan.xml"
     print(f"[+] Running Nmap against {target}")
-    subprocess.run(
-        ["nmap", "-sV", "-Pn", "-oX", out_file, target], stdout=subprocess.DEVNULL
+    result = subprocess.run(
+        ["nmap", "-sV", "-Pn", "-oX", out_file, target],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
+    if result.returncode != 0:
+        print(f"[!] Nmap exited with code {result.returncode}")
     return out_file if os.path.exists(out_file) else None
 
 
-def process_services(xml_path):
+def process_services(xml_path: str) -> list:
     services = parse_nmap(xml_path)
     all_results = []
     for host, protocol, port, name, product, version in services:
@@ -45,29 +48,28 @@ def process_services(xml_path):
             exploits = {cve: fetch_exploit_urls(cve) for cve in cve_list}
         else:
             exploits = {}
-        all_results.append(
-            {
-                "host": host,
-                "product": product,
-                "version": version,
-                "ecosystem": eco,
-                "vulns": vulns,
-                "exploits": exploits,
-            }
-        )
+        all_results.append({
+            "host": host,
+            "product": product,
+            "version": version,
+            "ecosystem": eco,
+            "vulns": vulns,
+            "exploits": exploits,
+        })
     return all_results
 
 
-def write_report(data):
+def write_report(data: list) -> str:
     now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     os.makedirs("reports", exist_ok=True)
     report_file = f"reports/report_{now}.json"
     with open(report_file, "w") as f:
         json.dump(data, f, indent=4)
     print(f"[+] Report saved to {report_file}")
+    return report_file
 
 
-def main(target):
+def main(target: str) -> None:
     scan_path = run_nmap(target)
     if not scan_path:
         print("[!] Nmap scan failed.")
@@ -78,6 +80,6 @@ def main(target):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: ./core/killchain.py <target_ip_or_cidr>")
+        print("Usage: python3 core/killchain.py <target_ip_or_cidr>")
         sys.exit(1)
     main(sys.argv[1])
