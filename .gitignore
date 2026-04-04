@@ -1,70 +1,24 @@
+# Runtime data
+tmp/
+*.db
+*.db-shm
+*.db-wal
+
+# Vault — never commit
+tmp/vault/
+
+# Reports
+reports/
+
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
+*.pyc
+*.pyo
+.venv/
 *.egg-info/
-.installed.cfg
-*.egg
 
-# Virtual environments
-venv/
-ENV/
-env/
-
-# LANimals specific
-loot/
-reports/*.json
+# Logs
 *.log
-osv_cache.json
-autopilot_state.json
-.lanimals/
-
-# Sensitive data
-*.pcap
-*.cap
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
 
 # OS
 .DS_Store
-Thumbs.db
-
-# Backup files
-*.bak
-*.bak2
-*_backup/
-LANimals_github_backup/
-backup_*/
-build/
-
-# Runtime state — do not commit
-tmp/nexus_discovery_cache.json
-tmp/nexus_state.json
-tmp/nexus_services.json
-tmp/*.xml
-__pycache__/
-*.pyc
-.venv/
-tmp/lanimals.db
-tmp/
-reports/archive/*.json
-tmp/
