@@ -38,6 +38,7 @@ body.bottom-collapsed{grid-template-rows:48px 1fr 22px;}
 .ov-btn.active.ov-honeypot{color:var(--trap);border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.08);}
 .ov-btn.active.ov-diff{color:var(--ok);border-color:rgba(42,157,78,.4);background:rgba(42,157,78,.08);}
 .ov-btn.active.ov-services{color:var(--info);border-color:rgba(59,126,207,.4);background:rgba(59,126,207,.08);}
+.ov-btn.active.ov-personality{color:#39ff14;border-color:rgba(57,255,20,.4);background:rgba(57,255,20,.08);}
 .topbar-right{display:flex;gap:5px;align-items:center;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 
@@ -386,6 +387,7 @@ button{cursor:pointer;font-family:var(--font);}
       <button class="ov-btn ov-diff" data-mode="diff">Diff</button>
       <button class="ov-btn ov-services" data-mode="services">Services</button>
       <button class="ov-btn ov-honeypot" data-mode="honeypot">Honeypot</button>
+      <button class="ov-btn ov-personality" data-mode="personality">Personality</button>
     </div>
   </div>
   <div class="topbar-right">
@@ -1051,6 +1053,10 @@ function renderDetail(node, neighbors, events, dbServices, notes, cves){
     ${vendor?`<div class="kv"><div class="k">vendor</div><div class="v info">${esc(vendor)}</div></div>`:''}
     ${node.meta?.interface?`<div class="kv"><div class="k">interface</div><div class="v">${esc(node.meta.interface)}</div></div>`:''}
     ${node.meta?.neighbor_state?`<div class="kv"><div class="k">arp state</div><div class="v ${node.meta.neighbor_state==='STALE'?'warn':''}">${esc(node.meta.neighbor_state)}</div></div>`:''}
+    ${node.meta?.personality?`<div class="kv"><div class="k">personality</div><div class="v" style="color:${node.meta.personality_color||'#fff'};font-weight:700;text-transform:uppercase;letter-spacing:.08em">${esc(node.meta.personality)}</div></div>`:''}
+    ${node.meta?.personality?`<div class="kv"><div class="k">agg / stealth / persist</div><div class="v muted">${node.meta.personality_aggression} / ${node.meta.personality_stealth} / ${node.meta.personality_persistence}</div></div>`:''}
+    ${node.meta?.xp!=null&&node.meta?.personality?`<div class="kv"><div class="k">xp / rank</div><div class="v">${node.meta.xp} <span class="muted">/ ${node.meta.xp_rank||'unknown'}</span></div></div>`:''}
+    ${node.meta?.mutations?`<div class="kv"><div class="k">mutations</div><div class="v">${node.meta.mutations}</div></div>`:''}
   </div>`;
 
   // Risk + reasons
@@ -1261,6 +1267,17 @@ function nodeColor(n){
     if(appeared) return{fill:'#2a9d4e',stroke:'#1a7a38'};
     if(changed) return{fill:'#c97b00',stroke:'#a06000'};
     return{fill:'rgba(40,40,50,.25)',stroke:'#252530'};
+  }
+  if(overlayMode==='personality'){
+    const p=n.meta?.personality;
+    if(!p) return{fill:'rgba(40,40,50,.25)',stroke:'#252530'};
+    const colors={
+      scout:  {fill:'rgba(57,255,20,.25)', stroke:'#39ff14'},
+      mimic:  {fill:'rgba(0,207,255,.25)', stroke:'#00cfff'},
+      parasite:{fill:'rgba(255,68,68,.25)',stroke:'#ff4444'},
+      leech:  {fill:'rgba(255,170,0,.25)', stroke:'#ffaa00'},
+    };
+    return colors[p]||{fill:'rgba(40,40,50,.25)',stroke:'#252530'};
   }
   return _defaultNodeColor(n);
 }
