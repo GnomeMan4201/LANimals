@@ -213,3 +213,37 @@ def rescore_all_hosts() -> List[Dict[str, Any]]:
         results.append({"ip": ip, "risk_score": score, "status": status, "reasons": reasons})
 
     return results
+
+
+def rescore_and_assign_personalities() -> List[Dict[str, Any]]:
+    """Rescore all hosts and assign personalities based on risk profile."""
+    from core.personality_engine import assign_personality, init_personality_tables
+    init_personality_tables()
+
+    results = rescore_all_hosts()
+
+    from core.nexus_db import get_services_for_ip
+    import json as _json
+
+    for r in results:
+        ip = r["ip"]
+        services = get_services_for_ip(ip)
+
+        from core.nexus_db import get_all_hosts
+        hosts = {h["ip"]: h for h in get_all_hosts()}
+        host = hosts.get(ip, {})
+        try:
+            meta = _json.loads(host.get("meta") or "{}")
+        except Exception:
+            meta = {}
+
+        personality, reason = assign_personality(
+            ip,
+            risk_score=r["risk_score"],
+            services=services,
+            meta=meta,
+        )
+        r["personality"] = personality
+        r["personality_reason"] = reason
+
+    return results
