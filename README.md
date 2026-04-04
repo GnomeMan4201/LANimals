@@ -20,6 +20,11 @@ nmap tells you what's there right now. LANimals tells you what changed, what's n
 
 ---
 
+![LANimals Personality Overlay](assets/lanimals_personality_overlay.png)
+*Personality overlay mode — hosts assigned behavioral profiles (scout/mimic/parasite/leech) based on risk signals. Force-directed graph with live risk scoring and per-host investigation panel.*
+
+---
+
 ## Requirements
 
 - Python 3.10+
