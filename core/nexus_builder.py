@@ -518,6 +518,7 @@ def build_snapshot() -> GraphSnapshot:
         "warning_nodes": len([n for n in all_nodes.values() if n.status == "warning"]),
     }
 
+    _enrich_nodes_with_personalities(all_nodes)
     return GraphSnapshot(
         title="LANimals",
         subtitle="Live Network Map",
@@ -527,3 +528,40 @@ def build_snapshot() -> GraphSnapshot:
         events=sorted(all_events, key=lambda e: e.ts, reverse=True)[:60],
         stats=stats,
     )
+
+
+def _enrich_nodes_with_personalities(nodes: Dict[str, "GraphNode"]) -> None:
+    """
+    Post-process all host nodes to inject personality data into meta.
+    Called after graph is assembled so all IPs are present.
+    """
+    try:
+        from core.personality_engine import get_all_personalities, get_xp
+        personalities = {p["ip"]: p for p in get_all_personalities()}
+    except Exception:
+        return
+
+    # Personality -> color hint for frontend
+    PERSONALITY_COLORS = {
+        "scout":    "#39ff14",  # lime green
+        "mimic":    "#00cfff",  # cyan
+        "parasite": "#ff4444",  # red
+        "leech":    "#ffaa00",  # amber
+    }
+
+    for node in nodes.values():
+        if node.node_type not in ("host", "router") or not node.ip:
+            continue
+        p = personalities.get(node.ip)
+        if not p:
+            continue
+        xp = get_xp(node.ip) or {}
+        node.meta["personality"] = p["personality"]
+        node.meta["personality_aggression"] = p["aggression"]
+        node.meta["personality_stealth"] = p["stealth"]
+        node.meta["personality_persistence"] = p["persistence"]
+        node.meta["personality_reason"] = p.get("reason", "")
+        node.meta["personality_color"] = PERSONALITY_COLORS.get(p["personality"], "#ffffff")
+        node.meta["xp"] = xp.get("xp", 0)
+        node.meta["xp_rank"] = xp.get("rank", "unknown")
+        node.meta["mutations"] = xp.get("mutations", 0)
