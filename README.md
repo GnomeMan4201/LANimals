@@ -1,5 +1,6 @@
-<p align="center">
 [![CI](https://github.com/GnomeMan4201/LANimals/actions/workflows/ci.yml/badge.svg)](https://github.com/GnomeMan4201/LANimals/actions/workflows/ci.yml)
+
+<p align="center">
 
   <img src="assets/logos/LANimals.png" alt="LANimals" width="380"/>
 </p>
@@ -7,6 +8,15 @@
 # LANimals
 
 **Local network intelligence platform — self-hosted, operator-grade, terminal-native.**
+
+## Demo
+
+    ./scripts/demo.sh
+
+![LANimals demo](demo_recordings/demo.gif)
+
+---
+
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](#)
