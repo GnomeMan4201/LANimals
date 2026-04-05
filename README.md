@@ -9,7 +9,7 @@
 
 **Local network intelligence platform — self-hosted, operator-grade, terminal-native.**
 
-## Demo
+##
 
     ./scripts/demo.sh
 
