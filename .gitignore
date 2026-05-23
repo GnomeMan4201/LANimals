@@ -22,3 +22,15 @@ __pycache__/
 
 # OS
 .DS_Store
+fix_push.sh
+push_to_github.sh
+resolve_*.sh
+resovle_*.sh
+*.bak
+*.original.*
+temp_*.txt
+one_liner.txt
+*exfil*.zip
+*FINAL*.zip
+*OMEGA*.zip
+backup_*/
