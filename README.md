@@ -9,14 +9,13 @@
 
 **Local network intelligence platform — self-hosted, operator-grade, terminal-native.**
 
-##
+## Demo
 
     ./scripts/demo.sh
 
 ![LANimals demo](demo_recordings/demo.gif)
 
 ---
-
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](#)
