@@ -25,12 +25,12 @@
 
 LANimals is a network intelligence platform that runs on your machine. It scans your LAN, tracks every device it finds, builds a MAC address baseline, flags rogue devices, fingerprints services, and renders everything as a live force-directed graph in your browser.
 
-nmap tells you what's there right now. LANimals tells you what changed, what's new, what's suspicious — and keeps the history so you can prove it.
+nmap tells you what's there right now. LANimals tells you what changed, what's new, and what deserves investigation — and keeps the history so you can reconstruct and evidence those changes.
 
 ---
 
 ![LANimals Personality Overlay](assets/lanimals_personality_overlay.png)
-*Personality overlay mode — hosts assigned behavioral profiles (scout/mimic/parasite/leech) based on risk signals. Force-directed graph with live risk scoring and per-host investigation panel.*
+*Personality overlay mode — hosts assigned heuristic interface labels (scout/mimic/parasite/leech) from configured risk signals. These labels support triage; they are not behavioral attribution. Force-directed graph with live risk scoring and a per-host investigation panel.*
 
 ---
 
@@ -47,7 +47,10 @@ nmap tells you what's there right now. LANimals tells you what changed, what's n
 ```bash
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
-pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 sudo apt install nmap
 ```
 
