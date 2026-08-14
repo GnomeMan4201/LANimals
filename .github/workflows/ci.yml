@@ -28,3 +28,5 @@ jobs:
         run: pytest tests/ -v --tb=short
       - name: Smoke-test local browser appliance
         run: bash scripts/smoke_appliance.sh
+      - name: Smoke-test fresh install and operator journey
+        run: bash scripts/smoke_operator_journey.sh

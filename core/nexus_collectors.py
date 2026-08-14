@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import shutil
 import socket
@@ -102,6 +103,24 @@ def _is_ipv4(ip: str | None) -> bool:
         return all(0 <= int(p) <= 255 for p in parts)
     except Exception:
         return False
+
+
+def filter_observations_to_cidr(rows: List[Dict[str, Any]], cidr: str) -> List[Dict[str, Any]]:
+    """Keep only usable IPv4 host observations inside one validated scan CIDR."""
+    network = ipaddress.ip_network(validate_scan_cidr(cidr), strict=False)
+    filtered: List[Dict[str, Any]] = []
+    for row in rows:
+        raw_ip = row.get("ip")
+        try:
+            address = ipaddress.ip_address(str(raw_ip))
+        except ValueError:
+            continue
+        if not isinstance(address, ipaddress.IPv4Address) or address not in network:
+            continue
+        if address in {network.network_address, network.broadcast_address}:
+            continue
+        filtered.append(row)
+    return filtered
 
 
 def _resolve(ip: str) -> str:
@@ -244,8 +263,12 @@ def collect_host_map(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]]:
 def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
     from core.nexus_db import get_mac_baseline
 
-    current_arp = collect_arp_neighbors()
-    current_nmap = collect_nmap_ping_sweep(cidr=cidr)
+    cidr = validate_scan_cidr(cidr)
+    # Run the active sweep before reading the neighbor cache. On a cold or
+    # recently-flushed cache, the sweep itself causes the kernel to resolve
+    # directly-connected peers; reading ARP first can miss a real MAC change.
+    current_nmap = filter_observations_to_cidr(collect_nmap_ping_sweep(cidr=cidr), cidr)
+    current_arp = filter_observations_to_cidr(collect_arp_neighbors(), cidr)
 
     current: Dict[str, Dict[str, Any]] = {}
     for row in current_arp + current_nmap:
@@ -324,9 +347,10 @@ def collect_sysinfo() -> Dict[str, Any]:
 
 
 def collect_all(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
-    arp = collect_arp_neighbors()
-    local = collect_local_interfaces()
-    nmap_hosts = collect_nmap_ping_sweep(cidr=cidr)
+    cidr = validate_scan_cidr(cidr)
+    arp = filter_observations_to_cidr(collect_arp_neighbors(), cidr)
+    local = filter_observations_to_cidr(collect_local_interfaces(), cidr)
+    nmap_hosts = filter_observations_to_cidr(collect_nmap_ping_sweep(cidr=cidr), cidr)
     target_ips = sorted({row["ip"] for row in arp + local + nmap_hosts if row.get("ip")})
     service_scan = collect_service_scan(target_ips[:8])
     return {

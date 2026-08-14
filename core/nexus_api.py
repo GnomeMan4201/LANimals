@@ -23,6 +23,7 @@ from core.nexus_collectors import (
     collect_rogue_scan,
     collect_sysinfo,
     collect_services_for_ip,
+    filter_observations_to_cidr,
 )
 from core.nexus_service_state import load_service_state, save_service_state
 from core.nexus_risk import rescore_all_hosts, score_host
@@ -142,13 +143,13 @@ def _jobs_recent(limit: int = 20) -> List[Dict[str, Any]]:
 def _run_discovery(jid: str, cidr: str) -> None:
     try:
         _job_log(jid, f"Discovery scan: {cidr}")
-        arp = collect_arp_neighbors()
-        local = collect_local_interfaces()
-        _job_log(jid, f"  ARP table: {len(arp)} entries")
-        _job_log(jid, f"  Local interfaces: {len(local)} addresses")
+        arp = filter_observations_to_cidr(collect_arp_neighbors(), cidr)
+        local = filter_observations_to_cidr(collect_local_interfaces(), cidr)
+        _job_log(jid, f"  ARP table in scope: {len(arp)} entries")
+        _job_log(jid, f"  Local interfaces in scope: {len(local)} addresses")
         _job_log(jid, f"  Starting nmap ping sweep on {cidr} …")
-        nmap_hosts = collect_nmap_ping_sweep(cidr=cidr)
-        _job_log(jid, f"  nmap found: {len(nmap_hosts)} hosts")
+        nmap_hosts = filter_observations_to_cidr(collect_nmap_ping_sweep(cidr=cidr), cidr)
+        _job_log(jid, f"  nmap found in scope: {len(nmap_hosts)} hosts")
 
         seen: dict[str, dict] = {}
         for h in arp + local + nmap_hosts:
