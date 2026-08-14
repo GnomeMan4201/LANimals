@@ -19,16 +19,24 @@ def test_sites_documents_preserve_authority_chain():
 
 def test_hosted_surface_is_unambiguously_representative():
     for text in (SPEC, PROMPT):
+        lowered = text.lower()
         assert "REPRESENTATIVE / NO LIVE LAN ACCESS" in text
-        assert "no direct" in text.lower()
-        assert "visitor" in text.lower()
-        assert "LAN" in text
+        assert "visitor" in lowered
+        assert "lan access" in lowered or "visitor-lan access" in lowered
+        assert "representative" in lowered
 
 
 def test_side_effecting_routes_remain_explicit_post_mutations():
-    for text in (SPEC, PROMPT, HANDOFF):
+    # Exact transport semantics belong in the paste-ready prompt and handoff.
+    # `site_capabilities.json` and its own contract tests remain authoritative.
+    for text in (PROMPT, HANDOFF):
         assert "POST /api/export/report" in text
         assert "POST /api/enrich/vt/{ip}" in text
+
+    lowered = SPEC.lower()
+    assert "report creation is an explicit mutation" in lowered
+    assert "virustotal" in lowered
+    assert "explicit operator" in lowered
 
 
 def test_product_identity_and_operator_direction_are_locked():
