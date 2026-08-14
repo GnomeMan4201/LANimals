@@ -20,6 +20,16 @@ _SIMPLE_COMMANDS = {
 _SCAN_COMMANDS = {"arp", "discovery", "hostmap", "rogue", "services", "cve"}
 
 
+def simple_commands() -> set[str]:
+    """Return a copy of the supported non-scan browser commands."""
+    return set(_SIMPLE_COMMANDS)
+
+
+def scan_commands() -> set[str]:
+    """Return a copy of the supported browser scan operations."""
+    return set(_SCAN_COMMANDS)
+
+
 def parse_terminal_command(raw: str) -> TerminalCommand:
     try:
         parts = shlex.split(raw.strip())

@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "product": "LANimals",
+  "version": "2.0.0",
+  "updated": "2026-08-14",
+  "status_definitions": {
+    "implemented_tested": "Implemented in the supported runtime and covered by automated contract tests.",
+    "implemented_local_runtime": "Implemented, but meaningful execution requires a self-hosted Linux runtime, local interfaces, system tools, or optional credentials.",
+    "experimental_legacy": "Preserved research module outside the supported browser operator path; not represented as production-ready."
+  },
+  "surfaces": {
+    "hosted_site": {
+      "mode": "representative_workflow",
+      "network_access": false,
+      "state": "in_memory_page_session",
+      "data_origin": "clearly_labeled_representative_dataset"
+    },
+    "self_hosted_web": {
+      "mode": "operational",
+      "default_bind": "127.0.0.1:8080",
+      "platform": "Linux / Python 3.10+",
+      "persistence": "SQLite plus local report/cache files"
+    }
+  },
+  "operator_bridge": {
+    "simple_commands": [
+      "baseline",
+      "clear",
+      "events",
+      "help",
+      "hosts",
+      "report",
+      "status",
+      "sysinfo"
+    ],
+    "scan_commands": [
+      "arp",
+      "cve",
+      "discovery",
+      "hostmap",
+      "rogue",
+      "services"
+    ],
+    "system_shell": false
+  },
+  "capabilities": [
+    {
+      "id": "runtime-boundary",
+      "label": "Loopback-first operator runtime",
+      "status": "implemented_tested",
+      "routes": ["/", "/api/health", "/api/scope"],
+      "evidence": ["lan.sh", "core/nexus_api.py", "tests/test_api_contracts.py"]
+    },
+    {
+      "id": "operator-authorization",
+      "label": "Mutation header and same-origin terminal boundary",
+      "status": "implemented_tested",
+      "routes": ["/ws/terminal"],
+      "evidence": ["core/nexus_api.py", "tests/test_api_contracts.py", "tests/test_contracts.py"]
+    },
+    {
+      "id": "inventory-persistence",
+      "label": "Host, service, event, note, and baseline persistence",
+      "status": "implemented_tested",
+      "routes": ["/api/hosts", "/api/events", "/api/baseline"],
+      "evidence": ["core/nexus_db.py", "tests/test_core.py", "tests/test_contracts.py"]
+    },
+    {
+      "id": "baseline-review",
+      "label": "Explicit accept/defer MAC baseline review",
+      "status": "implemented_tested",
+      "routes": ["/api/baseline/accept", "/api/baseline/defer"],
+      "evidence": ["core/nexus_db.py", "core/nexus_api.py", "tests/test_api_contracts.py"]
+    },
+    {
+      "id": "risk-scoring",
+      "label": "Explainable host risk scoring",
+      "status": "implemented_tested",
+      "routes": ["/api/scan/rescore"],
+      "evidence": ["core/nexus_risk.py", "tests/test_core.py"]
+    },
+    {
+      "id": "evidence-export",
+      "label": "Local HTML operator report",
+      "status": "implemented_tested",
+      "routes": ["/api/export/report"],
+      "evidence": ["core/nexus_api.py", "tests/test_api_contracts.py"]
+    },
+    {
+      "id": "lan-discovery",
+      "label": "Approved-scope nmap, ARP, and host mapping",
+      "status": "implemented_local_runtime",
+      "routes": ["/api/scan/discovery", "/api/scan/arp", "/api/scan/hostmap"],
+      "evidence": ["core/nexus_collectors.py", "core/nexus_scope.py", "core/nexus_api.py"]
+    },
+    {
+      "id": "rogue-detection",
+      "label": "New or changed MAC observation detection",
+      "status": "implemented_local_runtime",
+      "routes": ["/api/scan/rogue"],
+      "evidence": ["core/nexus_collectors.py", "core/nexus_db.py", "core/nexus_api.py"]
+    },
+    {
+      "id": "service-fingerprinting",
+      "label": "Approved-host service fingerprinting",
+      "status": "implemented_local_runtime",
+      "routes": ["/api/scan/services/{ip}"],
+      "evidence": ["core/nexus_collectors.py", "core/nexus_api.py"]
+    },
+    {
+      "id": "cve-correlation",
+      "label": "Approved-host nmap vulners correlation",
+      "status": "implemented_local_runtime",
+      "routes": ["/api/scan/cve/{ip}", "/api/hosts/{ip}/cves"],
+      "evidence": ["core/nexus_api.py"]
+    },
+    {
+      "id": "system-inventory",
+      "label": "Local system and interface inventory",
+      "status": "implemented_local_runtime",
+      "routes": ["/api/sysinfo", "/api/scan/inventory"],
+      "evidence": ["core/nexus_collectors.py", "core/nexus_api.py"]
+    },
+    {
+      "id": "optional-enrichment",
+      "label": "VirusTotal IP enrichment with operator-supplied key",
+      "status": "implemented_local_runtime",
+      "routes": ["/api/enrich/vt/{ip}"],
+      "evidence": ["core/nexus_api.py"]
+    },
+    {
+      "id": "legacy-research-modules",
+      "label": "Standalone alert, traffic, visualization, fortress, and advanced research scripts",
+      "status": "experimental_legacy",
+      "routes": [],
+      "evidence": ["bin", "modules", "core/advanced"]
+    }
+  ]
+}
