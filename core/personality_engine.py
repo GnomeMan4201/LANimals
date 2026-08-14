@@ -21,11 +21,10 @@ import base64
 import sqlite3
 import threading
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "tmp" / "lanimals.db"
+from core.nexus_db import DB_PATH
+
 _lock = threading.Lock()
 
 # ── Personality definitions ───────────────────────────────────────────────────

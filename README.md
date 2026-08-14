@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](#)
-[![Latest tagged release](https://img.shields.io/badge/latest_tag-v1.0.0-blue.svg)](https://github.com/GnomeMan4201/LANimals/releases)
+[![Version](https://img.shields.io/badge/version-2.1.0-maroon.svg)](VERSION)
 
 ---
 
@@ -38,7 +38,7 @@ nmap tells you what's there right now. LANimals tells you what changed, what's n
 
 - Python 3.10+
 - Linux (Pop!_OS / Ubuntu tested)
-- nmap: `sudo apt install nmap`
+- venv, nmap, and local route tooling: `sudo apt install python3-venv nmap iproute2`
 - Optional: `export VT_API_KEY=your_key` for VirusTotal enrichment
 
 ---
@@ -47,30 +47,53 @@ nmap tells you what's there right now. LANimals tells you what changed, what's n
 ```bash
 git clone https://github.com/GnomeMan4201/LANimals.git
 cd LANimals
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-sudo apt install nmap
+sudo apt install python3-venv nmap iproute2
+./install.sh
 ```
 
-LANimals currently uses a checkout-first installation because its CLI, browser UI,
-assets, and local state are operated together. `pip install .` is intentionally not
-advertised as a supported installation path.
+The installer creates an isolated `.venv` inside the checkout and links the
+checkout-aware commands into `~/.local/bin`. It refuses to overwrite a real file
+already using one of those command names. LANimals remains a checkout-first
+installation because the CLI, browser UI, assets, and runtime are operated together;
+`pip install .` is intentionally not advertised as a supported installation path.
+When run interactively, `install.sh` proposes an eligible private subnet and asks for
+approval. For unattended installation, use `./install.sh --scope 192.168.1.0/24`.
 
-## Run
-```bash
-bash lan.sh
-```
+## First run
 
-Opens at `http://127.0.0.1:8080` — auto-launches browser and starts background ARP refresh.
-
-LANimals binds to loopback by default. To approve a scan boundary explicitly:
+Approve the exact private network LANimals may inspect. Interactive setup proposes an
+eligible local subnet and requires confirmation, or you can provide it explicitly:
 
 ```bash
-export LANIMALS_ALLOWED_CIDRS=192.168.1.0/24
-bash lan.sh
+./bin/lanimals setup
+# or
+./bin/lanimals setup 192.168.1.0/24
+./bin/lanimals start
 ```
+
+`lanimals start` opens `http://127.0.0.1:8080`. It does not automatically scan.
+Collection begins only after an operator action in the local console.
+
+Useful lifecycle commands:
+
+```bash
+lanimals status
+lanimals open
+lanimals doctor
+lanimals config
+lanimals stop
+```
+
+Configuration is stored at `${XDG_CONFIG_HOME:-~/.config}/lanimals/config.json`.
+SQLite evidence and durable state live under
+`${XDG_DATA_HOME:-~/.local/share}/lanimals`; logs use
+`${XDG_STATE_HOME:-~/.local/state}/lanimals`; disposable scan artifacts use
+`${XDG_CACHE_HOME:-~/.cache}/lanimals`. Moving or updating the checkout does not move
+or delete the evidence store.
+
+On the first v2.1 start, LANimals non-destructively imports a checkout-relative v2.0
+SQLite database and supported state files when the new XDG destination is empty. The
+legacy files remain untouched as a recovery copy.
 
 The browser terminal is an allowlisted LANimals command bridge, not an operating-system shell. A non-loopback server bind is refused unless both `LANIMALS_HOST` and `LANIMALS_ALLOW_REMOTE=1` are set. If remote access is necessary, put LANimals behind authenticated network access.
 
@@ -83,7 +106,8 @@ Run the command center directly from any working directory:
 ```bash
 ./bin/lanimals help
 ./bin/lanimals version
-./bin/lanimals dashboard
+./bin/lanimals setup 192.168.1.0/24
+./bin/lanimals start
 ```
 
 To make the checkout's commands available in the current shell:

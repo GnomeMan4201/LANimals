@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any, Dict
 
+from core.nexus_paths import DATA_DIR
 
-ROOT = Path(__file__).resolve().parent.parent
-TMP_DIR = ROOT / "tmp"
-TMP_DIR.mkdir(exist_ok=True)
-
-SNAPSHOT_STATE_FILE = TMP_DIR / "network_snapshot.json"
-LEGACY_STATE_FILE = TMP_DIR / "nexus_state.json"
+SNAPSHOT_STATE_FILE = DATA_DIR / "network_snapshot.json"
+LEGACY_STATE_FILE = DATA_DIR / "nexus_state.json"
 
 
 def load_snapshot_state() -> Dict[str, Any]:
@@ -30,6 +26,7 @@ def save_snapshot_state(data: Dict[str, Any]) -> None:
     if not isinstance(hosts, dict):
         raise ValueError("snapshot state requires a hosts mapping")
     payload = {"hosts": hosts, "saved_at": data.get("saved_at")}
+    SNAPSHOT_STATE_FILE.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     tmp_path = SNAPSHOT_STATE_FILE.with_suffix(".tmp")
     tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
     tmp_path.replace(SNAPSHOT_STATE_FILE)

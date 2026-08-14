@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "LANimals",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "updated": "2026-08-14",
   "status_definitions": {
     "implemented_tested": "Implemented in the supported runtime and covered by automated contract tests.",
@@ -19,7 +19,7 @@
       "mode": "operational",
       "default_bind": "127.0.0.1:8080",
       "platform": "Linux / Python 3.10+",
-      "persistence": "SQLite plus local report/cache files"
+      "persistence": "XDG user directories: SQLite data, local reports, cache, logs, and fail-closed JSON configuration"
     }
   },
   "operator_bridge": {
@@ -44,6 +44,13 @@
     "system_shell": false
   },
   "capabilities": [
+    {
+      "id": "local-appliance-lifecycle",
+      "label": "First-run scope approval, lifecycle controls, diagnostics, and non-destructive v2.0 state migration",
+      "status": "implemented_tested",
+      "routes": [],
+      "evidence": ["core/appliance.py", "install.sh", "scripts/smoke_appliance.sh", "tests/test_appliance.py", "tests/test_cli_contracts.py"]
+    },
     {
       "id": "runtime-boundary",
       "label": "Loopback-first operator runtime",

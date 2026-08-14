@@ -4,6 +4,7 @@ import json
 import threading
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -36,6 +37,7 @@ from core.nexus_scope import (
     ScopeError, default_scan_cidr, scope_summary,
     validate_host_target, validate_scan_cidr,
 )
+from core.nexus_paths import CACHE_DIR, REPORTS_DIR
 from core.nexus_terminal import (
     TerminalCommandError, parse_terminal_command, terminal_help,
 )
@@ -43,9 +45,15 @@ from core.version import VERSION
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_FILE = ROOT / "ui" / "lanimals_live_map.html"
-REPORTS_DIR = ROOT / "reports"
 
-app = FastAPI(title="LANimals Nexus", version=VERSION)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="LANimals Nexus", version=VERSION, lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -634,7 +642,7 @@ def export_report():
 <table><thead><tr>
   <th>Severity</th><th>Timestamp</th><th>Event</th><th>Summary</th><th>IP</th>
 </tr></thead><tbody>{event_rows}</tbody></table>
-<div class="footer">LANimals Nexus v2.0 — badBANANA/LANimals</div>
+<div class="footer">LANimals Nexus v{VERSION} — badBANANA/LANimals</div>
 </body></html>"""
 
     return HTMLResponse(content=html)
@@ -779,9 +787,8 @@ def enrich_vt(ip: str):
 def _run_cve_scan(jid: str, ip: str) -> None:
     import shutil, subprocess, json as _json
     from xml.etree import ElementTree as ET
-    from pathlib import Path as _Path
-
-    TMP = _Path(__file__).resolve().parent.parent / "tmp"
+    TMP = CACHE_DIR
+    TMP.mkdir(mode=0o700, parents=True, exist_ok=True)
     try:
         _job_log(jid, f"CVE scan starting on {ip} (nmap vulners)")
         if not shutil.which("nmap"):

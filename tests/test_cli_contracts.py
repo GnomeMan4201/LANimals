@@ -107,7 +107,14 @@ class CliContractTests(unittest.TestCase):
     def test_checkout_is_not_misrepresented_as_a_python_package(self) -> None:
         self.assertFalse((ROOT / "setup.py").exists())
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("checkout-first installation", readme)
+        self.assertIn("checkout-first", readme)
+
+    def test_dispatcher_exposes_appliance_lifecycle(self) -> None:
+        result = self.run_cli("help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for command in ("start", "stop", "status", "open", "setup", "doctor"):
+            with self.subTest(command=command):
+                self.assertIn(command, result.stdout)
 
     def test_malformed_self_gitlink_is_absent(self) -> None:
         result = subprocess.run(
@@ -140,6 +147,13 @@ class CliContractTests(unittest.TestCase):
                 source = (BIN / script).read_text(encoding="utf-8")
                 self.assertIn("core.validate_scope_cli", source)
                 self.assertIn("Refusing target outside the approved LAN scope", source)
+
+    def test_installer_isolated_runtime_and_fail_closed_linking(self) -> None:
+        source = (ROOT / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('python3 -m venv "$ROOT/.venv"', source)
+        self.assertIn("Refusing to replace existing file", source)
+        self.assertNotIn("curl |", source)
+        self.assertNotIn("wget |", source)
 
 
 if __name__ == "__main__":

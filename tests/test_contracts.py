@@ -172,7 +172,9 @@ class TerminalContractTests(unittest.TestCase):
     def test_launcher_is_loopback_by_default(self) -> None:
         root = Path(__file__).parents[1]
         source = (root / "lan.sh").read_text()
-        self.assertIn('HOST="${LANIMALS_HOST:-127.0.0.1}"', source)
+        appliance = (root / "core" / "appliance.py").read_text()
+        self.assertIn('DEFAULT_HOST = "127.0.0.1"', appliance)
+        self.assertIn("refusing non-loopback bind", appliance)
         self.assertNotIn("--host 0.0.0.0", source)
         compatibility = (root / "launch_live_map.sh").read_text()
         self.assertNotIn("0.0.0.0", compatibility)

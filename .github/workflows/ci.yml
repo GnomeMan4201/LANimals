@@ -26,3 +26,5 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run tests
         run: pytest tests/ -v --tb=short
+      - name: Smoke-test local browser appliance
+        run: bash scripts/smoke_appliance.sh

@@ -65,11 +65,16 @@ def _detected_local_networks() -> list[ipaddress.IPv4Network]:
     return sorted(networks, key=lambda item: (int(item.network_address), item.prefixlen))
 
 
+def detected_local_networks() -> list[ipaddress.IPv4Network]:
+    """Return a copy of eligible, non-virtual RFC1918 interface networks."""
+    return list(_detected_local_networks())
+
+
 def approved_networks() -> list[ipaddress.IPv4Network]:
     configured = os.environ.get("LANIMALS_ALLOWED_CIDRS", "")
     if configured.strip():
         return _parse_networks(configured.split(","))
-    return _detected_local_networks()
+    return detected_local_networks()
 
 
 def default_scan_cidr() -> str:
