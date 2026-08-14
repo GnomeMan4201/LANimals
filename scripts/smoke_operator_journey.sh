@@ -124,7 +124,8 @@ def run_job(path):
 health, _ = request("GET", "/api/health")
 assert health["ok"] is True and health["version"] == "2.1.0"
 scope, _ = request("GET", "/api/scope")
-assert scope["allowed_cidrs"] == ["192.168.250.0/30"], scope
+assert scope["approved_cidrs"] == ["192.168.250.0/30"], scope
+assert scope["default_cidr"] == "192.168.250.0/30", scope
 
 first = run_job("/api/scan/discovery?cidr=192.168.250.0%2F30")
 assert first["result"]["host_count"] >= 1, first
