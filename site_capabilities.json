@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "product": "LANimals",
+  "product_version": "2.1.0",
+  "authority": {
+    "capability_manifest": "capabilities.json",
+    "browser_contract": "docs/BROWSER_RUNTIME_CONTRACT.md",
+    "rule": "If a site control cannot be mapped to an operation in this file and a capability in capabilities.json, it must not be presented as operational."
+  },
+  "surfaces": {
+    "hosted_site": {
+      "mode": "representative_workflow",
+      "network_access": false,
+      "api_connection": "none",
+      "persistence": "in_memory_page_session",
+      "required_badge": "REPRESENTATIVE / NO LIVE LAN ACCESS",
+      "may": [
+        "render representative inventory, graph, events, risk, baseline, report, and investigation workflows",
+        "filter, search, select, sort, branch, and inspect representative data",
+        "explain which operations become live in the self-hosted appliance"
+      ],
+      "must_not": [
+        "claim to scan the visitor LAN",
+        "claim live ARP, nmap, service, CVE, watchdog, anomaly, VirusTotal, or trap execution",
+        "claim representative state is persisted as LANimals evidence",
+        "simulate a successful live mutation without an explicit representative label",
+        "expose an operating-system shell"
+      ]
+    },
+    "self_hosted_web": {
+      "mode": "operational",
+      "origin": "http://127.0.0.1:8080 by default",
+      "api_connection": "same_origin_local_runtime",
+      "persistence": "XDG local state",
+      "scope": "explicitly approved private CIDR",
+      "mutation_header": "X-LANimals-Operator: 1",
+      "system_shell": false
+    }
+  },
+  "site_rules": {
+    "page_load": "read_only",
+    "active_collection": "explicit_operator_action_only",
+    "success_reporting": "A live action is successful only after the local API reports success; partial success must remain visibly partial.",
+    "hosted_fallback": "If live runtime is unavailable, keep the control representative/disabled; never silently substitute fabricated live data.",
+    "empty_state": "Show an honest empty state when no local evidence exists.",
+    "scope_visibility": "Live network acquisition controls must display or reference the approved CIDR/host target before execution."
+  },
+  "operations": [
+    {
+      "id": "runtime-health",
+      "capability_id": "runtime-boundary",
+      "label": "Runtime health",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/health", "target": "none", "operator_header_required": false, "async_job": false, "persistence": "none", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_status_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "approved-scope",
+      "capability_id": "runtime-boundary",
+      "label": "Approved scope",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/scope", "target": "none", "operator_header_required": false, "async_job": false, "persistence": "none", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_scope_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "network-graph",
+      "capability_id": "browser-runtime-contract",
+      "label": "Network graph",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/graph", "target": "none", "operator_header_required": false, "async_job": false, "persistence": "read_only", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_graph", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "host-inventory",
+      "capability_id": "inventory-persistence",
+      "label": "Host inventory",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/hosts", "target": "none", "operator_header_required": false, "async_job": false, "persistence": "read_only", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_inventory", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "event-feed",
+      "capability_id": "inventory-persistence",
+      "label": "Event feed",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/events", "target": "none", "operator_header_required": false, "async_job": false, "persistence": "read_only", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_events", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "baseline-queue",
+      "capability_id": "baseline-review",
+      "label": "Baseline review queue",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/baseline", "target": "none", "operator_header_required": false, "async_job": false, "persistence": "read_only", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_baseline", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "network-diff",
+      "capability_id": "observation-diff",
+      "label": "Observation diff",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/diff", "target": "none", "operator_header_required": false, "async_job": false, "persistence": "read_only", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_diff", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "Compares the last two explicit full Discovery observations; reading it does not advance observation state."
+    },
+    {
+      "id": "discovery",
+      "capability_id": "lan-discovery",
+      "label": "Discovery",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/discovery", "target": "approved_cidr", "operator_header_required": true, "async_job": true, "persistence": "hosts_events_cache_observation_snapshot", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_result_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "arp-refresh",
+      "capability_id": "lan-discovery",
+      "label": "ARP refresh",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/arp", "target": "approved_cidr", "operator_header_required": true, "async_job": true, "persistence": "hosts_cache", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_result_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "Passive ARP/interface rows are filtered to the exact approved CIDR before persistence."
+    },
+    {
+      "id": "host-map",
+      "capability_id": "lan-discovery",
+      "label": "Host map",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/hostmap", "target": "approved_cidr", "operator_header_required": true, "async_job": true, "persistence": "hosts_cache", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_result_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "rogue-detection",
+      "capability_id": "rogue-detection",
+      "label": "Rogue / identity-change detection",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/rogue", "target": "approved_cidr", "operator_header_required": true, "async_job": true, "persistence": "events_hosts_baseline_review_state", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_result_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "service-scan",
+      "capability_id": "service-fingerprinting",
+      "label": "Service fingerprinting",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/services/{ip}", "target": "approved_host", "operator_header_required": true, "async_job": true, "persistence": "services_events_host_risk", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "cve-scan",
+      "capability_id": "cve-correlation",
+      "label": "CVE correlation",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/cve/{ip}", "target": "approved_host", "operator_header_required": true, "async_job": true, "persistence": "host_meta_events_risk", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "system-inventory",
+      "capability_id": "system-inventory",
+      "label": "System inventory",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/inventory", "target": "local_runtime", "operator_header_required": true, "async_job": true, "persistence": "events_or_runtime_state", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "anomaly-scan",
+      "capability_id": "local-anomaly-observation",
+      "label": "Outbound connection anomaly scan",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/anomaly", "target": "local_runtime", "operator_header_required": true, "async_job": false, "persistence": "events", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "Reads local process/network connection state; it is not a remote network scan."
+    },
+    {
+      "id": "watchdog",
+      "capability_id": "baseline-watchdog",
+      "label": "Baseline availability watchdog",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/watchdog", "target": "local_runtime", "operator_header_required": true, "async_job": false, "persistence": "events_when_offline", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "risk-rescore",
+      "capability_id": "risk-scoring",
+      "label": "Risk rescore",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/scan/rescore", "target": "persisted_hosts", "operator_header_required": true, "async_job": false, "persistence": "host_risk_events", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_result_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "baseline-accept",
+      "capability_id": "baseline-review",
+      "label": "Accept baseline observation",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/baseline/accept", "target": "approved_host", "operator_header_required": true, "async_job": false, "persistence": "baseline_decision_events_risk", "external_network_dependency": false},
+      "hosted_site": {"behavior": "session_only_representative_mutation", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "baseline-defer",
+      "capability_id": "baseline-review",
+      "label": "Defer baseline observation",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/baseline/defer", "target": "approved_host", "operator_header_required": true, "async_job": false, "persistence": "baseline_decision_events", "external_network_dependency": false},
+      "hosted_site": {"behavior": "session_only_representative_mutation", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "host-notes",
+      "capability_id": "inventory-persistence",
+      "label": "Save host notes",
+      "local_runtime": {"supported": true, "method": "PATCH", "route": "/api/hosts/{ip}/notes", "target": "observed_host", "operator_header_required": true, "async_job": false, "persistence": "notes_events", "external_network_dependency": false},
+      "hosted_site": {"behavior": "session_only_representative_mutation", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "trap-list",
+      "capability_id": "deception-traps",
+      "label": "Trap inventory",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/traps", "target": "local_runtime", "operator_header_required": false, "async_job": false, "persistence": "read_only", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_trap_state", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "trap-deploy",
+      "capability_id": "deception-traps",
+      "label": "Deploy trap",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/traps", "target": "local_runtime_port", "operator_header_required": true, "async_job": false, "persistence": "trap_state_events", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "Partial/failed listener activation must never be displayed as clean success."
+    },
+    {
+      "id": "trap-bundle",
+      "capability_id": "deception-traps",
+      "label": "Deploy trap bundle",
+      "local_runtime": {"supported": true, "method": "POST", "route": "/api/traps/bundle/{bundle_name}", "target": "local_runtime_ports", "operator_header_required": true, "async_job": false, "persistence": "trap_state_events", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "API reports active_count and failure_count separately; any failure keeps the overall result unsuccessful."
+    },
+    {
+      "id": "trap-stop",
+      "capability_id": "deception-traps",
+      "label": "Stop trap",
+      "local_runtime": {"supported": true, "method": "DELETE", "route": "/api/traps/{trap_id}", "target": "existing_trap", "operator_header_required": true, "async_job": false, "persistence": "trap_state_events", "external_network_dependency": false},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "vt-enrichment",
+      "capability_id": "optional-enrichment",
+      "label": "VirusTotal IP enrichment",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/enrich/vt/{ip}", "target": "ip", "operator_header_required": false, "async_job": false, "persistence": "event_on_lookup", "external_network_dependency": true},
+      "hosted_site": {"behavior": "unavailable_without_local_runtime", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "Requires operator-supplied VT_API_KEY. Current route performs an external lookup and records an event."
+    },
+    {
+      "id": "report-export",
+      "capability_id": "evidence-export",
+      "label": "HTML operator report",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/export/report", "target": "persisted_evidence", "operator_header_required": false, "async_job": false, "persistence": "local_report_file", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_report_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "Current route generates and persists a local report file."
+    },
+    {
+      "id": "security-audit",
+      "capability_id": "security-audit-summary",
+      "label": "Security audit summary",
+      "local_runtime": {"supported": true, "method": "GET", "route": "/api/audit", "target": "persisted_evidence", "operator_header_required": false, "async_job": false, "persistence": "read_only", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_summary", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state"
+    },
+    {
+      "id": "terminal-bridge",
+      "capability_id": "operator-authorization",
+      "label": "LANimals operator command bridge",
+      "local_runtime": {"supported": true, "method": null, "route": "/ws/terminal", "target": "allowlisted_command", "operator_header_required": false, "async_job": false, "persistence": "depends_on_command", "external_network_dependency": false},
+      "hosted_site": {"behavior": "representative_terminal_only", "live_network_effect": false},
+      "failure_contract": "surface_error_and_preserve_previous_state",
+      "notes": "WebSocket bridge accepts LANimals commands only; no PTY or operating-system shell."
+    }
+  ],
+  "known_limitations": [
+    {
+      "id": "report-export-get-side-effect",
+      "route": "/api/export/report",
+      "detail": "The current GET route generates and persists a local report file. Treat it as an explicit operator action, not page-load data."
+    },
+    {
+      "id": "vt-enrichment-get-side-effect",
+      "route": "/api/enrich/vt/{ip}",
+      "detail": "The current GET route performs an external VirusTotal lookup and records an event. Treat it as an explicit operator action, not page-load data."
+    }
+  ]
+}
