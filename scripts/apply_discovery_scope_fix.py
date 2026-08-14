@@ -13,8 +13,8 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 replace_once(
     "core/nexus_collectors.py",
-    "import json\nimport os\n",
-    "import ipaddress\nimport json\nimport os\n",
+    "import json\nimport shutil\n",
+    "import ipaddress\nimport json\nimport shutil\n",
 )
 
 replace_once(
