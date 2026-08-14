@@ -103,9 +103,24 @@ def upsert_host(host: Dict[str, Any]) -> None:
     if not ip:
         return
     now = _now()
-    meta = {k: v for k, v in host.items()
-            if k not in ("ip","mac","hostname","vendor","interface",
-                         "status","risk_score","group_cidr","first_seen","last_seen")}
+    raw_meta = host.get("meta") or {}
+    if isinstance(raw_meta, str):
+        try:
+            parsed_meta = json.loads(raw_meta)
+            meta = dict(parsed_meta) if isinstance(parsed_meta, dict) else {}
+        except (TypeError, json.JSONDecodeError):
+            meta = {}
+    elif isinstance(raw_meta, dict):
+        meta = dict(raw_meta)
+    else:
+        meta = {}
+    host_columns = {
+        "ip", "mac", "hostname", "vendor", "interface", "status", "notes",
+        "risk_score", "group_cidr", "first_seen", "last_seen", "meta",
+    }
+    for key, value in host.items():
+        if key not in host_columns:
+            meta[key] = value
     # Trim CVEs list to avoid blob-too-big — keep max 10 CVEs
     if "cves" in meta and isinstance(meta.get("cves"), list):
         meta["cves"] = meta["cves"][:10]

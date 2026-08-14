@@ -8,8 +8,7 @@ from typing import Any, Dict, List, Tuple
 
 from core.nexus_models import GraphEdge, GraphEvent, GraphNode, GraphSnapshot
 from core.nexus_paths import CACHE_DIR, REPORTS_DIR
-from core.nexus_service_state import load_service_state
-from core.nexus_state import load_snapshot_state, save_snapshot_state
+from core.nexus_state import advance_snapshot_state, diff_snapshots, load_snapshot_pair
 
 TMP_DIR = CACHE_DIR
 DISCOVERY_CACHE = TMP_DIR / "nexus_discovery_cache.json"
@@ -279,12 +278,67 @@ def _normalize_collector_data(data: Dict[str, Any]) -> Tuple[List[GraphNode], Li
     return list(nodes.values()), list(edges.values()), events
 
 
+def _overlay_persisted_host_state(nodes: Dict[str, GraphNode]) -> None:
+    from core.nexus_db import get_all_hosts
+
+    if not nodes:
+        return
+    persisted = {row["ip"]: row for row in get_all_hosts()}
+    for node in nodes.values():
+        if node.node_type not in ("host", "router") or not node.ip:
+            continue
+        row = persisted.get(node.ip)
+        if not row:
+            continue
+        observation_source = node.meta.get("source")
+        raw_meta = row.get("meta") or {}
+        if isinstance(raw_meta, str):
+            try:
+                parsed = json.loads(raw_meta)
+                durable_meta = parsed if isinstance(parsed, dict) else {}
+            except Exception:
+                durable_meta = {}
+        elif isinstance(raw_meta, dict):
+            durable_meta = dict(raw_meta)
+        else:
+            durable_meta = {}
+        node.status = row.get("status") or node.status
+        try:
+            node.risk_score = int(row.get("risk_score") or node.risk_score)
+        except (TypeError, ValueError):
+            pass
+        if row.get("mac"):
+            node.mac = row["mac"]
+        if row.get("hostname"):
+            node.hostname = row["hostname"]
+            node.label = row["hostname"]
+        if row.get("group_cidr"):
+            node.group = row["group_cidr"]
+        if row.get("vendor"):
+            node.meta["vendor"] = row["vendor"]
+        node.meta.update(durable_meta)
+        if observation_source:
+            node.meta["observation_source"] = observation_source
+        if durable_meta.get("source"):
+            node.meta["evidence_source"] = durable_meta["source"]
+        if row.get("last_seen"):
+            node.meta["last_seen"] = row["last_seen"]
+        if row.get("notes"):
+            node.meta["notes"] = row["notes"]
+
+
 def _merge_cached_services(
     nodes: Dict[str, GraphNode], edges: Dict[str, GraphEdge], events: List[GraphEvent]
 ) -> None:
-    svc_state = load_service_state()
-    services_by_ip = svc_state.get("services_by_ip", {})
-    for ip, svc_rows in services_by_ip.items():
+    """Compatibility name; SQLite is the operator authority for services."""
+    from core.nexus_db import get_all_services
+
+    by_ip: Dict[str, List[Dict[str, Any]]] = {}
+    for service in get_all_services():
+        ip = service.get("ip")
+        if ip:
+            by_ip.setdefault(ip, []).append(service)
+    for ip, svc_rows in by_ip.items():
         host_id = f"host:{ip}"
         if host_id not in nodes:
             continue
@@ -302,7 +356,7 @@ def _merge_cached_services(
                 status="normal", risk_score=20, group=host_group,
                 meta={"port": port, "protocol": protocol, "service_name": service_name,
                       "product": product, "version": version,
-                      "source": svc.get("source", "service_cache")},
+                      "source": svc.get("source", "sqlite")},
             ))
             _add_edge(edges, GraphEdge(
                 id=_edge_id(host_id, svc_id, "offers_service"),
@@ -315,51 +369,91 @@ def _merge_cached_services(
         nodes[host_id].meta["services"] = service_summaries
 
 
+def _durable_graph_events(limit: int = 60) -> List[GraphEvent]:
+    from core.nexus_db import get_recent_events
+
+    rendered: List[GraphEvent] = []
+    for event in get_recent_events(limit=limit):
+        node_id = event.get("node_id")
+        if not node_id and event.get("ip"):
+            node_id = f"host:{event['ip']}"
+        rendered.append(GraphEvent(
+            id=str(event.get("id") or f"evt:{event.get('ts')}"),
+            ts=str(event.get("ts") or _now()),
+            severity=str(event.get("severity") or "info"),
+            title=str(event.get("title") or "Event"),
+            summary=str(event.get("summary") or ""),
+            node_id=node_id,
+        ))
+    return rendered
+
+
 def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
-    now = _now()
-    current_hosts = {}
+    """Compatibility helper: graph reads expose durable events and never mutate state."""
+    if not nodes:
+        return []
+    return _durable_graph_events()
+
+
+def advance_observation_snapshot(
+    data: Dict[str, Any], *, source: str = "discovery", scope: str | None = None
+) -> Dict[str, Any]:
+    """Advance diff state after an explicit, successful observation acquisition."""
+    nodes_list, _, _ = _normalize_collector_data(data)
+    nodes = {node.id: node for node in nodes_list}
+    _overlay_persisted_host_state(nodes)
+    observed_at = _now()
+    hosts: Dict[str, Dict[str, Any]] = {}
     for node in nodes.values():
-        if node.node_type == "host" and node.ip:
-            current_hosts[node.ip] = {
-                "label": node.label, "status": node.status,
-                "risk_score": node.risk_score, "group": node.group,
-            }
-    prev = load_snapshot_state()
-    prev_hosts = prev.get("hosts", {})
-    events: List[GraphEvent] = []
-    current_ips = set(current_hosts.keys())
-    prev_ips = set(prev_hosts.keys())
-
-    for ip in sorted(current_ips - prev_ips):
-        info = current_hosts[ip]
-        events.append(GraphEvent(
-            id=f"evt:new:{ip}:{now}", ts=now, severity="info",
-            title="New Host Observed",
-            summary=f'{info["label"]} appeared on {info["group"]}.',
-            node_id=f"host:{ip}",
-        ))
-    for ip in sorted(prev_ips - current_ips):
-        info = prev_hosts[ip]
-        events.append(GraphEvent(
-            id=f"evt:gone:{ip}:{now}", ts=now, severity="warning",
-            title="Host Missing",
-            summary=f'{info["label"]} is no longer visible.',
-            node_id=f"host:{ip}",
-        ))
-    for ip in sorted(current_ips & prev_ips):
-        cur = current_hosts[ip]
-        old = prev_hosts[ip]
-        if cur["status"] != old.get("status"):
-            sev = "warning" if cur["status"] == "warning" else "info"
-            events.append(GraphEvent(
-                id=f"evt:status:{ip}:{now}", ts=now, severity=sev,
-                title="Host Status Changed",
-                summary=f'{cur["label"]} status: {old.get("status")} → {cur["status"]}.',
-                node_id=f"host:{ip}",
-            ))
-
-    save_snapshot_state({"hosts": current_hosts, "saved_at": now})
-    return events
+        if node.node_type not in ("host", "router") or not node.ip:
+            continue
+        hosts[node.ip] = {
+            "ip": node.ip,
+            "hostname": node.hostname or node.label or node.ip,
+            "label": node.label or node.hostname or node.ip,
+            "mac": node.mac,
+            "status": node.status,
+            "risk_score": node.risk_score,
+            "group": node.group,
+            "last_seen": node.meta.get("last_seen") or observed_at,
+            "observed_at": observed_at,
+            "source": node.meta.get("observation_source") or source,
+        }
+    current = {
+        "hosts": hosts,
+        "saved_at": observed_at,
+        "source": source,
+        "scope": scope or data.get("cidr"),
+    }
+    before = load_snapshot_pair().get("current")
+    advance_snapshot_state(current)
+    diff = diff_snapshots(before, current)
+    if diff.get("comparable"):
+        from core.nexus_db import insert_events
+        events = []
+        for item in diff["appeared"]:
+            events.append({
+                "id": f"evt:observed:new:{item['ip']}:{observed_at}",
+                "ts": observed_at, "severity": "info", "title": "New Host Observed",
+                "summary": f"{item.get('hostname') or item['ip']} appeared in the discovery snapshot.",
+                "ip": item["ip"],
+            })
+        for item in diff["disappeared"]:
+            events.append({
+                "id": f"evt:observed:gone:{item['ip']}:{observed_at}",
+                "ts": observed_at, "severity": "warning", "title": "Host Missing",
+                "summary": f"{item.get('hostname') or item['ip']} is absent from the latest discovery snapshot.",
+                "ip": item["ip"],
+            })
+        for item in diff["changed"]:
+            events.append({
+                "id": f"evt:observed:changed:{item['ip']}:{observed_at}",
+                "ts": observed_at, "severity": "warning", "title": "Host Observation Changed",
+                "summary": "; ".join(item.get("changes") or []), "ip": item["ip"],
+            })
+        if events:
+            insert_events(events)
+    return diff
 
 
 def _load_discovery_cache() -> Dict[str, Any]:
@@ -428,25 +522,10 @@ def build_snapshot() -> GraphSnapshot:
             _add_edge(all_edges, edge)
         all_events.extend(c_events)
 
-    # 3. Cheap live ARP only (no nmap, fast)
-    if not cache:
-        try:
-            from core.nexus_collectors import collect_arp_neighbors, collect_local_interfaces
-            quick = {
-                "arp_neighbors": collect_arp_neighbors(),
-                "local_interfaces": collect_local_interfaces(),
-                "nmap_hosts": [],
-            }
-            q_nodes, q_edges, q_events = _normalize_collector_data(quick)
-            for node in q_nodes:
-                _add_node(all_nodes, node)
-            for edge in q_edges:
-                _add_edge(all_edges, edge)
-            all_events.extend(q_events)
-        except Exception:
-            pass
+    # 3. Hydrate durable host evidence without performing network I/O.
+    _overlay_persisted_host_state(all_nodes)
 
-    # 4. Merge cached services
+    # 4. Merge persisted SQLite services (single operator authority).
     _merge_cached_services(all_nodes, all_edges, all_events)
 
     # 5. Demo data is opt-in. Operational mode never invents hosts or alerts.
@@ -521,7 +600,7 @@ def build_snapshot() -> GraphSnapshot:
     _enrich_nodes_with_personalities(all_nodes)
     return GraphSnapshot(
         title="LANimals",
-        subtitle="Live Network Map",
+        subtitle="Observed Network Map",
         generated_at=_now(),
         nodes=list(all_nodes.values()),
         edges=list(all_edges.values()),
@@ -561,6 +640,11 @@ def _enrich_nodes_with_personalities(nodes: Dict[str, "GraphNode"]) -> None:
         node.meta["personality_stealth"] = p["stealth"]
         node.meta["personality_persistence"] = p["persistence"]
         node.meta["personality_reason"] = p.get("reason", "")
+        node.meta["personality_rule_version"] = p.get("rule_version")
+        try:
+            node.meta["personality_inputs"] = json.loads(p.get("input_summary") or "{}")
+        except Exception:
+            node.meta["personality_inputs"] = {}
         node.meta["personality_color"] = PERSONALITY_COLORS.get(p["personality"], "#ffffff")
         node.meta["xp"] = xp.get("xp", 0)
         node.meta["xp_rank"] = xp.get("rank", "unknown")

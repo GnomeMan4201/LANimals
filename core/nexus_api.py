@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 
-from core.nexus_builder import build_snapshot, save_discovery_cache
+from core.nexus_builder import build_snapshot, save_discovery_cache, advance_observation_snapshot
 from core.nexus_collectors import (
     collect_arp_neighbors,
     collect_local_interfaces,
@@ -54,7 +54,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="LANimals Nexus", version=VERSION, lifespan=lifespan)
+app = FastAPI(title="LANimals", version=VERSION, lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -191,7 +191,12 @@ def _run_discovery(jid: str, cidr: str) -> None:
                     _job_log(jid, f"    [{s['status'].upper()}] {s['ip']}  risk={s['risk_score']}")
         except Exception as _re:
             _job_log(jid, f"  Risk engine error: {_re}")
-        _job_done(jid, {"host_count": len(seen), "hosts": list(seen.values())})
+        diff = advance_observation_snapshot(cache_data, source="discovery", scope=cidr)
+        if diff.get("comparable"):
+            _job_log(jid, f"  Observation diff: {diff['summary']}")
+        else:
+            _job_log(jid, "  Observation baseline recorded; run Discovery again for a diff")
+        _job_done(jid, {"host_count": len(seen), "hosts": list(seen.values()), "diff": diff})
     except Exception as exc:
         _job_log(jid, f"ERROR: {exc}")
         _job_done(jid, None, str(exc))
@@ -294,14 +299,19 @@ def _run_service_scan(jid: str, ip: str) -> None:
     try:
         _job_log(jid, f"Service fingerprint: {ip}")
         services = collect_services_for_ip(ip)
-        state = load_service_state()
-        svc_map = state.get("services_by_ip", {})
-        svc_map[ip] = services
-        state["services_by_ip"] = svc_map
-        save_service_state(state)
+        # SQLite is the operator authority. Keep the JSON cache only as a
+        # best-effort compatibility artifact for historical modules.
+        upsert_services(services)
+        try:
+            state = load_service_state()
+            svc_map = state.get("services_by_ip", {})
+            svc_map[ip] = services
+            state["services_by_ip"] = svc_map
+            save_service_state(state)
+        except Exception:
+            pass
         for svc in services:
             _job_log(jid, f"  {svc.get('protocol','tcp'):4s}/{svc.get('port','?'):6s}  {svc.get('service_name',''):16s}  {svc.get('product','')} {svc.get('version','')}")
-        upsert_services(services)
         insert_events([{
             "id": f"evt:svc:{jid}",
             "ts": _now_iso(),
@@ -433,8 +443,7 @@ def get_report(name: str):
     return FileResponse(path, media_type="text/html", filename=safe_name)
 @app.get("/api/logs")
 def get_logs():
-    snap = build_snapshot()
-    return {"events": [e.model_dump() for e in snap.events[:30]]}
+    return {"events": get_recent_events(limit=30)}
 
 
 @app.get("/api/sysinfo")
@@ -444,8 +453,7 @@ def get_sysinfo():
 
 @app.get("/api/services/{ip}")
 def get_services(ip: str):
-    state = load_service_state()
-    services = state.get("services_by_ip", {}).get(ip, [])
+    services = get_services_for_ip(ip)
     return {"ip": ip, "services": services, "count": len(services)}
 
 
@@ -970,55 +978,13 @@ def rescore():
 
 @app.get("/api/diff")
 def network_diff():
-    """Compare current DB state to previous snapshot. Shows what changed."""
-    from core.nexus_state import load_snapshot_state
+    """Compare the last two explicit full Discovery observations."""
+    from core.nexus_state import diff_snapshots, load_snapshot_pair
 
-    current_hosts = {h["ip"]: h for h in get_all_hosts()}
-    prev_state = load_snapshot_state()
-    prev_hosts: dict = prev_state.get("hosts", {})
-
-    current_ips = set(current_hosts.keys())
-    prev_ips = set(prev_hosts.keys())
-
-    appeared = []
-    disappeared = []
-    changed = []
-
-    for ip in sorted(current_ips - prev_ips):
-        h = current_hosts[ip]
-        appeared.append({
-            "ip": ip, "hostname": h.get("hostname", ip),
-            "mac": h.get("mac", ""), "vendor": h.get("vendor", ""),
-            "first_seen": h.get("first_seen", ""),
-        })
-
-    for ip in sorted(prev_ips - current_ips):
-        prev = prev_hosts[ip]
-        disappeared.append({
-            "ip": ip, "hostname": prev.get("label", ip),
-            "last_seen": prev.get("last_seen", ""),
-        })
-
-    for ip in sorted(current_ips & prev_ips):
-        cur = current_hosts[ip]
-        prev = prev_hosts[ip]
-        diffs = []
-        if cur.get("status") != prev.get("status"):
-            diffs.append(f"status: {prev.get('status')} → {cur.get('status')}")
-        if cur.get("risk_score") != prev.get("risk_score"):
-            diffs.append(f"risk: {prev.get('risk_score')} → {cur.get('risk_score')}")
-        if cur.get("mac") and prev.get("mac") and cur["mac"].lower() != prev["mac"].lower():
-            diffs.append(f"MAC: {prev['mac']} → {cur['mac']}")
-        if diffs:
-            changed.append({"ip": ip, "hostname": cur.get("hostname", ip), "changes": diffs})
-
-    return {
-        "appeared": appeared,
-        "disappeared": disappeared,
-        "changed": changed,
-        "summary": f"+{len(appeared)} new  -{len(disappeared)} gone  ~{len(changed)} changed",
-        "generated_at": _now_iso(),
-    }
+    pair = load_snapshot_pair()
+    result = diff_snapshots(pair.get("previous"), pair.get("current"))
+    result["generated_at"] = _now_iso()
+    return result
 
 
 # ── Watchdog ──────────────────────────────────────────────────────────────────

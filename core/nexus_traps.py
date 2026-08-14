@@ -57,6 +57,7 @@ _HTTP_CAPTURE_RESPONSE = b"""HTTP/1.1 302 Found\r\nLocation: /\r\nContent-Length
 # ── Trap state ────────────────────────────────────────────────────────────────
 _ACTIVE_TRAPS: Dict[str, Dict[str, Any]] = {}
 _TRAPS_LOCK = threading.Lock()
+_TRAPS_LOADED = False
 
 
 def _now() -> str:
@@ -313,17 +314,44 @@ def _save_traps() -> None:
 
 def _load_traps_state() -> Dict[str, Any]:
     try:
-        if TRAPS_FILE.exists():
-            return json.loads(TRAPS_FILE.read_text())
+        if TRAPS_FILE.exists() and not TRAPS_FILE.is_symlink():
+            data = json.loads(TRAPS_FILE.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
     except Exception:
         pass
     return {}
+
+
+def _ensure_traps_loaded() -> None:
+    global _TRAPS_LOADED
+    with _TRAPS_LOCK:
+        if _TRAPS_LOADED:
+            return
+        persisted = _load_traps_state()
+        for trap_id, value in persisted.items():
+            if not isinstance(value, dict):
+                continue
+            trap = dict(value)
+            trap["id"] = str(trap.get("id") or trap_id)
+            trap.pop("thread", None)
+            trap.pop("stop_event", None)
+            if trap.get("status") in {"active", "starting"}:
+                trap["status"] = "interrupted"
+            hits = trap.get("hits") if isinstance(trap.get("hits"), list) else []
+            trap["hits"] = hits[-100:]
+            try:
+                trap["hit_count"] = max(int(trap.get("hit_count", 0)), len(trap["hits"]))
+            except (TypeError, ValueError):
+                trap["hit_count"] = len(trap["hits"])
+            _ACTIVE_TRAPS[trap["id"]] = trap
+        _TRAPS_LOADED = True
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
 def deploy_trap(trap_type: str, port: int, name: str,
                 banner_key: str = "generic") -> Dict[str, Any]:
     """Deploy a single trap. Returns trap info dict."""
+    _ensure_traps_loaded()
     import uuid
     trap_id = str(uuid.uuid4())[:8]
 
@@ -372,6 +400,7 @@ def deploy_trap(trap_type: str, port: int, name: str,
 
 
 def stop_trap(trap_id: str) -> bool:
+    _ensure_traps_loaded()
     with _TRAPS_LOCK:
         trap = _ACTIVE_TRAPS.get(trap_id)
         if not trap:
@@ -386,6 +415,7 @@ def stop_trap(trap_id: str) -> bool:
 
 
 def get_all_traps() -> List[Dict[str, Any]]:
+    _ensure_traps_loaded()
     with _TRAPS_LOCK:
         return [
             {k: v for k, v in t.items() if k not in ("stop_event", "thread")}
@@ -394,6 +424,7 @@ def get_all_traps() -> List[Dict[str, Any]]:
 
 
 def get_trap(trap_id: str) -> Optional[Dict[str, Any]]:
+    _ensure_traps_loaded()
     with _TRAPS_LOCK:
         t = _ACTIVE_TRAPS.get(trap_id)
         if not t:
@@ -402,6 +433,7 @@ def get_trap(trap_id: str) -> Optional[Dict[str, Any]]:
 
 
 def get_trap_hits(trap_id: str) -> List[Dict[str, Any]]:
+    _ensure_traps_loaded()
     with _TRAPS_LOCK:
         t = _ACTIVE_TRAPS.get(trap_id)
         return list(t.get("hits", [])) if t else []
@@ -447,6 +479,7 @@ def deploy_bundle(bundle_name: str = "default") -> List[Dict[str, Any]]:
 
 def get_all_hits() -> List[Dict[str, Any]]:
     """All hits across all traps, sorted newest first."""
+    _ensure_traps_loaded()
     all_hits = []
     with _TRAPS_LOCK:
         for trap in _ACTIVE_TRAPS.values():
