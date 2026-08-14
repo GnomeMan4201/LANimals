@@ -264,8 +264,11 @@ def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
     from core.nexus_db import get_mac_baseline
 
     cidr = validate_scan_cidr(cidr)
-    current_arp = filter_observations_to_cidr(collect_arp_neighbors(), cidr)
+    # Run the active sweep before reading the neighbor cache. On a cold or
+    # recently-flushed cache, the sweep itself causes the kernel to resolve
+    # directly-connected peers; reading ARP first can miss a real MAC change.
     current_nmap = filter_observations_to_cidr(collect_nmap_ping_sweep(cidr=cidr), cidr)
+    current_arp = filter_observations_to_cidr(collect_arp_neighbors(), cidr)
 
     current: Dict[str, Dict[str, Any]] = {}
     for row in current_arp + current_nmap:
