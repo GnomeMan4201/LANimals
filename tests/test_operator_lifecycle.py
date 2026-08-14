@@ -95,3 +95,25 @@ class OperatorLifecycleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TrapBundleResultContractTests(unittest.TestCase):
+    def test_bundle_counts_status_not_presence_of_error_key(self) -> None:
+        fake = [
+            {"id": "ok1", "name": "one", "port": 1, "status": "active", "error": None},
+            {"id": "ok2", "name": "two", "port": 2, "status": "active", "error": None},
+            {"id": "bad", "name": "three", "port": 3, "status": "error", "error": "busy"},
+        ]
+        client = TestClient(app)
+        with (
+            patch.object(nexus_api, "deploy_bundle", return_value=fake),
+            patch.object(nexus_api, "insert_events"),
+        ):
+            payload = client.post(
+                "/api/traps/bundle/default",
+                headers={"X-LANimals-Operator": "1"},
+            ).json()
+
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["active_count"], 2)
+        self.assertEqual(payload["failure_count"], 1)

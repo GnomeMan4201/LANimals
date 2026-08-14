@@ -71,3 +71,9 @@ def test_page_open_is_read_only_with_respect_to_network_collection_and_mutation(
 def test_major_inline_actions_surface_backend_errors():
     for label in ["anomaly scan", "watchdog", "network diff", "risk rescore", "trap deployment", "stop all traps", "note save"]:
         assert f"showActionError('{label}'" in UI
+
+
+def test_trap_bundle_ui_distinguishes_partial_failure_from_success():
+    assert "const failures=(d.deployed||[]).filter(t=>t.status==='error'||t.error);" in UI
+    assert "setStatus('trap bundle partial','error');" in UI
+    assert "d.failure_count??failures.length" in UI

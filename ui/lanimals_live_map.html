@@ -1047,9 +1047,17 @@ async function deployTrapBundle(){
   setStatus('deploying traps…','scanning');
   try{
     const d=await apiPost('/api/traps/bundle/default');
-    addScanLine(`${d.active_count} traps deployed`,'ok');
-    d.deployed?.forEach(t=>addScanLine(`  ◈ ${t.name} port=${t.port} ${t.status}`,'ok'));
-    setStatus('traps deployed','ready');
+    const failures=(d.deployed||[]).filter(t=>t.status==='error'||t.error);
+    addScanLine(`${d.active_count} traps active · ${d.failure_count??failures.length} failed`,failures.length?'warn':'ok');
+    d.deployed?.forEach(t=>{
+      const failed=t.status==='error'||t.error;
+      addScanLine(`  ◈ ${t.name||'trap'} port=${t.port??'?'} ${failed?'ERROR: '+(t.error||t.status):t.status}`,failed?'err':'ok');
+    });
+    if(failures.length){
+      setStatus('trap bundle partial','error');
+    }else{
+      setStatus('traps deployed','ready');
+    }
     await fetchTraps(); await fetchGraph(); activateTab('traps');
   }catch(e){
     showActionError('trap deployment',e);

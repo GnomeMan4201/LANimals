@@ -1154,15 +1154,22 @@ def create_trap(payload: TrapDeployPayload):
 @app.post("/api/traps/bundle/{bundle_name}")
 def deploy_trap_bundle(bundle_name: str):
     deployed = deploy_bundle(bundle_name)
-    active = [t for t in deployed if "error" not in t]
+    active = [t for t in deployed if t.get("status") == "active"]
+    failed = [t for t in deployed if t.get("status") == "error" or t.get("error")]
     insert_events([{
         "id": f"evt:bundle:{bundle_name}:{_now_iso()}",
         "ts": _now_iso(),
-        "severity": "info",
+        "severity": "warning" if failed else "info",
         "title": f"Trap bundle deployed: {bundle_name}",
-        "summary": f"{len(active)} traps active",
+        "summary": f"{len(active)} traps active, {len(failed)} failed",
     }])
-    return {"ok": True, "bundle": bundle_name, "deployed": deployed, "active_count": len(active)}
+    return {
+        "ok": not failed,
+        "bundle": bundle_name,
+        "deployed": deployed,
+        "active_count": len(active),
+        "failure_count": len(failed),
+    }
 
 
 @app.delete("/api/traps/{trap_id}")
