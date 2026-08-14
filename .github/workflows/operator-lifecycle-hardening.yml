@@ -50,6 +50,8 @@ jobs:
         run: python scripts/apply_operator_lifecycle_hardening.py
 
       - name: Run focused regression tests
+        env:
+          PYTHONPATH: .
         run: |
           pytest tests/test_operator_lifecycle.py tests/test_api_contracts.py tests/test_capability_manifest.py tests/test_product_identity.py -v --tb=short
 
