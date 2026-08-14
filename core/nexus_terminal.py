@@ -61,8 +61,8 @@ def parse_terminal_command(raw: str) -> TerminalCommand:
         raise TerminalCommandError("scan accepts at most one target")
     if operation in {"services", "cve"} and not target:
         raise TerminalCommandError(f"scan {operation} requires an IPv4 target")
-    if operation == "arp" and target:
-        raise TerminalCommandError("scan arp does not accept a target")
+    if operation == "arp" and target and "/" not in target:
+        raise TerminalCommandError("scan arp target must be a CIDR")
     return TerminalCommand(f"scan:{operation}", target)
 
 
@@ -74,7 +74,7 @@ def terminal_help() -> list[str]:
         "  events                     show recent events",
         "  baseline                   show unresolved identity changes",
         "  sysinfo                    show local system inventory",
-        "  scan arp                   refresh ARP observations",
+        "  scan arp [CIDR]            refresh ARP observations in approved scope",
         "  scan discovery [CIDR]      run bounded LAN discovery",
         "  scan hostmap [CIDR]        resolve hosts in approved scope",
         "  scan rogue [CIDR]          compare observations to baseline",
