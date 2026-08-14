@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](#)
-[![Release](https://img.shields.io/badge/release-v1.0.0-blue.svg)](https://github.com/GnomeMan4201/LANimals/releases)
+[![Latest tagged release](https://img.shields.io/badge/latest_tag-v1.0.0-blue.svg)](https://github.com/GnomeMan4201/LANimals/releases)
 
 ---
 
@@ -54,6 +54,10 @@ python -m pip install -r requirements.txt
 sudo apt install nmap
 ```
 
+LANimals currently uses a checkout-first installation because its CLI, browser UI,
+assets, and local state are operated together. `pip install .` is intentionally not
+advertised as a supported installation path.
+
 ## Run
 ```bash
 bash lan.sh
@@ -71,6 +75,29 @@ bash lan.sh
 The browser terminal is an allowlisted LANimals command bridge, not an operating-system shell. A non-loopback server bind is refused unless both `LANIMALS_HOST` and `LANIMALS_ALLOW_REMOTE=1` are set. If remote access is necessary, put LANimals behind authenticated network access.
 
 Direct state-changing API calls require `X-LANimals-Operator: 1`. This non-simple header prevents ordinary cross-site forms from silently triggering localhost operations; it is a browser boundary, not remote-user authentication.
+
+## CLI
+
+Run the command center directly from any working directory:
+
+```bash
+./bin/lanimals help
+./bin/lanimals version
+./bin/lanimals dashboard
+```
+
+To make the checkout's commands available in the current shell:
+
+```bash
+export PATH="$PWD/bin:$PATH"
+lanimals help
+```
+
+The dispatcher resolves its own checkout, so supported commands do not depend on
+the caller's working directory. Network inspection commands may require elevated
+capabilities. Browser scans and targeted `netmap`/`vulnscan` operations apply the
+same approved-private-CIDR boundary; older standalone research modules are not all
+part of that supported operator path.
 
 ---
 

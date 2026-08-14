@@ -1,2 +1,4 @@
 #!/usr/bin/env bash
-python3 modules/tripwire_monitor.py "$@"
+set -e
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+exec python3 "$ROOT/modules/tripwire_monitor.py" "$@"

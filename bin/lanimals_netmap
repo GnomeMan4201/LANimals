@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+
 # Formatting
-BOLD=$(tput bold)
-NORMAL=$(tput sgr0)
+BOLD=$(tput bold 2>/dev/null || true)
+NORMAL=$(tput sgr0 2>/dev/null || true)
 MAROON='\033[38;5;1m'
 RED='\033[31m'
 GREEN='\033[32m'
@@ -140,7 +142,7 @@ scan_target() {
     
     # Ping the target
     echo -e "${BOLD}${MAROON}[ PING ]${NORMAL} Testing connectivity..."
-    ping -c 1 -W 1 $target > /dev/null 2>&1
+    ping -c 1 -W 1 "$target" > /dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Target is reachable"
     else
@@ -148,7 +150,7 @@ scan_target() {
     fi
     
     # Get MAC address
-    MAC=$(ip neigh | grep "$target" | awk '{print $5}')
+    MAC=$(ip neigh | grep -F -- "$target" | awk '{print $5}')
     if [ -n "$MAC" ]; then
         echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} MAC Address: $MAC"
     fi
@@ -166,7 +168,7 @@ scan_target() {
             SERVICE=$(echo $PORT_INFO | cut -d: -f2)
             
             # Check if port is open
-            timeout 1 nc -zv $target $PORT 2>&1 | grep -i "succeeded" > /dev/null
+            timeout 1 nc -zv "$target" "$PORT" 2>&1 | grep -i "succeeded" > /dev/null
             if [ $? -eq 0 ]; then
                 echo -e "${BOLD}${GREEN}[ OPEN ]${NORMAL} Port $PORT ($SERVICE)"
             fi
@@ -177,7 +179,7 @@ scan_target() {
     
     # Try to identify OS (very basic)
     echo -e "${BOLD}${MAROON}[ FINGERPRINT ]${NORMAL} Attempting OS identification..."
-    TTL=$(ping -c 1 -W 1 $target 2>/dev/null | grep "ttl=" | cut -d" " -f6 | cut -d"=" -f2)
+    TTL=$(ping -c 1 -W 1 "$target" 2>/dev/null | grep "ttl=" | cut -d" " -f6 | cut -d"=" -f2)
     
     if [ -n "$TTL" ]; then
         if [ $TTL -le 64 ]; then
@@ -194,7 +196,7 @@ scan_target() {
 
 # Command line parsing
 if [ "$1" = "--help" ]; then
-    echo "Usage: lanimals_netmap [OPTIONS]"
+    echo "Usage: lanimals netmap [OPTIONS]"
     echo ""
     echo "Options:"
     echo "  --map              Generate a visual network map (default)"
@@ -213,6 +215,13 @@ for arg in "$@"; do
             MODE="scan"
             TARGET="${arg#*=}"
             ;;
+        --map)
+            MODE="map"
+            ;;
+        *)
+            echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Unknown option: $arg" >&2
+            exit 2
+            ;;
     esac
 done
 
@@ -220,7 +229,11 @@ done
 if [ "$MODE" = "map" ]; then
     create_network_map
 elif [ "$MODE" = "scan" ] && [ -n "$TARGET" ]; then
-    scan_target $TARGET
+    if ! TARGET=$(PYTHONPATH="$ROOT" python3 -m core.validate_scope_cli "$TARGET"); then
+        echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Refusing target outside the approved LAN scope." >&2
+        exit 2
+    fi
+    scan_target "$TARGET"
 else
     echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Invalid arguments. Use --help for usage information."
 fi

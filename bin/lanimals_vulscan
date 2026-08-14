@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 
+set -e
+
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+
 # Formatting
-BOLD=$(tput bold)
-NORMAL=$(tput sgr0)
+BOLD=$(tput bold 2>/dev/null || true)
+NORMAL=$(tput sgr0 2>/dev/null || true)
 MAROON='\033[38;5;1m'
 RED='\033[31m'
 GREEN='\033[32m'
@@ -48,10 +52,10 @@ SUBNET=$(ip -o -4 addr show $PRIMARY_INTERFACE | awk '{print $4}' | cut -d/ -f1 
 
 # Function to display help
 show_help() {
-    echo "Usage: lanimals_vulnscan [OPTIONS]"
+    echo "Usage: lanimals vulnscan [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --target=HOST/NETWORK    Specify target (default: local subnet)"
+    echo "  --target=HOST/NETWORK    Approved private target (default: local subnet)"
     echo "  --ports=PORTS            Specify ports (default: common ports)"
     echo "  --intense                Perform intense scan (more thorough but slower)"
     echo "  --stealth                Perform stealth scan (less detectable)"
@@ -61,9 +65,9 @@ show_help() {
     echo "  --help                   Show this help message"
     echo ""
     echo "Examples:"
-    echo "  lanimals_vulnscan --target=192.168.1.1"
-    echo "  lanimals_vulnscan --target=192.168.1.0/24 --intense"
-    echo "  lanimals_vulnscan --target=example.com --vuln --ssl"
+    echo "  lanimals vulnscan --target=192.168.1.1"
+    echo "  lanimals vulnscan --target=192.168.1.0/24 --intense"
+    echo "  LANIMALS_ALLOWED_CIDRS=192.168.1.0/24 lanimals vulnscan --target=192.168.1.10 --vuln"
 }
 
 # Function to perform basic scan
@@ -78,7 +82,7 @@ basic_scan() {
     
     # Run the scan, redirect to log file and display progress
     # Removed -F flag as it conflicts with -p
-    sudo nmap -sV -T4 -O --version-light -p $ports $target | tee "$output"
+    sudo nmap -sV -T4 -O --version-light -p "$ports" "$target" | tee "$output"
     
     echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Basic scan completed."
 }
@@ -95,7 +99,7 @@ intense_scan() {
     echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} This scan is more thorough but slower and more detectable."
     
     # Run the scan, redirect to log file and display progress
-    sudo nmap -sS -sV -T4 -A -O -p $ports $target | tee "$output"
+    sudo nmap -sS -sV -T4 -A -O -p "$ports" "$target" | tee "$output"
     
     echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Intense scan completed."
 }
@@ -112,7 +116,7 @@ stealth_scan() {
     echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} This scan is less likely to be detected but may miss some information."
     
     # Run the scan, redirect to log file and display progress
-    sudo nmap -sS -T2 -f -D RND:5 -p $ports $target | tee "$output"
+    sudo nmap -sS -T2 -f -D RND:5 -p "$ports" "$target" | tee "$output"
     
     echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Stealth scan completed."
 }
@@ -127,7 +131,7 @@ vuln_scan() {
     echo -e "${BOLD}${YELLOW}[ WARN ]${NORMAL} This scan can take a long time to complete."
     
     # Run the scan, redirect to log file and display progress
-    sudo nmap --script vuln $target | tee "$output"
+    sudo nmap --script vuln "$target" | tee "$output"
     
     echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} Vulnerability scan completed."
 }
@@ -141,7 +145,7 @@ ssl_scan() {
     echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} Results will be saved to $output"
     
     # Run the scan, redirect to log file and display progress
-    sudo nmap --script ssl-enum-ciphers,ssl-heartbleed,ssl-poodle,ssl-ccs-injection $target | tee "$output"
+    sudo nmap --script ssl-enum-ciphers,ssl-heartbleed,ssl-poodle,ssl-ccs-injection "$target" | tee "$output"
     
     echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} SSL/TLS vulnerability scan completed."
 }
@@ -199,6 +203,16 @@ fi
 if [ -z "$SCAN_TARGET" ]; then
     SCAN_TARGET="$SUBNET"
     echo -e "${BOLD}${MAROON}[ INFO ]${NORMAL} No target specified, using default: $SCAN_TARGET"
+fi
+
+if [[ ! "$SCAN_PORTS" =~ ^[0-9,-]+$ ]]; then
+    echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Invalid port list. Use digits, commas, and ranges only." >&2
+    exit 2
+fi
+
+if ! SCAN_TARGET=$(PYTHONPATH="$ROOT" python3 -m core.validate_scope_cli "$SCAN_TARGET"); then
+    echo -e "${BOLD}${RED}[ ERROR ]${NORMAL} Refusing target outside the approved LAN scope." >&2
+    exit 2
 fi
 
 # Run the selected scan type

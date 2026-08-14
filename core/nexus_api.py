@@ -39,12 +39,13 @@ from core.nexus_scope import (
 from core.nexus_terminal import (
     TerminalCommandError, parse_terminal_command, terminal_help,
 )
+from core.version import VERSION
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_FILE = ROOT / "ui" / "lanimals_live_map.html"
 REPORTS_DIR = ROOT / "reports"
 
-app = FastAPI(title="LANimals Nexus", version="2.0.0")
+app = FastAPI(title="LANimals Nexus", version=VERSION)
 
 
 @app.middleware("http")
@@ -346,7 +347,7 @@ def favicon():
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "service": "lanimals-nexus", "version": "2.0.0"}
+    return {"ok": True, "service": "lanimals-nexus", "version": VERSION}
 
 
 @app.get("/api/scope")
@@ -742,7 +743,7 @@ def enrich_vt(ip: str):
     try:
         req = urllib.request.Request(
             f"https://www.virustotal.com/api/v3/ip_addresses/{ip}",
-            headers={"x-apikey": api_key, "User-Agent": "LANimals/2.0"}
+            headers={"x-apikey": api_key, "User-Agent": f"LANimals/{VERSION}"}
         )
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = _json.loads(resp.read())

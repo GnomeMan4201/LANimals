@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+ROOT="$(dirname "$SCRIPT_DIR")"
+VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+
 # Formatting
-BOLD=$(tput bold)
-NORMAL=$(tput sgr0)
+BOLD=$(tput bold 2>/dev/null || true)
+NORMAL=$(tput sgr0 2>/dev/null || true)
 MAROON='\033[38;5;1m'
 RED='\033[31m'
 GREEN='\033[32m'
@@ -53,46 +59,48 @@ mkdir -p ~/.lanimals/logs
 # Handle command line arguments
 case "$1" in
     dash|dashboard)
-        lanimals_dashboard
+        shift
+        exec "$SCRIPT_DIR/lanimals_dashboard" "$@"
         ;;
     recon)
         shift
-        lanimals_recon "$@"
+        exec "$SCRIPT_DIR/lanimals_recon" "$@"
         ;;
     alert)
         shift
-        lanimals_alert "$@"
+        exec "$SCRIPT_DIR/lanimals_alert" "$@"
         ;;
     monitor)
-        lanimals_alert --monitor
+        shift
+        exec "$SCRIPT_DIR/lanimals_alert" --monitor "$@"
         ;;
     traffic)
         shift
-        lanimals_traffic "$@"
+        exec "$SCRIPT_DIR/lanimals_traffic" "$@"
         ;;
     netmap)
         shift
-        lanimals_netmap "$@"
+        exec "$SCRIPT_DIR/lanimals_netmap" "$@"
         ;;
     viznet)
         shift
-        lanimals_viznet "$@"
+        exec "$SCRIPT_DIR/lanimals_viznet" "$@"
         ;;
     fortress)
         shift
-        lanimals_fortress "$@"
+        exec "$SCRIPT_DIR/lanimals_fortress" "$@"
         ;;
     sysinfo)
         shift
-        lanimals_sysinfo "$@"
+        exec "$SCRIPT_DIR/lanimals_sysinfo" "$@"
         ;;
     hunter)
         shift
-        lanimals_hunter "$@"
+        exec "$SCRIPT_DIR/lanimals_hunter" "$@"
         ;;
     vulnscan)
         shift
-        lanimals_vulnscan "$@"
+        exec "$SCRIPT_DIR/lanimals_vulscan" "$@"
         ;;
     threats)
         if [ -f ~/.lanimals/logs/threats.log ]; then
@@ -102,16 +110,21 @@ case "$1" in
             echo "No threats logged yet."
         fi
         ;;
-    version)
-        echo -e "${BOLD}${MAROON}LANimals${NORMAL} - Version 1.1.0"
+    version|--version|-V)
+        echo -e "${BOLD}${MAROON}LANimals${NORMAL} - Version ${VERSION}"
         echo -e "Network Security Toolkit"
-        echo -e "Released: May 2025"
         ;;
     update)
-        echo -e "${BOLD}${MAROON}[ UPDATE ]${NORMAL} Checking for updates..."
-        echo -e "${BOLD}${GREEN}[ OK ]${NORMAL} LANimals is up to date (Version 1.1.0)"
+        echo -e "${BOLD}${MAROON}[ UPDATE ]${NORMAL} Automatic update checking is not implemented."
+        echo -e "Installed version: ${VERSION}"
+        echo "Compare releases at https://github.com/GnomeMan4201/LANimals/releases"
         ;;
-    *|help)
+    help|--help|-h|"")
         show_help
+        ;;
+    *)
+        echo "Unknown LANimals command: $1" >&2
+        echo "Run 'lanimals help' for the supported command list." >&2
+        exit 2
         ;;
 esac

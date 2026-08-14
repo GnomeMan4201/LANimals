@@ -1,2 +1,4 @@
 #!/usr/bin/env bash
-python3 modules/traffic_tap.py "$@"
+set -e
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+exec python3 "$ROOT/modules/traffic_tap.py" "$@"

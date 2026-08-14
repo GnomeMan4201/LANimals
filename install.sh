@@ -1,32 +1,22 @@
 #!/usr/bin/env bash
-set -e
+set -eu
+
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 RED="\033[0;31m"
 GRN="\033[0;32m"
 NC="\033[0m"
 
 echo -e "${GRN}[*] Installing LANimals requirements...${NC}"
-pip3 install --user -r requirements.txt
-
-# Try to detect if venv/conda is active, else install system-wide
-if [[ -d "venv" ]] || [[ -n "$VIRTUAL_ENV" ]]; then
-    echo -e "${GRN}[i] Using virtual environment. Skipping user PATH change.${NC}"
+if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+    python3 -m pip install -r "$ROOT/requirements.txt"
 else
-    # Add to .bashrc and .zshrc for PATH persistency
-    LA_BIN="$PWD/bin"
-    if [[ ":$PATH:" != *":$LA_BIN:"* ]]; then
-        echo -e "\n# LANimals CLI tools" >> ~/.bashrc
-        echo "export PATH=\"$LA_BIN:\$PATH\"" >> ~/.bashrc
-        echo -e "\n# LANimals CLI tools" >> ~/.zshrc
-        echo "export PATH=\"$LA_BIN:\$PATH\"" >> ~/.zshrc
-        echo -e "${GRN}[+] Added LANimals bin to PATH in .bashrc and .zshrc${NC}"
-    fi
-    export PATH="$LA_BIN:$PATH"
+    python3 -m pip install --user -r "$ROOT/requirements.txt"
 fi
 
-echo -e "${GRN}[] LANimals installed.${NC}\n"
-echo -e "${RED}To use LANimals from any terminal, open a new shell or run:${NC}"
-echo -e "    export PATH=\"$PWD/bin:\$PATH\"\n"
+echo -e "${GRN}[+] LANimals dependencies installed.${NC}\n"
+echo -e "${RED}To use the checkout-first CLI in this shell, run:${NC}"
+echo -e "    export PATH=\"$ROOT/bin:\$PATH\"\n"
 
 echo -e "${GRN}Example commands:${NC}"
 echo "    lanimals_sysinfo        # System info"
@@ -48,6 +38,6 @@ echo "    lanimals_viznet         # Interactive network viz"
 echo "    lanimals_vulscan        # Vuln scanner"
 echo "    lanimals_netmap         # Visual network map"
 echo "    lanimals_recon          # Autonomous recon"
-echo "    lanimals_dash           # LANimals dashboard"
+echo "    lanimals dashboard      # LANimals browser dashboard"
 echo
-echo -e "${RED}Run: lanimals_sysinfo or any other module command.${NC}"
+echo -e "${RED}Run: $ROOT/bin/lanimals help${NC}"
