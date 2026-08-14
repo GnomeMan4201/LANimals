@@ -49,6 +49,19 @@ jobs:
       - name: Apply fail-closed patch
         run: python scripts/apply_operator_lifecycle_hardening.py
 
+      - name: Add report validator dependency
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('core/nexus_api.py')
+          text = path.read_text(encoding='utf-8')
+          old = 'import json\nimport threading\n'
+          new = 'import json\nimport re\nimport threading\n'
+          if text.count(old) != 1:
+              raise SystemExit('nexus_api import block drifted')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
       - name: Run focused regression tests
         env:
           PYTHONPATH: .
