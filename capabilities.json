@@ -3,6 +3,7 @@
   "product": "LANimals",
   "version": "2.1.0",
   "updated": "2026-08-14",
+  "site_contract": "site_capabilities.json",
   "status_definitions": {
     "implemented_tested": "Implemented in the supported runtime and covered by automated contract tests.",
     "implemented_local_runtime": "Implemented, but meaningful execution requires a self-hosted Linux runtime, local interfaces, system tools, or optional credentials.",
@@ -81,8 +82,26 @@
       ],
       "evidence": [
         "core/nexus_api.py",
+        "core/nexus_terminal.py",
         "tests/test_api_contracts.py",
         "tests/test_contracts.py"
+      ]
+    },
+    {
+      "id": "browser-runtime-contract",
+      "label": "Read-only page initialization, visible route wiring, and fail-closed browser mutation feedback",
+      "status": "implemented_tested",
+      "routes": [
+        "/api/graph",
+        "/api/stats",
+        "/api/jobs",
+        "/api/jobs/{jid}"
+      ],
+      "evidence": [
+        "ui/lanimals_live_map.html",
+        "docs/BROWSER_RUNTIME_CONTRACT.md",
+        "tests/test_browser_contract.py",
+        "tests/test_operator_lifecycle.py"
       ]
     },
     {
@@ -91,6 +110,9 @@
       "status": "implemented_tested",
       "routes": [
         "/api/hosts",
+        "/api/hosts/{ip}/services",
+        "/api/hosts/{ip}/events",
+        "/api/hosts/{ip}/notes",
         "/api/events",
         "/api/baseline"
       ],
@@ -105,6 +127,7 @@
       "label": "Explicit accept/defer MAC baseline review",
       "status": "implemented_tested",
       "routes": [
+        "/api/baseline",
         "/api/baseline/accept",
         "/api/baseline/defer"
       ],
@@ -124,6 +147,19 @@
       "evidence": [
         "core/nexus_risk.py",
         "tests/test_core.py"
+      ]
+    },
+    {
+      "id": "observation-diff",
+      "label": "Difference between the last two explicit full Discovery observations",
+      "status": "implemented_tested",
+      "routes": [
+        "/api/diff"
+      ],
+      "evidence": [
+        "core/nexus_state.py",
+        "core/nexus_api.py",
+        "tests/test_state_evidence_integrity.py"
       ]
     },
     {
@@ -153,7 +189,8 @@
       "evidence": [
         "core/nexus_collectors.py",
         "core/nexus_scope.py",
-        "core/nexus_api.py"
+        "core/nexus_api.py",
+        "tests/test_observation_scope.py"
       ]
     },
     {
@@ -166,7 +203,8 @@
       "evidence": [
         "core/nexus_collectors.py",
         "core/nexus_db.py",
-        "core/nexus_api.py"
+        "core/nexus_api.py",
+        "tests/test_observation_scope.py"
       ]
     },
     {
@@ -204,6 +242,61 @@
       "evidence": [
         "core/nexus_collectors.py",
         "core/nexus_api.py"
+      ]
+    },
+    {
+      "id": "local-anomaly-observation",
+      "label": "Local outbound connection observation and anomaly eventing",
+      "status": "implemented_local_runtime",
+      "routes": [
+        "/api/scan/anomaly"
+      ],
+      "evidence": [
+        "core/nexus_api.py",
+        "ui/lanimals_live_map.html"
+      ]
+    },
+    {
+      "id": "baseline-watchdog",
+      "label": "Compare accepted baseline hosts with current local ARP presence",
+      "status": "implemented_local_runtime",
+      "routes": [
+        "/api/watchdog"
+      ],
+      "evidence": [
+        "core/nexus_api.py",
+        "ui/lanimals_live_map.html"
+      ]
+    },
+    {
+      "id": "deception-traps",
+      "label": "Local honeypot listeners, trap state, hits, bundles, and operator stop controls",
+      "status": "implemented_local_runtime",
+      "routes": [
+        "/api/traps",
+        "/api/traps/bundle/{bundle_name}",
+        "/api/traps/{trap_id}",
+        "/api/traps/{trap_id}/hits",
+        "/api/traps/hits/all"
+      ],
+      "evidence": [
+        "core/nexus_traps.py",
+        "core/nexus_api.py",
+        "tests/test_operator_lifecycle.py",
+        "tests/test_state_evidence_integrity.py",
+        "scripts/smoke_operator_journey.sh"
+      ]
+    },
+    {
+      "id": "security-audit-summary",
+      "label": "Derived security posture summary from persisted LANimals evidence",
+      "status": "implemented_local_runtime",
+      "routes": [
+        "/api/audit"
+      ],
+      "evidence": [
+        "core/nexus_api.py",
+        "ui/lanimals_live_map.html"
       ]
     },
     {
