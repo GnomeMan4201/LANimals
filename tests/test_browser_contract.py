@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from core.nexus_terminal import TerminalCommandError, parse_terminal_command
+
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = (ROOT / "ui" / "lanimals_live_map.html").read_text(encoding="utf-8")
@@ -27,6 +29,19 @@ def test_visible_browser_actions_map_to_supported_runtime_routes():
     assert "'/api/scan/arp?cidr='+encodeURIComponent(cidr())" in UI
     assert 'def scan_arp(cidr: Optional[str] = Query(default=None))' in API
     assert 'scan arp [CIDR]' in TERMINAL
+
+
+def test_terminal_arp_accepts_only_optional_cidr_targets():
+    default = parse_terminal_command("scan arp")
+    explicit = parse_terminal_command("scan arp 192.168.50.0/24")
+    assert (default.action, default.target) == ("scan:arp", None)
+    assert (explicit.action, explicit.target) == ("scan:arp", "192.168.50.0/24")
+    try:
+        parse_terminal_command("scan arp 192.168.50.9")
+    except TerminalCommandError:
+        pass
+    else:
+        raise AssertionError("ARP terminal target accepted a host IP instead of a CIDR")
 
 
 def test_browser_mutations_share_fail_closed_status_checking():
