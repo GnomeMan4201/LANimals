@@ -1,2 +1,4 @@
 #!/usr/bin/env bash
-python3 modules/loot_log.py "$@"
+set -e
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+exec python3 "$ROOT/modules/loot_log.py" "$@"
