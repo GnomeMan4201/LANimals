@@ -82,11 +82,23 @@ def test_hosted_site_has_no_live_network_effect_or_silent_live_fallback():
         assert not hosted["behavior"].startswith("live"), operation["id"]
 
 
-def test_get_routes_with_known_side_effects_are_explicitly_declared():
-    limitations = {item["id"]: item for item in SITE["known_limitations"]}
-    assert limitations["report-export-get-side-effect"]["route"] == "/api/export/report"
-    assert limitations["vt-enrichment-get-side-effect"]["route"] == "/api/enrich/vt/{ip}"
-
+def test_side_effecting_site_actions_are_explicit_post_mutations():
     operations = {item["id"]: item for item in SITE["operations"]}
-    assert operations["report-export"]["local_runtime"]["persistence"] == "local_report_file"
-    assert operations["vt-enrichment"]["local_runtime"]["external_network_dependency"] is True
+    report = operations["report-export"]
+    vt = operations["vt-enrichment"]
+
+    assert report["local_runtime"]["method"] == "POST"
+    assert report["local_runtime"]["operator_header_required"] is True
+    assert report["retrieval_route"] == "/api/reports/{name}"
+    assert _route_supports("/api/export/report", "POST")
+    assert not _route_supports("/api/export/report", "GET")
+
+    assert vt["local_runtime"]["method"] == "POST"
+    assert vt["local_runtime"]["operator_header_required"] is True
+    assert vt["local_runtime"]["external_network_dependency"] is True
+    assert _route_supports("/api/enrich/vt/{ip}", "POST")
+    assert not _route_supports("/api/enrich/vt/{ip}", "GET")
+
+    limitation_ids = {item["id"] for item in SITE.get("known_limitations", [])}
+    assert "report-export-get-side-effect" not in limitation_ids
+    assert "vt-enrichment-get-side-effect" not in limitation_ids

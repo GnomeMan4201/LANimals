@@ -1139,7 +1139,7 @@ function renderDetail(node, neighbors, events, dbServices, notes, cves){
       actions.push({label:'CVE Scan',icon:'☠',why:'Elevated risk — check for known vulnerabilities',cls:'',fn:()=>runOp('/api/scan/cve/'+encodeURIComponent(node.ip))});
     }
     if(honeypotHits===0&&!metaObj.vt_checked){
-      actions.push({label:'VirusTotal Lookup',icon:'⚡',why:'Check IP reputation',cls:'',fn:async()=>{ const d=await apiGet('/api/enrich/vt/'+encodeURIComponent(node.ip)); addScanLine(JSON.stringify(d),''); }});
+      actions.push({label:'VirusTotal Lookup',icon:'⚡',why:'Check IP reputation',cls:'',fn:async()=>{ try{ const d=await apiPost('/api/enrich/vt/'+encodeURIComponent(node.ip)); addScanLine(JSON.stringify(d),''); }catch(e){ showActionError('VirusTotal lookup',e); } }});
     }
   }
 
@@ -1741,7 +1741,17 @@ $('btnStopAllTraps').onclick=async()=>{
   }
 };
 $('btnSysinfo').onclick=fetchSysinfo;
-$('btnReport').onclick=()=>window.open('/api/export/report','_blank');
+$('btnReport').onclick=async()=>{
+  const reportWin=window.open('about:blank','_blank');
+  try{
+    const d=await apiPost('/api/export/report');
+    if(!d?.url) throw new Error('Report export did not return a retrieval URL');
+    if(reportWin) reportWin.location=d.url; else window.location.href=d.url;
+  }catch(e){
+    if(reportWin) reportWin.close();
+    showActionError('report export',e);
+  }
+};
 $('searchInput').oninput=fetchGraph;
 $('typeFilter').onchange=fetchGraph;
 

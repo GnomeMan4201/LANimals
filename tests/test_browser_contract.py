@@ -54,6 +54,9 @@ def test_browser_mutations_share_fail_closed_status_checking():
     assert "notesBtn.textContent='Save failed';" in UI
     assert "await fetch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes'" not in UI
     assert "await fetch('/api/traps/'+encodeURIComponent(trapId)" not in UI
+    assert "await apiPost('/api/export/report')" in UI
+    assert "await apiPost('/api/enrich/vt/'" in UI
+    assert "window.open('/api/export/report'" not in UI
 
 
 def test_page_open_is_read_only_with_respect_to_network_collection_and_mutation():
@@ -69,7 +72,7 @@ def test_page_open_is_read_only_with_respect_to_network_collection_and_mutation(
 
 
 def test_major_inline_actions_surface_backend_errors():
-    for label in ["anomaly scan", "watchdog", "network diff", "risk rescore", "trap deployment", "stop all traps", "note save"]:
+    for label in ["anomaly scan", "watchdog", "network diff", "risk rescore", "trap deployment", "stop all traps", "note save", "report export", "VirusTotal lookup"]:
         assert f"showActionError('{label}'" in UI
 
 

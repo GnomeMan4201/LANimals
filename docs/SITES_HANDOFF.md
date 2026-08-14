@@ -69,14 +69,14 @@ The self-hosted console currently has real implementations for:
 
 `site_capabilities.json` provides the exact route, method, target type, persistence effect, hosted behavior, and failure contract for each action.
 
-## Known API semantic debt
+## Mutation semantics
 
-Two current GET routes have operator-visible side effects and therefore must **never** be used as page-load fetches:
+Side-effecting operator actions use mutation methods:
 
-- `GET /api/export/report` generates and persists a report file.
-- `GET /api/enrich/vt/{ip}` performs an external VirusTotal lookup and records an event.
+- `POST /api/export/report` generates and persists a report, then returns its read-only `/api/reports/{name}` retrieval URL.
+- `POST /api/enrich/vt/{ip}` performs the explicit external VirusTotal lookup and may record an event.
 
-They are explicitly recorded in `site_capabilities.json` until their HTTP semantics are tightened in a later runtime change.
+Both routes require the operator mutation header and reject GET. They must never be invoked during page-load hydration.
 
 ## Acceptance test for a generated site
 

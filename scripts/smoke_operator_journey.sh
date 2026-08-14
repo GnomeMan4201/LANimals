@@ -160,10 +160,12 @@ assert notes["notes"].startswith("Known CI fixture")
 read_notes, _ = request("GET", f"/api/hosts/{TARGET}/notes")
 assert read_notes["notes"] == notes["notes"]
 
-report_html, report_headers = request("GET", "/api/export/report")
+report_result, _ = request("POST", "/api/export/report", payload={}, headers=HEADER)
+assert report_result["ok"] is True, report_result
+report_name = report_result["name"]
+assert report_name.startswith("report_") and report_result["url"] == f"/api/reports/{report_name}"
+report_html, _ = request("GET", report_result["url"])
 assert "LANimals" in report_html and TARGET in report_html and "8080" in report_html
-report_name = report_headers.get("X-LANimals-Report")
-assert report_name and report_name.startswith("report_")
 reports, _ = request("GET", "/api/reports")
 assert any(item["name"] == report_name for item in reports["reports"]), reports
 
