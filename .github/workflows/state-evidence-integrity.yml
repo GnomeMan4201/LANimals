@@ -39,41 +39,25 @@ jobs:
       - name: Keep empty graph reads storage-independent
         run: |
           python - <<'PY'
+          import re
           from pathlib import Path
+
           path = Path('core/nexus_builder.py')
           text = path.read_text(encoding='utf-8')
-          replacements = [
+          patterns = [
               (
-                  '''def _overlay_persisted_host_state(nodes: Dict[str, GraphNode]) -> None:
-                  from core.nexus_db import get_all_hosts
-
-                  persisted = {row["ip"]: row for row in get_all_hosts()}
-                  '''.replace('                  ', ''),
-                  '''def _overlay_persisted_host_state(nodes: Dict[str, GraphNode]) -> None:
-                  from core.nexus_db import get_all_hosts
-
-                  if not nodes:
-                      return
-                  persisted = {row["ip"]: row for row in get_all_hosts()}
-                  '''.replace('                  ', ''),
+                  r'(def _overlay_persisted_host_state\(nodes: Dict\[str, GraphNode\]\) -> None:\n\s+from core\.nexus_db import get_all_hosts\n\n)(\s+persisted = \{row\["ip"\]: row for row in get_all_hosts\(\)\})',
+                  r'\1    if not nodes:\n        return\n\2',
               ),
               (
-                  '''def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
-                  """Compatibility helper: graph reads expose durable events and never mutate state."""
-                  return _durable_graph_events()
-                  '''.replace('                  ', ''),
-                  '''def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
-                  """Compatibility helper: graph reads expose durable events and never mutate state."""
-                  if not nodes:
-                      return []
-                  return _durable_graph_events()
-                  '''.replace('                  ', ''),
+                  r'(def _generate_state_events\(nodes: Dict\[str, GraphNode\]\) -> List\[GraphEvent\]:\n\s+"""Compatibility helper: graph reads expose durable events and never mutate state\."""\n)(\s+return _durable_graph_events\(\))',
+                  r'\1    if not nodes:\n        return []\n\2',
               ),
           ]
-          for old, new in replacements:
-              if text.count(old) != 1:
-                  raise SystemExit('builder empty-state source drifted')
-              text = text.replace(old, new, 1)
+          for pattern, replacement in patterns:
+              text, count = re.subn(pattern, replacement, text, count=1)
+              if count != 1:
+                  raise SystemExit('builder empty-state structure drifted')
           path.write_text(text, encoding='utf-8')
           PY
 
