@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core import nexus_builder, nexus_collectors, nexus_db, nexus_scope, nexus_state
 from core.nexus_scope import ScopeError
