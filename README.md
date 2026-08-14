@@ -150,6 +150,17 @@ POST /api/baseline/accept
 POST /api/baseline/defer
 ```
 
+## Capability contract
+
+[`capabilities.json`](capabilities.json) is the machine-checked statement of
+what LANimals implements, what requires a self-hosted Linux/network runtime,
+and what remains an experimental legacy module. CI verifies its version,
+operator-command grammar, API routes, evidence paths, and hosted-demo boundary.
+
+The hosted site is a representative, in-memory workflow surface. It never
+claims access to the visitor's LAN. Operational collection and persistence are
+provided only by the self-hosted runtime.
+
 ---
 
 *LANimals // badBANANA research // GnomeMan4201*
