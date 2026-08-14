@@ -18,6 +18,10 @@ This applies to baseline decisions, notes, traps, scans, risk rescoring, watchdo
 
 Trap bundle deployment also preserves partial-success truth. The API counts a trap as active only when its returned status is `active`, reports a separate failure count, and marks the overall result unsuccessful when any member failed. The browser displays active and failed counts separately and retains an error state for a partial deployment instead of reducing it to a clean success message.
 
+## Side-effecting action semantics
+
+Report generation and VirusTotal enrichment are explicit mutations. `POST /api/export/report` creates the durable local report and returns a read-only report URL; `POST /api/enrich/vt/{ip}` performs the operator-requested external lookup. Both require the operator header and reject GET. Page-load hydration must never invoke either route.
+
 ## Page-load boundary
 
 Opening the browser reads current local state: scope, graph, statistics, traps, baseline, reports, intelligence/events, and system information. It does not start Discovery, ARP collection, Host Mapping, Rogue Detection, service/CVE scans, traps, or other mutation operations automatically.

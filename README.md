@@ -209,7 +209,7 @@ GET  /api/events
 GET  /api/sysinfo
 GET  /api/baseline
 GET  /api/jobs/{id}
-GET  /api/export/report
+POST /api/export/report
 
 POST /api/scan/discovery
 POST /api/scan/arp
@@ -220,6 +220,7 @@ POST /api/scan/inventory
 POST /api/scan/anomaly
 POST /api/scan/cve/{ip}
 POST /api/scan/rescore
+POST /api/enrich/vt/{ip}
 
 PATCH /api/hosts/{ip}/notes
 POST  /api/baseline/accept

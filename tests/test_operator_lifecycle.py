@@ -51,23 +51,38 @@ class OperatorLifecycleTests(unittest.TestCase):
             "ip": "192.168.50.10",
         }])
 
-        response = self.client.get("/api/export/report")
+        response = self.client.post(
+            "/api/export/report",
+            headers={"X-LANimals-Operator": "1"},
+        )
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("<script>alert(1)</script>", response.text)
-        self.assertNotIn("<script>event()</script>", response.text)
-        self.assertNotIn("<img src=x", response.text)
-        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", response.text)
-        self.assertIn("Bad &amp; &lt;img", response.text)
+        result = response.json()
+        self.assertTrue(result["ok"])
+        name = result["name"]
+        self.assertTrue(name.startswith("report_") and name.endswith(".html"))
+        self.assertEqual(result["url"], f"/api/reports/{name}")
 
-        name = response.headers.get("X-LANimals-Report")
-        self.assertTrue(name and name.startswith("report_") and name.endswith(".html"))
+        stored = self.client.get(result["url"])
+        self.assertEqual(stored.status_code, 200)
+        self.assertNotIn("<script>alert(1)</script>", stored.text)
+        self.assertNotIn("<script>event()</script>", stored.text)
+        self.assertNotIn("<img src=x", stored.text)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", stored.text)
+        self.assertIn("Bad &amp; &lt;img", stored.text)
 
         listing = self.client.get("/api/reports")
         self.assertEqual(listing.status_code, 200)
         self.assertEqual(listing.json()["reports"][0]["name"], name)
-        stored = self.client.get(f"/api/reports/{name}")
-        self.assertEqual(stored.status_code, 200)
-        self.assertEqual(stored.text, response.text)
+
+    def test_side_effecting_operator_routes_reject_get_and_require_mutation_header(self) -> None:
+        before = self.client.get("/api/reports").json()["reports"]
+        self.assertEqual(self.client.get("/api/export/report").status_code, 405)
+        after = self.client.get("/api/reports").json()["reports"]
+        self.assertEqual(after, before)
+
+        self.assertEqual(self.client.get("/api/enrich/vt/192.168.50.10").status_code, 405)
+        self.assertEqual(self.client.post("/api/export/report").status_code, 403)
+        self.assertEqual(self.client.post("/api/enrich/vt/192.168.50.10").status_code, 403)
 
     def test_report_name_validation_is_fail_closed(self) -> None:
         response = self.client.get("/api/reports/not-a-report.html")

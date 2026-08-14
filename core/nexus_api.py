@@ -609,10 +609,9 @@ def get_anomaly():
     return {"anomalies": anomalies, "count": len(anomalies), "scanned_at": _now_iso()}
 
 
-@app.get("/api/export/report")
+@app.post("/api/export/report")
 def export_report():
     """Generate, persist, and return a local HTML operator report."""
-    from fastapi.responses import HTMLResponse
     from html import escape as html_escape
 
     hosts = get_all_hosts()
@@ -700,10 +699,13 @@ def export_report():
     report_path.write_text(html, encoding="utf-8")
     report_path.chmod(0o600)
 
-    return HTMLResponse(
-        content=html,
-        headers={"X-LANimals-Report": filename, "Cache-Control": "no-store"},
-    )
+    return {
+        "ok": True,
+        "name": filename,
+        "url": f"/api/reports/{filename}",
+        "size": report_path.stat().st_size,
+        "generated_at": now,
+    }
 
 
 
@@ -799,7 +801,7 @@ def defer_baseline(payload: BaselineDecisionPayload):
 
 # ── VirusTotal enrichment ─────────────────────────────────────────────────────
 
-@app.get("/api/enrich/vt/{ip}")
+@app.post("/api/enrich/vt/{ip}")
 def enrich_vt(ip: str):
     """VirusTotal IP reputation. Requires VT_API_KEY env var."""
     import os, urllib.request, json as _json
