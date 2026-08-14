@@ -9,17 +9,33 @@ ROOT = Path(__file__).resolve().parent.parent
 TMP_DIR = ROOT / "tmp"
 TMP_DIR.mkdir(exist_ok=True)
 
-STATE_FILE = TMP_DIR / "nexus_state.json"
+SNAPSHOT_STATE_FILE = TMP_DIR / "network_snapshot.json"
+LEGACY_STATE_FILE = TMP_DIR / "nexus_state.json"
 
 
-def load_state() -> Dict[str, Any]:
-    if not STATE_FILE.exists():
-        return {}
+def load_snapshot_state() -> Dict[str, Any]:
+    path = SNAPSHOT_STATE_FILE
+    if not path.exists() and LEGACY_STATE_FILE.exists():
+        path = LEGACY_STATE_FILE
     try:
-        return json.loads(STATE_FILE.read_text())
+        data = json.loads(path.read_text())
     except Exception:
         return {}
+    hosts = data.get("hosts")
+    return {"hosts": hosts, "saved_at": data.get("saved_at")} if isinstance(hosts, dict) else {}
 
 
-def save_state(data: Dict[str, Any]) -> None:
-    STATE_FILE.write_text(json.dumps(data, indent=2, sort_keys=True))
+def save_snapshot_state(data: Dict[str, Any]) -> None:
+    hosts = data.get("hosts")
+    if not isinstance(hosts, dict):
+        raise ValueError("snapshot state requires a hosts mapping")
+    payload = {"hosts": hosts, "saved_at": data.get("saved_at")}
+    tmp_path = SNAPSHOT_STATE_FILE.with_suffix(".tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    tmp_path.replace(SNAPSHOT_STATE_FILE)
+
+
+# Compatibility aliases for older callers. These now represent snapshots only;
+# MAC baselines are authoritative in SQLite and must never share this file.
+load_state = load_snapshot_state
+save_state = save_snapshot_state

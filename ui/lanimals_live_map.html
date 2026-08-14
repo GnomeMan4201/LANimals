@@ -355,6 +355,7 @@ button{cursor:pointer;font-family:var(--font);}
 .terminal-title{font-size:10px;color:var(--muted);font-weight:600;}
 .terminal-status{font-size:9px;color:var(--muted);}
 #xterm-container{flex:1;overflow:hidden;padding:4px;}
+#xterm-container.fallback-terminal{white-space:pre-wrap;overflow:auto;outline:none;color:var(--text);font:12px/1.4 var(--font);}
 .btn{background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 10px;font-size:11px;font-weight:600;}
 .btn:hover{border-color:var(--red);}
 .btn.sm{padding:3px 7px;font-size:10px;}
@@ -378,7 +379,7 @@ button{cursor:pointer;font-family:var(--font);}
   <div class="brand"><span class="LA">LAN</span><span class="Nimals">imals</span></div>
   <div class="topbar-center">
     <span class="scope-label">CIDR</span>
-    <input id="cidrInput" value="192.168.0.0/24" placeholder="192.168.0.0/24"/>
+    <input id="cidrInput" value="" placeholder="detecting local scope…"/>
     <div class="status-pip" id="statusDot"></div>
     <span id="statusLabel">ready</span>
     <div class="overlay-bar">
@@ -532,6 +533,7 @@ button{cursor:pointer;font-family:var(--font);}
     <button class="tab-btn" data-tab="intel">Intelligence</button>
     <button class="tab-btn" data-tab="scanout">Scan Output</button>
     <button class="tab-btn" data-tab="hosts">Hosts</button>
+    <button class="tab-btn" data-tab="baseline">Baseline</button>
     <button class="tab-btn" data-tab="traps">Traps</button>
     <button class="tab-btn" data-tab="reports">Reports</button>
     <button class="tab-btn" data-tab="sysinfo">Sysinfo</button>
@@ -545,7 +547,7 @@ button{cursor:pointer;font-family:var(--font);}
             <span class="terminal-dot red"></span>
             <span class="terminal-dot yellow"></span>
             <span class="terminal-dot green"></span>
-            <span class="terminal-title">LANimals Shell — bash</span>
+            <span class="terminal-title">LANimals Operator Command Bridge</span>
           </div>
           <span class="terminal-status" id="termStatus">connecting…</span>
         </div>
@@ -555,6 +557,7 @@ button{cursor:pointer;font-family:var(--font);}
     <div class="tab-pane" id="tab-intel"><div id="intelFeed"><p class="log-line muted">Loading intelligence feed…</p></div></div>
     <div class="tab-pane" id="tab-scanout"><div id="scanOutput"></div></div>
     <div class="tab-pane" id="tab-hosts"><div id="hostsTable"></div></div>
+    <div class="tab-pane" id="tab-baseline"><div id="baselineContent"><p class="log-line muted">Loading baseline review queue…</p></div></div>
     <div class="tab-pane" id="tab-traps"><div id="trapsContent"></div></div>
     <div class="tab-pane" id="tab-reports"><div id="reportsList"></div></div>
     <div class="tab-pane" id="tab-sysinfo"><div id="sysinfoContent"><p class="log-line muted">Click ≡ Sys or run Inventory.</p></div></div>
@@ -601,7 +604,7 @@ const tooltip = document.getElementById('tooltip');
 // ── Util ──────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
-function cidr(){ return $('cidrInput').value.trim()||'192.168.0.0/24'; }
+function cidr(){ return $('cidrInput').value.trim(); }
 
 function setStatus(label, state='ready'){
   $('statusLabel').textContent=label;
@@ -640,7 +643,24 @@ function setOverlay(mode){
 
 // ── API ───────────────────────────────────────────────────────────────────────
 async function apiGet(path){ const r=await fetch(path); if(!r.ok) throw new Error(r.status); return r.json(); }
-async function apiPost(path,body){ const r=await fetch(path,{method:'POST',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}); if(!r.ok) throw new Error(r.status); return r.json(); }
+async function apiPost(path,body){
+  const headers={'X-LANimals-Operator':'1'};
+  if(body) headers['Content-Type']='application/json';
+  const r=await fetch(path,{method:'POST',headers,body:body?JSON.stringify(body):undefined});
+  if(!r.ok){ let detail=''; try{ detail=(await r.json()).detail||''; }catch(e){} throw new Error(detail||r.status); }
+  return r.json();
+}
+
+async function fetchScope(){
+  try{
+    const data=await apiGet('/api/scope');
+    if(data.default_cidr) $('cidrInput').value=data.default_cidr;
+    else {
+      $('cidrInput').placeholder='set LANIMALS_ALLOWED_CIDRS';
+      setStatus('scan scope required','error');
+    }
+  }catch(e){ setStatus('scope unavailable','error'); }
+}
 
 async function fetchGraph(){
   try{
@@ -734,6 +754,47 @@ async function fetchHosts(){
   try{ const data=await apiGet('/api/hosts'); renderHostsTable(data.hosts||[]); } catch(e){}
 }
 
+async function fetchBaseline(){
+  try{
+    const data=await apiGet('/api/baseline');
+    baselineIps=new Set((data.entries||[]).map(item=>item.ip));
+    renderBaseline(data);
+  }catch(e){ $('baselineContent').innerHTML=`<p class="empty-state">Baseline unavailable: ${esc(e.message||e)}</p>`; }
+}
+
+function renderBaseline(data){
+  const wrap=$('baselineContent');
+  const pending=data.pending||[];
+  const decisions=data.decisions||[];
+  const pendingRows=pending.map(item=>`<tr>
+    <td class="${item.status==='changed'?'warn':'red'}">${esc((item.status||'new').toUpperCase())}</td>
+    <td>${esc(item.ip)}</td><td>${esc(item.observed_mac||'—')}</td><td>${esc(item.baseline_mac||'—')}</td>
+    <td><button class="btn sm" onclick="decideBaseline('accept','${esc(item.ip)}')">Accept</button>
+        <button class="btn sm" onclick="decideBaseline('defer','${esc(item.ip)}')">Defer</button></td>
+  </tr>`).join('');
+  const decisionRows=decisions.slice(0,12).map(item=>`<tr>
+    <td>${esc((item.action||'').toUpperCase())}</td><td>${esc(item.ip)}</td>
+    <td>${esc(item.observed_mac||'—')}</td><td>${esc((item.ts||'').slice(0,19).replace('T',' '))}</td>
+    <td>${esc(item.note||'—')}</td></tr>`).join('');
+  wrap.innerHTML=`
+    <div class="log-line ${pending.length?'warn':'ok'}">${pending.length} unresolved change(s) · ${data.entry_count||0} accepted identities · revision ${data.revision||0}</div>
+    <table class="hosts-table"><thead><tr><th>State</th><th>IP</th><th>Observed MAC</th><th>Accepted MAC</th><th>Decision</th></tr></thead>
+      <tbody>${pendingRows||'<tr><td colspan="5" class="muted">No unresolved baseline changes.</td></tr>'}</tbody></table>
+    <div class="log-line muted" style="margin-top:8px;">Recent operator decisions</div>
+    <table class="hosts-table"><thead><tr><th>Action</th><th>IP</th><th>Observed MAC</th><th>Time</th><th>Note</th></tr></thead>
+      <tbody>${decisionRows||'<tr><td colspan="5" class="muted">No decisions recorded.</td></tr>'}</tbody></table>`;
+}
+
+async function decideBaseline(action,ip){
+  const note=prompt(`${action.toUpperCase()} baseline observation for ${ip}\nOptional audit note:`,'');
+  if(note===null) return;
+  try{
+    await apiPost(`/api/baseline/${action}`,{ip,note});
+    await Promise.all([fetchBaseline(),fetchStats(),fetchIntelFeed(),fetchGraph()]);
+    setStatus(`baseline ${action}ed`,'ready');
+  }catch(e){ setStatus('baseline decision failed','error'); alert(e.message||e); }
+}
+
 async function fetchReports(){
   try{ const data=await apiGet('/api/reports'); renderReports(data.reports||[]); } catch(e){}
 }
@@ -764,7 +825,7 @@ async function pollJob(jid){
     } else {
       setStatus(job.status==='done'?'done':'error',job.status==='done'?'ready':'error');
       if(job.status==='done'){
-        setTimeout(()=>{ fetchGraph(); fetchStats(); fetchIntelFeed(); fetchHosts(); fetchTraps(); },600);
+        setTimeout(()=>{ fetchGraph(); fetchStats(); fetchIntelFeed(); fetchHosts(); fetchBaseline(); fetchTraps(); },600);
       }
       if(job.op==='inventory'&&job.result) renderSysinfo(job.result);
     }
@@ -957,7 +1018,7 @@ function renderTraps(traps){
 }
 
 async function stopTrap(trapId){
-  await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE'});
+  await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE',headers:{'X-LANimals-Operator':'1'}});
   await fetchTraps(); await fetchGraph();
 }
 
@@ -1166,7 +1227,7 @@ function renderDetail(node, neighbors, events, dbServices, notes, cves){
   if(notesBtn&&node.ip){
     notesBtn.addEventListener('click',async()=>{
       notesBtn.textContent='Saving…';
-      await fetch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:$('notesArea').value})});
+      await fetch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes',{method:'PATCH',headers:{'Content-Type':'application/json','X-LANimals-Operator':'1'},body:JSON.stringify({notes:$('notesArea').value})});
       notesBtn.textContent='Saved ✓';
       setTimeout(()=>notesBtn.textContent='Save Notes',1500);
     });
@@ -1570,15 +1631,15 @@ $('btnArp').onclick=()=>runOp('/api/scan/arp');
 $('btnHostmap').onclick=()=>runOp('/api/scan/hostmap?cidr='+encodeURIComponent(cidr()));
 $('btnRogue').onclick=()=>runOp('/api/scan/rogue?cidr='+encodeURIComponent(cidr()));
 $('btnAnomaly').onclick=async()=>{
-  addScanLine('→ GET /api/scan/anomaly','muted'); activateTab('scanout');
-  const d=await apiGet('/api/scan/anomaly');
+  addScanLine('→ POST /api/scan/anomaly','muted'); activateTab('scanout');
+  const d=await apiPost('/api/scan/anomaly');
   if(d.anomalies?.length){ d.anomalies.forEach(a=>addScanLine(`  ${a.ip}:${a.port} ${a.status}`,'warn')); }
   else addScanLine('[ OK ] No anomalies','ok');
   fetchIntelFeed();
 };
 $('btnWatchdog').onclick=async()=>{
-  addScanLine('→ GET /api/watchdog','muted'); activateTab('scanout');
-  const d=await apiGet('/api/watchdog');
+  addScanLine('→ POST /api/watchdog','muted'); activateTab('scanout');
+  const d=await apiPost('/api/watchdog');
   addScanLine(`Watchdog: ${d.online_count} online, ${d.offline_count} offline`,'ok');
   d.offline?.forEach(o=>addScanLine(`  [OFFLINE] ${o.ip} ${o.hostname}`,'warn'));
   fetchIntelFeed();
@@ -1602,7 +1663,7 @@ $('btnRescore').onclick=async()=>{
 $('btnDeployTraps').onclick=()=>deployTrapBundle();
 $('btnStopAllTraps').onclick=async()=>{
   const data=await apiGet('/api/traps');
-  for(const t of data.traps||[]){ if(t.status==='active') await fetch('/api/traps/'+t.id,{method:'DELETE'}); }
+  for(const t of data.traps||[]){ if(t.status==='active') await fetch('/api/traps/'+t.id,{method:'DELETE',headers:{'X-LANimals-Operator':'1'}}); }
   addScanLine('All traps stopped','muted'); await fetchTraps(); await fetchGraph();
 };
 $('btnSysinfo').onclick=fetchSysinfo;
@@ -1772,12 +1833,44 @@ let fitAddon = null;
 let termSocket = null;
 let termReady = false;
 
+function fallbackTerminal(container){
+  let dataHandler=()=>{};
+  container.classList.add('fallback-terminal');
+  container.tabIndex=0;
+  container.setAttribute('role','textbox');
+  container.setAttribute('aria-label','LANimals operator command bridge');
+  container.addEventListener('keydown',e=>{
+    let data='';
+    if(e.key==='Enter') data='\r';
+    else if(e.key==='Backspace') data='\x7f';
+    else if(e.ctrlKey&&e.key.toLowerCase()==='c') data='\x03';
+    else if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.key.length===1) data=e.key;
+    if(data){ e.preventDefault(); dataHandler(data); }
+  });
+  container.addEventListener('paste',e=>{
+    e.preventDefault(); dataHandler(e.clipboardData?.getData('text')||'');
+  });
+  container.addEventListener('click',()=>container.focus());
+  return {
+    rows:24,cols:80,
+    loadAddon(){},open(){container.focus();},
+    write(data){
+      if(data.includes('\x1b[2J')) container.textContent='';
+      const clean=data.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g,'');
+      if(clean==='\b \b') container.textContent=container.textContent.slice(0,-1);
+      else container.textContent+=clean.replace(/\r/g,'');
+      container.scrollTop=container.scrollHeight;
+    },
+    onData(fn){dataHandler=fn;},onResize(){},
+  };
+}
+
 function initTerminal() {
   if (term) return;
   const container = $('xterm-container');
   if (!container) return;
 
-  term = new Terminal({
+  term = window.Terminal ? new Terminal({
     cursorBlink: true,
     theme: {
       background: '#0b0b0d',
@@ -1807,12 +1900,12 @@ function initTerminal() {
     lineHeight: 1.4,
     scrollback: 2000,
     allowTransparency: true,
-  });
+  }) : fallbackTerminal(container);
 
-  fitAddon = new FitAddon.FitAddon();
-  term.loadAddon(fitAddon);
+  fitAddon = window.FitAddon ? new FitAddon.FitAddon() : null;
+  if(fitAddon) term.loadAddon(fitAddon);
   term.open(container);
-  fitAddon.fit();
+  if(fitAddon) fitAddon.fit();
 
   connectTermSocket();
 
@@ -1858,14 +1951,14 @@ function connectTermSocket() {
     termReady = false;
   };
 
-  // Input → shell
+  // Input → allowlisted command bridge
   term.onData(data => {
     if (termSocket && termSocket.readyState === WebSocket.OPEN) {
       termSocket.send(JSON.stringify({type: 'input', data}));
     }
   });
 
-  // Resize → shell
+  // Resize → bridge (ignored by the server; retained for xterm compatibility)
   term.onResize(({rows, cols}) => {
     if (termSocket && termSocket.readyState === WebSocket.OPEN) {
       termSocket.send(JSON.stringify({type: 'resize', rows, cols}));
@@ -1875,10 +1968,12 @@ function connectTermSocket() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 resizeCanvas();
+fetchScope();
 fetchGraph();
 fetchStats();
 initTerminal();
 fetchTraps();
+fetchBaseline();
 fetchReports();
 fetchIntelFeed();
 fetchSysinfo();
@@ -1888,6 +1983,7 @@ setInterval(fetchTraps,4000);
 setInterval(fetchIntelFeed,8000);
 setInterval(fetchJobs,5000);
 setInterval(pollAlerts,3000);
+setInterval(()=>apiPost('/api/scan/arp').catch(()=>{}),300000);
 </script>
 </body>
 </html>

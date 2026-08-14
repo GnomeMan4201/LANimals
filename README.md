@@ -23,7 +23,7 @@
 
 ---
 
-LANimals is a network intelligence platform that runs on your machine. It scans your LAN, tracks every device it finds, builds a MAC address baseline, flags rogue devices, fingerprints services, and renders everything as a live force-directed graph in your browser.
+LANimals is a network intelligence platform that runs on your machine. It scans your approved local scope, tracks every device it finds, proposes MAC address baseline changes for operator review, flags new or changed devices, fingerprints services, and renders the observations as a live force-directed graph in your browser.
 
 nmap tells you what's there right now. LANimals tells you what changed, what's new, and what deserves investigation — and keeps the history so you can reconstruct and evidence those changes.
 
@@ -61,6 +61,17 @@ bash lan.sh
 
 Opens at `http://127.0.0.1:8080` — auto-launches browser and starts background ARP refresh.
 
+LANimals binds to loopback by default. To approve a scan boundary explicitly:
+
+```bash
+export LANIMALS_ALLOWED_CIDRS=192.168.1.0/24
+bash lan.sh
+```
+
+The browser terminal is an allowlisted LANimals command bridge, not an operating-system shell. A non-loopback server bind is refused unless both `LANIMALS_HOST` and `LANIMALS_ALLOW_REMOTE=1` are set. If remote access is necessary, put LANimals behind authenticated network access.
+
+Direct state-changing API calls require `X-LANimals-Operator: 1`. This non-simple header prevents ordinary cross-site forms from silently triggering localhost operations; it is a browser boundary, not remote-user authentication.
+
 ---
 
 ## Operations
@@ -70,7 +81,7 @@ Opens at `http://127.0.0.1:8080` — auto-launches browser and starts background
 | Discovery Scan | nmap ping sweep + ARP + interface enumeration |
 | ARP Refresh | Fast `ip neigh` pull, instant graph update |
 | Host Mapping | nmap with full hostname resolution |
-| Rogue Detection | MAC baseline comparison — flags new/changed devices |
+| Rogue Detection | MAC baseline comparison — flags new/changed devices for accept/defer review |
 | Inventory | Local system: CPU, RAM, disk, interfaces |
 | Anomaly Scan | Live outbound connection scoring |
 | Service Scan | nmap -sV per host, stored in DB |
@@ -84,12 +95,15 @@ Opens at `http://127.0.0.1:8080` — auto-launches browser and starts background
 - Hosts tab, Events tab, Sysinfo tab
 - VirusTotal enrichment via `VT_API_KEY`
 - One-click HTML network report export
+- Explicit baseline accept/defer decisions with an audit trail
+- Honest empty state by default; synthetic graph data requires `LANIMALS_DEMO_MODE=1`
 
 ---
 
 ## API
 ```
 GET  /api/health
+GET  /api/scope
 GET  /api/graph
 GET  /api/hosts
 GET  /api/hosts/{ip}/services
@@ -97,11 +111,16 @@ GET  /api/hosts/{ip}/events
 GET  /api/events
 GET  /api/sysinfo
 GET  /api/export/report
+GET  /api/baseline
 POST /api/scan/discovery?cidr=X
 POST /api/scan/arp
 POST /api/scan/rogue?cidr=X
 POST /api/scan/services/{ip}
-POST /api/hosts/{ip}/notes
+POST /api/scan/anomaly
+POST /api/watchdog
+PATCH /api/hosts/{ip}/notes
+POST /api/baseline/accept
+POST /api/baseline/defer
 ```
 
 ---

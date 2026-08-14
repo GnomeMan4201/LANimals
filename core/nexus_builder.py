@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from core.nexus_models import GraphEdge, GraphEvent, GraphNode, GraphSnapshot
 from core.nexus_service_state import load_service_state
-from core.nexus_state import load_state, save_state
+from core.nexus_state import load_snapshot_state, save_snapshot_state
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS_DIR = ROOT / "reports"
@@ -16,7 +17,7 @@ DISCOVERY_CACHE = TMP_DIR / "nexus_discovery_cache.json"
 
 
 def _now() -> str:
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _safe_load_json(path: Path) -> Any:
@@ -324,7 +325,7 @@ def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
                 "label": node.label, "status": node.status,
                 "risk_score": node.risk_score, "group": node.group,
             }
-    prev = load_state()
+    prev = load_snapshot_state()
     prev_hosts = prev.get("hosts", {})
     events: List[GraphEvent] = []
     current_ips = set(current_hosts.keys())
@@ -358,7 +359,7 @@ def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
                 node_id=f"host:{ip}",
             ))
 
-    save_state({"hosts": current_hosts, "saved_at": now})
+    save_snapshot_state({"hosts": current_hosts, "saved_at": now})
     return events
 
 
@@ -372,9 +373,6 @@ def _load_discovery_cache() -> Dict[str, Any]:
         return {}
 
 
-_VIRTUAL_IP_PREFIXES_BUILD = ("172.17.", "172.18.", "172.19.", "172.20.", "172.21.", "172.22.",
-                               "172.23.", "172.24.", "172.25.", "172.26.", "172.27.", "172.28.",
-                               "172.29.", "172.30.", "172.31.", "10.0.3.", "10.0.2.")
 _VIRTUAL_IFACE_PREFIXES_BUILD = ("docker", "veth", "virbr", "br-", "lxc", "lxd", "vbox", "vmnet",
                                   "tun", "tap", "wg", "utun")
 
@@ -382,10 +380,7 @@ _VIRTUAL_IFACE_PREFIXES_BUILD = ("docker", "veth", "virbr", "br-", "lxc", "lxd",
 def _filter_virtual_hosts(rows: list) -> list:
     out = []
     for h in rows:
-        ip = h.get("ip") or ""
         iface = h.get("interface") or ""
-        if any(ip.startswith(p) for p in _VIRTUAL_IP_PREFIXES_BUILD):
-            continue
         if any(iface.lower().startswith(p) for p in _VIRTUAL_IFACE_PREFIXES_BUILD):
             continue
         out.append(h)
@@ -455,8 +450,8 @@ def build_snapshot() -> GraphSnapshot:
     # 4. Merge cached services
     _merge_cached_services(all_nodes, all_edges, all_events)
 
-    # 5. Fallback demo graph if nothing loaded
-    if not all_nodes:
+    # 5. Demo data is opt-in. Operational mode never invents hosts or alerts.
+    if not all_nodes and os.environ.get("LANIMALS_DEMO_MODE") == "1":
         subnet = GraphNode(id="subnet:192.168.1.0/24", node_type="subnet", label="192.168.1.0/24", risk_score=5)
         router = GraphNode(id="host:192.168.1.1", node_type="router", label="Gateway", ip="192.168.1.1", risk_score=20)
         ws1 = GraphNode(id="host:192.168.1.20", node_type="host", label="Workstation-01", ip="192.168.1.20", risk_score=25)
@@ -473,10 +468,16 @@ def build_snapshot() -> GraphSnapshot:
             all_edges[e.id] = e
         all_events.extend([
             GraphEvent(id="evt:boot:1", ts=_now(), severity="info",
-                       title="LANimals initialized", summary="Run Discovery Scan to populate the graph."),
+                       title="LANimals demo mode", summary="Synthetic graph data is enabled."),
             GraphEvent(id="evt:boot:2", ts=_now(), severity="high",
-                       title="Rogue Host Flagged", summary="Unknown-Host requires triage.", node_id=ws2.id),
+                       title="Synthetic Rogue Host", summary="Demo-only host requires triage.", node_id=ws2.id),
         ])
+    elif not all_nodes:
+        all_events.append(GraphEvent(
+            id="evt:empty", ts=_now(), severity="info",
+            title="No Observations Yet",
+            summary="Run Discovery Scan to populate the live graph.",
+        ))
 
     all_events.extend(_generate_state_events(all_nodes))
 

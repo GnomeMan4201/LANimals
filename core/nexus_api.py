@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import json
 import threading
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 
 from core.nexus_builder import build_snapshot, save_discovery_cache
@@ -21,13 +23,21 @@ from core.nexus_collectors import (
     collect_services_for_ip,
 )
 from core.nexus_service_state import load_service_state, save_service_state
-from core.nexus_state import load_state, save_state
 from core.nexus_risk import rescore_all_hosts, score_host
 from core.nexus_db import (
     init_db, upsert_hosts, upsert_services, insert_events,
     get_all_hosts, get_services_for_ip, get_recent_events,
-    get_db_stats, update_mac_baseline, get_mac_baseline,
+    get_db_stats, get_mac_baseline, get_pending_baseline_changes,
+    accept_baseline_observation, defer_baseline_observation,
+    get_baseline_decisions,
     get_host_notes, set_host_notes, get_host,
+)
+from core.nexus_scope import (
+    ScopeError, default_scan_cidr, scope_summary,
+    validate_host_target, validate_scan_cidr,
+)
+from core.nexus_terminal import (
+    TerminalCommandError, parse_terminal_command, terminal_help,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,6 +46,21 @@ REPORTS_DIR = ROOT / "reports"
 
 app = FastAPI(title="LANimals Nexus", version="2.0.0")
 
+
+@app.middleware("http")
+async def require_operator_header(request: Request, call_next):
+    """Block cross-site form requests from triggering local state changes."""
+    if (
+        request.url.path.startswith("/api/")
+        and request.method in {"POST", "PATCH", "PUT", "DELETE"}
+        and request.headers.get("x-lanimals-operator") != "1"
+    ):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "missing X-LANimals-Operator request header"},
+        )
+    return await call_next(request)
+
 # ── Job registry ──────────────────────────────────────────────────────────────
 _JOBS: Dict[str, Dict[str, Any]] = {}
 _JOBS_LOCK = threading.Lock()
@@ -43,7 +68,21 @@ _JOB_MAX = 50
 
 
 def _now_iso() -> str:
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _cidr_or_422(value: Optional[str]) -> str:
+    try:
+        return validate_scan_cidr(value or default_scan_cidr())
+    except ScopeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+def _host_or_422(value: str) -> str:
+    try:
+        return validate_host_target(value)
+    except ScopeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 def _job_create(op: str, params: dict) -> str:
@@ -160,6 +199,7 @@ def _run_arp_refresh(jid: str) -> None:
             "local_interfaces": local,
             "nmap_hosts": [],
         })
+        upsert_hosts(rows + local)
         _job_log(jid, f"ARP refresh complete: {len(rows)} entries — graph cache updated")
         _job_done(jid, {"count": len(rows), "neighbors": rows})
     except Exception as exc:
@@ -188,6 +228,7 @@ def _run_hostmap(jid: str, cidr: str) -> None:
             if r.get("ip") not in existing_ips:
                 nmap_hosts.append(r)
         save_discovery_cache({"nmap_hosts": nmap_hosts, "cidr": cidr})
+        upsert_hosts(rows)
         _job_log(jid, f"Host map complete: {len(rows)} hosts — graph cache updated")
         _job_done(jid, {"count": len(rows), "hosts": rows})
     except Exception as exc:
@@ -200,10 +241,29 @@ def _run_rogue(jid: str, cidr: str) -> None:
         _job_log(jid, f"Rogue detection: {cidr}")
         result = collect_rogue_scan(cidr=cidr)
         rogues = result.get("rogues", [])
+        observations = result.get("observations", [])
+        rogue_ips = {item.get("ip") for item in rogues}
+        upsert_hosts([
+            {
+                **item,
+                "status": "warning" if item.get("ip") in rogue_ips else "normal",
+                "risk_score": 65 if item.get("ip") in rogue_ips else 15,
+            }
+            for item in observations
+        ])
+        save_discovery_cache({"nmap_hosts": observations, "cidr": cidr})
         known = result.get("known_count", 0)
         if rogues:
             for r in rogues:
                 _job_log(jid, f"  [ROGUE] {r.get('ip',''):18s}  mac={r.get('mac') or '--':20s}  {r.get('reason','')}")
+            insert_events([{
+                "id": f"evt:baseline:{jid}:{r.get('ip','unknown')}",
+                "ts": _now_iso(),
+                "severity": "warning",
+                "title": "Baseline Change Requires Review",
+                "summary": r.get("reason", "Observed identity differs from baseline"),
+                "ip": r.get("ip"),
+            } for r in rogues])
         else:
             _job_log(jid, "  No rogue devices detected")
         _job_log(jid, f"Rogue scan complete: {known} known, {len(rogues)} flagged")
@@ -289,6 +349,12 @@ def health():
     return {"ok": True, "service": "lanimals-nexus", "version": "2.0.0"}
 
 
+@app.get("/api/scope")
+def get_scope():
+    """Return the effective local-only scan boundary."""
+    return scope_summary()
+
+
 @app.get("/api/graph")
 def get_graph():
     snapshot = build_snapshot()
@@ -349,7 +415,8 @@ def get_services(ip: str):
 # ── Scan endpoints ─────────────────────────────────────────────────────────────
 
 @app.post("/api/scan/discovery")
-def scan_discovery(cidr: str = Query(default="192.168.0.0/24")):
+def scan_discovery(cidr: Optional[str] = Query(default=None)):
+    cidr = _cidr_or_422(cidr)
     jid = _job_create("discovery", {"cidr": cidr})
     threading.Thread(target=_run_discovery, args=(jid, cidr), daemon=True).start()
     return {"ok": True, "job_id": jid, "op": "discovery", "cidr": cidr}
@@ -363,14 +430,16 @@ def scan_arp():
 
 
 @app.post("/api/scan/hostmap")
-def scan_hostmap(cidr: str = Query(default="192.168.0.0/24")):
+def scan_hostmap(cidr: Optional[str] = Query(default=None)):
+    cidr = _cidr_or_422(cidr)
     jid = _job_create("hostmap", {"cidr": cidr})
     threading.Thread(target=_run_hostmap, args=(jid, cidr), daemon=True).start()
     return {"ok": True, "job_id": jid, "op": "hostmap", "cidr": cidr}
 
 
 @app.post("/api/scan/rogue")
-def scan_rogue(cidr: str = Query(default="192.168.0.0/24")):
+def scan_rogue(cidr: Optional[str] = Query(default=None)):
+    cidr = _cidr_or_422(cidr)
     jid = _job_create("rogue", {"cidr": cidr})
     threading.Thread(target=_run_rogue, args=(jid, cidr), daemon=True).start()
     return {"ok": True, "job_id": jid, "op": "rogue", "cidr": cidr}
@@ -378,6 +447,7 @@ def scan_rogue(cidr: str = Query(default="192.168.0.0/24")):
 
 @app.post("/api/scan/services/{ip}")
 def scan_services(ip: str):
+    ip = _host_or_422(ip)
     jid = _job_create("service_scan", {"ip": ip})
     threading.Thread(target=_run_service_scan, args=(jid, ip), daemon=True).start()
     return {"ok": True, "job_id": jid, "op": "service_scan", "ip": ip}
@@ -443,7 +513,7 @@ def get_stats():
     }
 
 
-@app.get("/api/scan/anomaly")
+@app.post("/api/scan/anomaly")
 def get_anomaly():
     """Check live outbound connections against known hosts — flag unknowns."""
     import psutil
@@ -578,6 +648,11 @@ class NotesPayload(_BaseModel):
     notes: str
 
 
+class BaselineDecisionPayload(_BaseModel):
+    ip: str
+    note: str = ""
+
+
 @app.get("/api/hosts/{ip}/notes")
 def get_notes(ip: str):
     return {"ip": ip, "notes": get_host_notes(ip)}
@@ -595,6 +670,64 @@ def patch_notes(ip: str, payload: NotesPayload):
         "ip": ip,
     }])
     return {"ok": True, "ip": ip, "notes": payload.notes.strip()}
+
+
+@app.get("/api/baseline")
+def get_baseline():
+    entries = list(get_mac_baseline().values())
+    pending = get_pending_baseline_changes()
+    decisions = get_baseline_decisions(limit=50)
+    return {
+        "entries": entries,
+        "entry_count": len(entries),
+        "pending": pending,
+        "pending_count": len(pending),
+        "decisions": decisions,
+        "revision": decisions[0]["id"] if decisions else 0,
+    }
+
+
+@app.post("/api/baseline/accept")
+def accept_baseline(payload: BaselineDecisionPayload):
+    ip = _host_or_422(payload.ip)
+    try:
+        decision = accept_baseline_observation(ip, payload.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    insert_events([{
+        "id": f"evt:baseline:accept:{decision['id']}",
+        "ts": decision["ts"],
+        "severity": "info",
+        "title": "Baseline Observation Accepted",
+        "summary": (
+            f"{ip} accepted with MAC {decision['observed_mac']}"
+            + (f"; note: {decision['note'][:80]}" if decision["note"] else "")
+        ),
+        "ip": ip,
+    }])
+    rescore_all_hosts()
+    return {"ok": True, "decision": decision}
+
+
+@app.post("/api/baseline/defer")
+def defer_baseline(payload: BaselineDecisionPayload):
+    ip = _host_or_422(payload.ip)
+    try:
+        decision = defer_baseline_observation(ip, payload.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    insert_events([{
+        "id": f"evt:baseline:defer:{decision['id']}",
+        "ts": decision["ts"],
+        "severity": "warning",
+        "title": "Baseline Observation Deferred",
+        "summary": (
+            f"{ip} remains unresolved"
+            + (f"; note: {decision['note'][:80]}" if decision["note"] else "")
+        ),
+        "ip": ip,
+    }])
+    return {"ok": True, "decision": decision, "baseline_changed": False}
 
 
 # ── VirusTotal enrichment ─────────────────────────────────────────────────────
@@ -655,9 +788,8 @@ def _run_cve_scan(jid: str, ip: str) -> None:
             return
 
         xml_path = TMP / f"cve_{ip.replace('.','_')}.xml"
+        xml_path.unlink(missing_ok=True)
         cmd = ["nmap", "-Pn", "-sV", "--script", "vulners", "-oX", str(xml_path), ip]
-        if shutil.which("sudo") and __import__("os").geteuid() != 0:
-            cmd = ["sudo"] + cmd
 
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         if not xml_path.exists():
@@ -726,6 +858,7 @@ def _run_cve_scan(jid: str, ip: str) -> None:
 
 @app.post("/api/scan/cve/{ip}")
 def scan_cve(ip: str):
+    ip = _host_or_422(ip)
     jid = _job_create("cve_scan", {"ip": ip})
     threading.Thread(target=_run_cve_scan, args=(jid, ip), daemon=True).start()
     return {"ok": True, "job_id": jid, "op": "cve_scan", "ip": ip}
@@ -766,11 +899,10 @@ def rescore():
 @app.get("/api/diff")
 def network_diff():
     """Compare current DB state to previous snapshot. Shows what changed."""
-    from core.nexus_state import load_state
-    import json as _json
+    from core.nexus_state import load_snapshot_state
 
     current_hosts = {h["ip"]: h for h in get_all_hosts()}
-    prev_state = load_state()
+    prev_state = load_snapshot_state()
     prev_hosts: dict = prev_state.get("hosts", {})
 
     current_ips = set(current_hosts.keys())
@@ -819,7 +951,7 @@ def network_diff():
 
 # ── Watchdog ──────────────────────────────────────────────────────────────────
 
-@app.get("/api/watchdog")
+@app.post("/api/watchdog")
 def watchdog():
     """Check which baseline hosts are currently NOT in the ARP table."""
     from core.nexus_collectors import collect_arp_neighbors
@@ -857,82 +989,6 @@ def watchdog():
         "offline": offline,
         "arp_count": len(arp_ips),
         "checked_at": _now_iso(),
-    }
-
-
-# ── Security audit summary ────────────────────────────────────────────────────
-
-@app.get("/api/audit")
-def get_audit():
-    """Full security posture summary — suitable for report header."""
-    import json as _json
-
-    hosts = get_all_hosts()
-    baseline = get_mac_baseline()
-    events = get_recent_events(limit=200)
-    services = []
-    try:
-        from core.nexus_db import get_all_services
-        services = get_all_services()
-    except Exception:
-        pass
-
-    # Risk distribution
-    critical = [h for h in hosts if h.get("status") == "critical"]
-    warning  = [h for h in hosts if h.get("status") == "warning"]
-    normal   = [h for h in hosts if h.get("status") == "normal"]
-
-    # Randomized MACs
-    from core.nexus_risk import _is_randomized_mac
-    randomized = [h for h in hosts if _is_randomized_mac(h.get("mac"))]
-
-    # New hosts (not in baseline)
-    baseline_ips = set(baseline.keys())
-    new_hosts = [h for h in hosts if h["ip"] not in baseline_ips]
-
-    # High-risk ports
-    risky_ports = {"21","23","445","3389","5900","4444","6379","9200","27017"}
-    exposed = [s for s in services if s.get("port") in risky_ports]
-
-    # CVE-flagged hosts
-    cve_hosts = []
-    for h in hosts:
-        try:
-            meta = _json.loads(h.get("meta") or "{}")
-        except Exception:
-            meta = {}
-        if meta.get("cve_count", 0) > 0:
-            cve_hosts.append({
-                "ip": h["ip"],
-                "hostname": h.get("hostname", h["ip"]),
-                "cve_count": meta["cve_count"],
-            })
-
-    # Recent alerts
-    alert_events = [e for e in events if e.get("severity") in ("critical","high","warning")][:20]
-
-    return {
-        "generated_at": _now_iso(),
-        "summary": {
-            "total_hosts": len(hosts),
-            "critical": len(critical),
-            "warning": len(warning),
-            "normal": len(normal),
-            "in_baseline": len(baseline_ips),
-            "new_hosts": len(new_hosts),
-            "randomized_macs": len(randomized),
-            "exposed_services": len(exposed),
-            "cve_flagged_hosts": len(cve_hosts),
-            "total_services": len(services),
-            "total_events": len(events),
-        },
-        "critical_hosts": [{"ip": h["ip"], "hostname": h.get("hostname",""), "risk": h.get("risk_score",0)} for h in critical],
-        "warning_hosts":  [{"ip": h["ip"], "hostname": h.get("hostname",""), "risk": h.get("risk_score",0)} for h in warning],
-        "new_hosts": [{"ip": h["ip"], "hostname": h.get("hostname",""), "mac": h.get("mac",""), "vendor": h.get("vendor","")} for h in new_hosts],
-        "randomized_macs": [{"ip": h["ip"], "mac": h.get("mac",""), "hostname": h.get("hostname","")} for h in randomized],
-        "exposed_services": [{"ip": s["ip"], "port": s["port"], "service": s.get("service_name",""), "product": s.get("product","")} for s in exposed],
-        "cve_flagged": cve_hosts,
-        "recent_alerts": [{"ts": e["ts"], "severity": e["severity"], "title": e["title"], "ip": e.get("ip","")} for e in alert_events],
     }
 
 
@@ -1103,147 +1159,136 @@ def all_trap_hits():
     return {"hits": hits[:100], "count": len(hits)}
 
 
-# ── WebSocket Terminal ────────────────────────────────────────────────────────
+# ── WebSocket Operator Command Bridge ────────────────────────────────────────
 
-import asyncio
-import ptyprocess
-from fastapi import WebSocket, WebSocketDisconnect
-from starlette.websockets import WebSocketState
+_TERMINAL_PROMPT = "\r\n\x1b[38;5;88mLANimals\x1b[0m> "
 
 
-@app.websocket("/ws/terminal")
-async def terminal_ws(websocket: WebSocket):
-    """
-    Real PTY terminal over WebSocket.
-    Spawns a bash shell in the LANimals directory.
-    xterm.js on the frontend connects here.
-    """
-    await websocket.accept()
-
-    # Spawn shell in LANimals root
-    shell = ptyprocess.PtyProcessUnicode.spawn(
-        ["/usr/bin/bash", "--login"],
-        cwd=str(ROOT),
-        env={
-            "TERM": "xterm-256color",
-            "HOME": str(Path.home()),
-            "USER": "bad_banana",
-            "SHELL": "/usr/bin/bash",
-            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:"
-                    + str(Path.home() / ".local/bin"),
-            "LANIMALS_ROOT": str(ROOT),
-            "PS1": r"\[\033[01;31m\]LANimals\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ",
-        },
-    )
-
-    async def read_shell():
-        """Read from PTY and send to browser."""
-        loop = asyncio.get_event_loop()
-        while True:
-            try:
-                data = await loop.run_in_executor(None, shell.read, 4096)
-                if websocket.client_state == WebSocketState.CONNECTED:
-                    await websocket.send_text(data)
-            except EOFError:
-                break
-            except Exception:
-                break
-
-    read_task = asyncio.create_task(read_shell())
-
-    try:
-        while True:
-            msg = await websocket.receive_text()
-            try:
-                import json as _json
-                pkt = _json.loads(msg)
-                if pkt.get("type") == "input":
-                    shell.write(pkt.get("data", ""))
-                elif pkt.get("type") == "resize":
-                    rows = int(pkt.get("rows", 24))
-                    cols = int(pkt.get("cols", 80))
-                    shell.setwinsize(rows, cols)
-            except Exception:
-                # Raw input fallback
-                shell.write(msg)
-    except (WebSocketDisconnect, Exception):
-        pass
-    finally:
-        read_task.cancel()
-        try:
-            shell.terminate()
-        except Exception:
-            pass
+def _start_terminal_job(action: str, target: Optional[str]) -> dict[str, Any]:
+    if action == "scan:arp":
+        jid = _job_create("arp_refresh", {})
+        runner, args = _run_arp_refresh, (jid,)
+    elif action in {"scan:discovery", "scan:hostmap", "scan:rogue"}:
+        cidr = _cidr_or_422(target)
+        operation = action.split(":", 1)[1]
+        jid = _job_create(operation, {"cidr": cidr})
+        runner = {
+            "discovery": _run_discovery,
+            "hostmap": _run_hostmap,
+            "rogue": _run_rogue,
+        }[operation]
+        args = (jid, cidr)
+    elif action in {"scan:services", "scan:cve"}:
+        ip = _host_or_422(target or "")
+        operation = action.split(":", 1)[1]
+        jid = _job_create(operation, {"ip": ip})
+        runner = _run_service_scan if operation == "services" else _run_cve_scan
+        args = (jid, ip)
+    else:
+        raise TerminalCommandError("unsupported scan operation")
+    threading.Thread(target=runner, args=args, daemon=True).start()
+    return {"job_id": jid, "operation": action, "target": target}
 
 
-# ── WebSocket Terminal ────────────────────────────────────────────────────────
-
-import asyncio
-import ptyprocess
-from fastapi import WebSocket, WebSocketDisconnect
-from starlette.websockets import WebSocketState
+def _terminal_output(raw: str) -> tuple[list[str], bool]:
+    command = parse_terminal_command(raw)
+    if command.action == "help":
+        return terminal_help(), False
+    if command.action == "clear":
+        return [], True
+    if command.action == "status":
+        stats = get_db_stats()
+        return [f"{key}: {value}" for key, value in sorted(stats.items())], False
+    if command.action == "hosts":
+        hosts = get_all_hosts()
+        lines = [
+            f"{host.get('ip', ''):15s}  {host.get('mac') or '--':17s}  "
+            f"{host.get('status', 'normal'):8s}  {host.get('hostname') or '--'}"
+            for host in hosts
+        ]
+        return lines or ["No observed hosts. Run: scan discovery"], False
+    if command.action == "events":
+        events = get_recent_events(limit=20)
+        lines = [
+            f"[{event.get('severity', 'info').upper():8s}] "
+            f"{event.get('ts', '')}  {event.get('title', '')}"
+            for event in events
+        ]
+        return lines or ["No recorded events."], False
+    if command.action == "baseline":
+        pending = get_pending_baseline_changes()
+        lines = [
+            f"{item['status'].upper():7s} {item['ip']:15s}  "
+            f"baseline={item.get('baseline_mac') or '--'}  observed={item.get('observed_mac') or '--'}"
+            for item in pending
+        ]
+        return lines or ["No unresolved baseline changes."], False
+    if command.action == "sysinfo":
+        info = collect_sysinfo()
+        return json.dumps(info, indent=2, sort_keys=True).splitlines(), False
+    if command.action == "report":
+        return ["Report endpoint: /api/export/report"], False
+    if command.action.startswith("scan:"):
+        job = _start_terminal_job(command.action, command.target)
+        return [
+            f"Queued {job['operation']} as job {job['job_id']}.",
+            f"Inspect progress: /api/jobs/{job['job_id']}",
+        ], False
+    raise TerminalCommandError("unsupported command")
 
 
 @app.websocket("/ws/terminal")
 async def terminal_ws(websocket: WebSocket):
-    """
-    Real PTY terminal over WebSocket.
-    Spawns a bash shell in the LANimals directory.
-    xterm.js on the frontend connects here.
-    """
+    """Expose LANimals operations without exposing the host operating-system shell."""
+    origin = websocket.headers.get("origin")
+    host = websocket.headers.get("host")
+    if origin and (not host or urlsplit(origin).netloc.lower() != host.lower()):
+        await websocket.close(code=1008, reason="cross-origin terminal connection refused")
+        return
     await websocket.accept()
-
-    # Spawn shell in LANimals root
-    shell = ptyprocess.PtyProcessUnicode.spawn(
-        ["/usr/bin/bash", "--login"],
-        cwd=str(ROOT),
-        env={
-            "TERM": "xterm-256color",
-            "HOME": str(Path.home()),
-            "USER": "bad_banana",
-            "SHELL": "/usr/bin/bash",
-            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:"
-                    + str(Path.home() / ".local/bin"),
-            "LANIMALS_ROOT": str(ROOT),
-            "PS1": r"\[\033[01;31m\]LANimals\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ",
-        },
+    await websocket.send_text(
+        "LANimals operator command bridge\r\n"
+        "Type 'help' for approved commands. This is not a system shell."
+        + _TERMINAL_PROMPT
     )
-
-    async def read_shell():
-        """Read from PTY and send to browser."""
-        loop = asyncio.get_event_loop()
-        while True:
-            try:
-                data = await loop.run_in_executor(None, shell.read, 4096)
-                if websocket.client_state == WebSocketState.CONNECTED:
-                    await websocket.send_text(data)
-            except EOFError:
-                break
-            except Exception:
-                break
-
-    read_task = asyncio.create_task(read_shell())
-
+    line = ""
     try:
         while True:
-            msg = await websocket.receive_text()
+            message = await websocket.receive_text()
             try:
-                import json as _json
-                pkt = _json.loads(msg)
-                if pkt.get("type") == "input":
-                    shell.write(pkt.get("data", ""))
-                elif pkt.get("type") == "resize":
-                    rows = int(pkt.get("rows", 24))
-                    cols = int(pkt.get("cols", 80))
-                    shell.setwinsize(rows, cols)
-            except Exception:
-                # Raw input fallback
-                shell.write(msg)
-    except (WebSocketDisconnect, Exception):
-        pass
-    finally:
-        read_task.cancel()
-        try:
-            shell.terminate()
-        except Exception:
-            pass
+                packet = json.loads(message)
+                if packet.get("type") != "input":
+                    continue
+                data = str(packet.get("data", ""))
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                data = message
+
+            for char in data:
+                if char in {"\r", "\n"}:
+                    await websocket.send_text("\r\n")
+                    try:
+                        output, clear = _terminal_output(line)
+                        if clear:
+                            await websocket.send_text("\x1b[2J\x1b[H")
+                        elif output:
+                            await websocket.send_text("\r\n".join(output))
+                    except HTTPException as exc:
+                        await websocket.send_text(f"[ERROR] {exc.detail}")
+                    except TerminalCommandError as exc:
+                        await websocket.send_text(f"[ERROR] {exc}")
+                    except Exception as exc:
+                        await websocket.send_text(f"[ERROR] operation failed: {exc}")
+                    line = ""
+                    await websocket.send_text(_TERMINAL_PROMPT)
+                elif char in {"\x7f", "\b"}:
+                    if line:
+                        line = line[:-1]
+                        await websocket.send_text("\b \b")
+                elif char == "\x03":
+                    line = ""
+                    await websocket.send_text("^C" + _TERMINAL_PROMPT)
+                elif char.isprintable() and len(line) < 512:
+                    line += char
+                    await websocket.send_text(char)
+    except WebSocketDisconnect:
+        return
