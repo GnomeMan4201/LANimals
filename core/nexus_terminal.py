@@ -61,6 +61,8 @@ def parse_terminal_command(raw: str) -> TerminalCommand:
         raise TerminalCommandError("scan accepts at most one target")
     if operation in {"services", "cve"} and not target:
         raise TerminalCommandError(f"scan {operation} requires an IPv4 target")
+    if operation == "arp" and target and "/" not in target:
+        raise TerminalCommandError("scan arp target must be a CIDR")
     return TerminalCommand(f"scan:{operation}", target)
 
 
