@@ -1,0 +1,44 @@
+name: Apply browser runtime contract correction
+
+on:
+  push:
+    branches: [ agent/browser-runtime-contract ]
+    paths:
+      - scripts/apply_browser_runtime_contract.py
+      - .github/workflows/apply-browser-runtime-contract.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/browser-runtime-contract
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Apply browser/runtime correction
+        run: python scripts/apply_browser_runtime_contract.py
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt >/dev/null
+      - name: Verify focused browser contracts
+        env:
+          PYTHONPATH: .
+        run: |
+          python -m py_compile core/nexus_api.py core/nexus_terminal.py
+          pytest tests/test_observation_scope.py tests/test_browser_contract.py tests/test_api_contracts.py tests/test_operator_lifecycle.py -q
+      - name: Commit verified correction
+        run: |
+          rm scripts/apply_browser_runtime_contract.py
+          rm .github/workflows/apply-browser-runtime-contract.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Align browser controls with runtime contract'
+          git push origin HEAD:agent/browser-runtime-contract
