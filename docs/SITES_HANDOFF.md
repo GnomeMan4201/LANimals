@@ -11,9 +11,12 @@ Use these files in this order:
 1. `capabilities.json` — authoritative product capability/status manifest.
 2. `site_capabilities.json` — browser/site action contract and hosted-vs-local behavior.
 3. `docs/BROWSER_RUNTIME_CONTRACT.md` — runtime acquisition, mutation, page-load, and failure invariants.
-4. `ui/lanimals_live_map.html` — current operational browser implementation.
+4. `docs/SITES_BUILD_SPEC.md` — canonical visual, interaction, responsive, and representative-data specification.
+5. `ui/lanimals_live_map.html` — current operational browser implementation.
 
 If a proposed control cannot be mapped to an operation in `site_capabilities.json` and a capability in `capabilities.json`, it is not an operational LANimals feature yet.
+
+For a new ChatGPT Sites build, use `docs/SITES_BUILD_PROMPT.md` as the paste-ready build instruction. That prompt is subordinate to the three machine/runtime contracts above and should be used together with the repository source and supplied visual assets.
 
 ## Two distinct surfaces
 
