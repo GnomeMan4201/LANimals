@@ -27,6 +27,8 @@ jobs:
       - name: Install test dependencies
         run: pip install -r requirements-dev.txt >/dev/null
       - name: Verify focused regression
+        env:
+          PYTHONPATH: .
         run: |
           python -m py_compile core/nexus_collectors.py
           pytest tests/test_observation_scope.py tests/test_contracts.py tests/test_state_evidence_integrity.py -q
