@@ -18,13 +18,11 @@ import socket
 import threading
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-ROOT = Path(__file__).resolve().parent.parent
-TMP_DIR = ROOT / "tmp"
-TMP_DIR.mkdir(exist_ok=True)
-TRAPS_FILE = TMP_DIR / "nexus_traps.json"
+from core.nexus_paths import DATA_DIR
+
+TRAPS_FILE = DATA_DIR / "nexus_traps.json"
 
 # ── Fake service banners — what the trap presents to whoever connects ─────────
 _BANNERS: Dict[str, bytes] = {
@@ -302,6 +300,7 @@ def _http_listener(trap_id: str, port: int,
 # ── Persistence ───────────────────────────────────────────────────────────────
 def _save_traps() -> None:
     try:
+        TRAPS_FILE.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         with _TRAPS_LOCK:
             serializable = {}
             for tid, trap in _ACTIVE_TRAPS.items():

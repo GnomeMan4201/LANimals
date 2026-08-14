@@ -1,14 +1,9 @@
-#!/bin/bash
-# LANimals quickstart
-set -e
+#!/usr/bin/env bash
+set -eu
 
-echo "[*] Checking dependencies..."
-python3 -c "import fastapi, uvicorn, scapy, rich" 2>/dev/null || {
-    echo "[*] Installing dependencies..."
-    pip install -r requirements.txt
-}
-
-command -v nmap >/dev/null || echo "[!] nmap not found — install with: sudo apt install nmap"
-
-echo "[*] Starting LANimals..."
-exec bash lan.sh
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+if [[ ! -x "$ROOT/.venv/bin/python" ]]; then
+    echo "[FAIL] LANimals is not installed. Run: ./install.sh" >&2
+    exit 2
+fi
+exec "$ROOT/bin/lanimals" start "$@"

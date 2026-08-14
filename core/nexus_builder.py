@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from core.nexus_models import GraphEdge, GraphEvent, GraphNode, GraphSnapshot
+from core.nexus_paths import CACHE_DIR, REPORTS_DIR
 from core.nexus_service_state import load_service_state
 from core.nexus_state import load_snapshot_state, save_snapshot_state
 
-ROOT = Path(__file__).resolve().parent.parent
-REPORTS_DIR = ROOT / "reports"
-TMP_DIR = ROOT / "tmp"
+TMP_DIR = CACHE_DIR
 DISCOVERY_CACHE = TMP_DIR / "nexus_discovery_cache.json"
 
 
@@ -389,7 +388,7 @@ def _filter_virtual_hosts(rows: list) -> list:
 
 def save_discovery_cache(data: Dict[str, Any]) -> None:
     """Called by scan jobs to persist results. Filters virtual interfaces before writing."""
-    TMP_DIR.mkdir(exist_ok=True)
+    TMP_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     existing = _load_discovery_cache()
     # Merge lists, filtering virtual entries
     for key in ("arp_neighbors", "local_interfaces", "nmap_hosts"):

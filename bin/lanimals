@@ -5,6 +5,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+PYTHON="$ROOT/.venv/bin/python"
+if [[ ! -x "$PYTHON" ]]; then
+    PYTHON="$(command -v python3 || true)"
+fi
 
 # Formatting
 BOLD=$(tput bold 2>/dev/null || true)
@@ -23,6 +27,12 @@ show_help() {
     echo -e "${BOLD}${MAROON}║               SYSTEM COMMANDS                 ║${NORMAL}"
     echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
     echo -e "  ${BOLD}dash${NORMAL}      Show LANimals dashboard"
+    echo -e "  ${BOLD}start${NORMAL}     Start the local browser appliance"
+    echo -e "  ${BOLD}stop${NORMAL}      Stop the local browser appliance"
+    echo -e "  ${BOLD}status${NORMAL}    Show local appliance health"
+    echo -e "  ${BOLD}open${NORMAL}      Open the running browser console"
+    echo -e "  ${BOLD}setup${NORMAL}     Approve the private LAN scan scope"
+    echo -e "  ${BOLD}doctor${NORMAL}    Check dependencies and configuration"
     echo -e "  ${BOLD}sysinfo${NORMAL}   Analyze system components"
     echo ""
     echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
@@ -53,14 +63,24 @@ show_help() {
     echo -e "For command-specific help, use: ${BOLD}lanimals [command] --help${NORMAL}"
 }
 
-# Create needed directories
-mkdir -p ~/.lanimals/logs
-
 # Handle command line arguments
 case "$1" in
     dash|dashboard)
         shift
-        exec "$SCRIPT_DIR/lanimals_dashboard" "$@"
+        if [[ -z "$PYTHON" ]]; then
+            echo "Python 3 is required for the LANimals browser appliance." >&2
+            exit 2
+        fi
+        exec "$PYTHON" -m core.appliance start "$@"
+        ;;
+    start|stop|status|open|setup|doctor|config)
+        command="$1"
+        shift
+        if [[ -z "$PYTHON" ]]; then
+            echo "Python 3 is required for 'lanimals $command'." >&2
+            exit 2
+        fi
+        exec "$PYTHON" -m core.appliance "$command" "$@"
         ;;
     recon)
         shift
@@ -103,9 +123,10 @@ case "$1" in
         exec "$SCRIPT_DIR/lanimals_vulscan" "$@"
         ;;
     threats)
-        if [ -f ~/.lanimals/logs/threats.log ]; then
+        STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+        if [ -f "$STATE_HOME/lanimals/logs/threats.log" ]; then
             echo -e "${BOLD}${MAROON}Recent Threats:${NORMAL}"
-            tail -n 20 ~/.lanimals/logs/threats.log
+            tail -n 20 "$STATE_HOME/lanimals/logs/threats.log"
         else
             echo "No threats logged yet."
         fi

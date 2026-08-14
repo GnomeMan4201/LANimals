@@ -1,43 +1,63 @@
 #!/usr/bin/env bash
-set -eu
+set -euo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-
-RED="\033[0;31m"
-GRN="\033[0;32m"
-NC="\033[0m"
-
-echo -e "${GRN}[*] Installing LANimals requirements...${NC}"
-if [[ -n "${VIRTUAL_ENV:-}" ]]; then
-    python3 -m pip install -r "$ROOT/requirements.txt"
-else
-    python3 -m pip install --user -r "$ROOT/requirements.txt"
+SCOPE=""
+if [[ "${1:-}" == "--scope" ]]; then
+    SCOPE="${2:-}"
+    if [[ -z "$SCOPE" || $# -ne 2 ]]; then
+        echo "usage: ./install.sh [--scope PRIVATE-CIDR]" >&2
+        exit 2
+    fi
+elif [[ $# -ne 0 ]]; then
+    echo "usage: ./install.sh [--scope PRIVATE-CIDR]" >&2
+    exit 2
 fi
 
-echo -e "${GRN}[+] LANimals dependencies installed.${NC}\n"
-echo -e "${RED}To use the checkout-first CLI in this shell, run:${NC}"
-echo -e "    export PATH=\"$ROOT/bin:\$PATH\"\n"
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "[FAIL] Python 3.10 or newer is required." >&2
+    exit 2
+fi
+python3 - <<'PY'
+import sys
+if sys.version_info < (3, 10):
+    raise SystemExit("[FAIL] Python 3.10 or newer is required.")
+PY
 
-echo -e "${GRN}Example commands:${NC}"
-echo "    lanimals_sysinfo        # System info"
-echo "    lanimals_traffic        # Network traffic analyzer"
-echo "    lanimals_lootlog        # View loot logs"
-echo "    lanimals_lootsummary    # Summarize loot analytics"
-echo "    lanimals_tripwire       # Tripwire monitor"
-echo "    lanimals_roguescan      # Rogue device scanner"
-echo "    lanimals_asciiroll      # Rotating ASCII banner"
-echo "    lanimals_ghostscan      # Outbound infra detection"
-echo "    lanimals_anomalydetector # Network anomaly detector"
-echo "    lanimals_threatenrich   # Live threat enrichment"
-echo "    lanimals_sessionlogger  # Session logger/report"
-echo "    lanimals_darkwebhost    # Dark web host detector"
-echo "    lanimals_wlanbeacon     # WLAN beacon hunter"
-echo "    lanimals_fortress       # Security hardening"
-echo "    lanimals_alert          # Threat alert system"
-echo "    lanimals_viznet         # Interactive network viz"
-echo "    lanimals_vulscan        # Vuln scanner"
-echo "    lanimals_netmap         # Visual network map"
-echo "    lanimals_recon          # Autonomous recon"
-echo "    lanimals dashboard      # LANimals browser dashboard"
-echo
-echo -e "${RED}Run: $ROOT/bin/lanimals help${NC}"
+echo "[....] Creating isolated LANimals runtime"
+python3 -m venv "$ROOT/.venv"
+"$ROOT/.venv/bin/python" -m pip install -r "$ROOT/requirements.txt"
+
+USER_BIN="${HOME}/.local/bin"
+mkdir -p "$USER_BIN"
+for source in "$ROOT"/bin/lanimals*; do
+    target="$USER_BIN/$(basename "$source")"
+    if [[ -e "$target" && ! -L "$target" ]]; then
+        echo "[FAIL] Refusing to replace existing file: $target" >&2
+        exit 2
+    fi
+    ln -sfn "$source" "$target"
+done
+
+if [[ -n "$SCOPE" ]]; then
+    "$ROOT/.venv/bin/python" -m core.appliance setup "$SCOPE"
+    "$ROOT/.venv/bin/python" -m core.appliance doctor
+elif [[ -t 0 ]]; then
+    "$ROOT/.venv/bin/python" -m core.appliance setup
+fi
+
+echo "[ OK ] LANimals runtime installed"
+echo "[ OK ] Command directory: $USER_BIN"
+if ! command -v nmap >/dev/null 2>&1; then
+    echo "[WARN] nmap is not installed; discovery will be limited until you run:"
+    echo "       sudo apt install nmap"
+fi
+if [[ ":$PATH:" != *":$USER_BIN:"* ]]; then
+    echo "[INFO] Add this line to your shell profile:"
+    echo "       export PATH=\"$USER_BIN:\$PATH\""
+fi
+if [[ -z "$SCOPE" ]]; then
+    echo "[NEXT] If setup was skipped, approve a scope: $ROOT/bin/lanimals setup"
+else
+    echo "[NEXT] Start the local browser appliance: $ROOT/bin/lanimals start"
+fi

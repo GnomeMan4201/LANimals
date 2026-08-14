@@ -4,14 +4,12 @@ import json
 import shutil
 import socket
 import subprocess
-from pathlib import Path
 from typing import Any, Dict, List
 
+from core.nexus_paths import CACHE_DIR
 from core.nexus_scope import validate_host_target, validate_scan_cidr
 
-ROOT = Path(__file__).resolve().parent.parent
-TMP_DIR = ROOT / "tmp"
-TMP_DIR.mkdir(exist_ok=True)
+TMP_DIR = CACHE_DIR
 
 # ── Virtual interface filtering ───────────────────────────────────────────────
 _VIRTUAL_IFACE_PREFIXES = (

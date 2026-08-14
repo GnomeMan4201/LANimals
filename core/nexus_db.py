@@ -4,17 +4,17 @@ import json
 import sqlite3
 import threading
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "tmp" / "lanimals.db"
-DB_PATH.parent.mkdir(exist_ok=True)
+from core.nexus_paths import DATA_DIR
+
+DB_PATH = DATA_DIR / "lanimals.db"
 
 _lock = threading.Lock()
 
 
 def _conn() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     c = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL")
@@ -440,6 +440,3 @@ def set_host_notes(ip: str, notes: str) -> None:
         )
         c.commit()
         c.close()
-
-
-init_db()
