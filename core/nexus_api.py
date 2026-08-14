@@ -203,21 +203,22 @@ def _run_discovery(jid: str, cidr: str) -> None:
         _job_done(jid, None, str(exc))
 
 
-def _run_arp_refresh(jid: str) -> None:
+def _run_arp_refresh(jid: str, cidr: str) -> None:
     try:
-        _job_log(jid, "ARP neighbor refresh")
-        rows = collect_arp_neighbors()
-        local = collect_local_interfaces()
+        _job_log(jid, f"ARP neighbor refresh: {cidr}")
+        rows = filter_observations_to_cidr(collect_arp_neighbors(), cidr)
+        local = filter_observations_to_cidr(collect_local_interfaces(), cidr)
         for r in rows:
             _job_log(jid, f"  {r.get('ip',''):18s}  mac={r.get('mac') or '--':20s}  state={r.get('state','')}")
         save_discovery_cache({
             "arp_neighbors": rows,
             "local_interfaces": local,
             "nmap_hosts": [],
+            "cidr": cidr,
         })
         upsert_hosts(rows + local)
-        _job_log(jid, f"ARP refresh complete: {len(rows)} entries — graph cache updated")
-        _job_done(jid, {"count": len(rows), "neighbors": rows})
+        _job_log(jid, f"ARP refresh complete: {len(rows)} in-scope entries — graph cache updated")
+        _job_done(jid, {"count": len(rows), "neighbors": rows, "cidr": cidr})
     except Exception as exc:
         _job_log(jid, f"ERROR: {exc}")
         _job_done(jid, None, str(exc))
@@ -469,10 +470,11 @@ def scan_discovery(cidr: Optional[str] = Query(default=None)):
 
 
 @app.post("/api/scan/arp")
-def scan_arp():
-    jid = _job_create("arp_refresh", {})
-    threading.Thread(target=_run_arp_refresh, args=(jid,), daemon=True).start()
-    return {"ok": True, "job_id": jid, "op": "arp_refresh"}
+def scan_arp(cidr: Optional[str] = Query(default=None)):
+    cidr = _cidr_or_422(cidr)
+    jid = _job_create("arp_refresh", {"cidr": cidr})
+    threading.Thread(target=_run_arp_refresh, args=(jid, cidr), daemon=True).start()
+    return {"ok": True, "job_id": jid, "op": "arp_refresh", "cidr": cidr}
 
 
 @app.post("/api/scan/hostmap")
@@ -1205,8 +1207,9 @@ _TERMINAL_PROMPT = "\r\n\x1b[38;5;88mLANimals\x1b[0m> "
 
 def _start_terminal_job(action: str, target: Optional[str]) -> dict[str, Any]:
     if action == "scan:arp":
-        jid = _job_create("arp_refresh", {})
-        runner, args = _run_arp_refresh, (jid,)
+        cidr = _cidr_or_422(target)
+        jid = _job_create("arp_refresh", {"cidr": cidr})
+        runner, args = _run_arp_refresh, (jid, cidr)
     elif action in {"scan:discovery", "scan:hostmap", "scan:rogue"}:
         cidr = _cidr_or_422(target)
         operation = action.split(":", 1)[1]

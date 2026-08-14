@@ -642,13 +642,26 @@ function setOverlay(mode){
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
-async function apiGet(path){ const r=await fetch(path); if(!r.ok) throw new Error(r.status); return r.json(); }
-async function apiPost(path,body){
-  const headers={'X-LANimals-Operator':'1'};
-  if(body) headers['Content-Type']='application/json';
-  const r=await fetch(path,{method:'POST',headers,body:body?JSON.stringify(body):undefined});
-  if(!r.ok){ let detail=''; try{ detail=(await r.json()).detail||''; }catch(e){} throw new Error(detail||r.status); }
+async function apiGet(path){
+  const r=await fetch(path);
+  if(!r.ok){ let detail=''; try{ detail=(await r.json()).detail||''; }catch(e){} throw new Error(detail||`GET ${path} failed (${r.status})`); }
   return r.json();
+}
+async function apiMutate(method,path,body){
+  const headers={'X-LANimals-Operator':'1'};
+  if(body!==undefined) headers['Content-Type']='application/json';
+  const r=await fetch(path,{method,headers,body:body!==undefined?JSON.stringify(body):undefined});
+  if(!r.ok){ let detail=''; try{ detail=(await r.json()).detail||''; }catch(e){} throw new Error(detail||`${method} ${path} failed (${r.status})`); }
+  const ctype=r.headers.get('content-type')||'';
+  return ctype.includes('application/json')?r.json():null;
+}
+async function apiPost(path,body){ return apiMutate('POST',path,body); }
+async function apiPatch(path,body){ return apiMutate('PATCH',path,body); }
+async function apiDelete(path){ return apiMutate('DELETE',path); }
+function showActionError(label,e){
+  const msg=e?.message||String(e);
+  addScanLine(`ERROR: ${label}: ${msg}`,'err');
+  setStatus(`${label} failed`,'error');
 }
 
 async function fetchScope(){
@@ -1018,16 +1031,29 @@ function renderTraps(traps){
 }
 
 async function stopTrap(trapId){
-  await fetch('/api/traps/'+encodeURIComponent(trapId),{method:'DELETE',headers:{'X-LANimals-Operator':'1'}});
-  await fetchTraps(); await fetchGraph();
+  activateTab('scanout');
+  try{
+    await apiDelete('/api/traps/'+encodeURIComponent(trapId));
+    addScanLine(`Trap stopped: ${trapId}`,'ok');
+    setStatus('trap stopped','ready');
+    await fetchTraps(); await fetchGraph();
+  }catch(e){
+    showActionError('trap stop',e);
+  }
 }
 
 async function deployTrapBundle(){
   addScanLine('→ Deploying trap bundle…','muted'); activateTab('scanout');
-  const d=await apiPost('/api/traps/bundle/default');
-  addScanLine(`${d.active_count} traps deployed`,'ok');
-  d.deployed?.forEach(t=>addScanLine(`  ◈ ${t.name} port=${t.port} ${t.status}`,'ok'));
-  await fetchTraps(); await fetchGraph(); activateTab('traps');
+  setStatus('deploying traps…','scanning');
+  try{
+    const d=await apiPost('/api/traps/bundle/default');
+    addScanLine(`${d.active_count} traps deployed`,'ok');
+    d.deployed?.forEach(t=>addScanLine(`  ◈ ${t.name} port=${t.port} ${t.status}`,'ok'));
+    setStatus('traps deployed','ready');
+    await fetchTraps(); await fetchGraph(); activateTab('traps');
+  }catch(e){
+    showActionError('trap deployment',e);
+  }
 }
 
 // ── Render Reports ────────────────────────────────────────────────────────────
@@ -1235,8 +1261,14 @@ function renderDetail(node, neighbors, events, dbServices, notes, cves){
   if(notesBtn&&node.ip){
     notesBtn.addEventListener('click',async()=>{
       notesBtn.textContent='Saving…';
-      await fetch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes',{method:'PATCH',headers:{'Content-Type':'application/json','X-LANimals-Operator':'1'},body:JSON.stringify({notes:$('notesArea').value})});
-      notesBtn.textContent='Saved ✓';
+      try{
+        await apiPatch('/api/hosts/'+encodeURIComponent(node.ip)+'/notes',{notes:$('notesArea').value});
+        notesBtn.textContent='Saved';
+        setStatus('notes saved','ready');
+      }catch(e){
+        notesBtn.textContent='Save failed';
+        showActionError('note save',e);
+      }
       setTimeout(()=>notesBtn.textContent='Save Notes',1500);
     });
   }
@@ -1635,44 +1667,70 @@ $('btnClearSel').onclick=clearDetail;
 $('btnZoomIn').onclick=()=>{scale=Math.min(4,scale*1.2);renderGraph();};
 $('btnZoomOut').onclick=()=>{scale=Math.max(.25,scale/1.2);renderGraph();};
 $('btnDiscovery').onclick=()=>runOp('/api/scan/discovery?cidr='+encodeURIComponent(cidr()));
-$('btnArp').onclick=()=>runOp('/api/scan/arp');
+$('btnArp').onclick=()=>runOp('/api/scan/arp?cidr='+encodeURIComponent(cidr()));
 $('btnHostmap').onclick=()=>runOp('/api/scan/hostmap?cidr='+encodeURIComponent(cidr()));
 $('btnRogue').onclick=()=>runOp('/api/scan/rogue?cidr='+encodeURIComponent(cidr()));
 $('btnAnomaly').onclick=async()=>{
   addScanLine('→ POST /api/scan/anomaly','muted'); activateTab('scanout');
-  const d=await apiPost('/api/scan/anomaly');
-  if(d.anomalies?.length){ d.anomalies.forEach(a=>addScanLine(`  ${a.ip}:${a.port} ${a.status}`,'warn')); }
-  else addScanLine('[ OK ] No anomalies','ok');
-  fetchIntelFeed();
+  setStatus('anomaly scan…','scanning');
+  try{
+    const d=await apiPost('/api/scan/anomaly');
+    if(d.error) throw new Error(d.error);
+    if(d.anomalies?.length){ d.anomalies.forEach(a=>addScanLine(`  ${a.ip}:${a.port} ${a.status}`,'warn')); }
+    else addScanLine('[ OK ] No anomalies','ok');
+    setStatus('done','ready');
+    fetchIntelFeed();
+  }catch(e){ showActionError('anomaly scan',e); }
 };
 $('btnWatchdog').onclick=async()=>{
   addScanLine('→ POST /api/watchdog','muted'); activateTab('scanout');
-  const d=await apiPost('/api/watchdog');
-  addScanLine(`Watchdog: ${d.online_count} online, ${d.offline_count} offline`,'ok');
-  d.offline?.forEach(o=>addScanLine(`  [OFFLINE] ${o.ip} ${o.hostname}`,'warn'));
-  fetchIntelFeed();
+  setStatus('watchdog…','scanning');
+  try{
+    const d=await apiPost('/api/watchdog');
+    addScanLine(`Watchdog: ${d.online_count} online, ${d.offline_count} offline`,'ok');
+    d.offline?.forEach(o=>addScanLine(`  [OFFLINE] ${o.ip} ${o.hostname}`,'warn'));
+    setStatus('done','ready');
+    fetchIntelFeed();
+  }catch(e){ showActionError('watchdog',e); }
 };
 $('btnDiff').onclick=async()=>{
   addScanLine('→ GET /api/diff · last two explicit Discovery scans','muted'); activateTab('scanout');
-  diffData=await apiGet('/api/diff');
-  addScanLine(diffData.summary,'ok');
-  diffData.appeared?.forEach(h=>addScanLine(`  [NEW] ${h.ip} ${h.hostname}`,'ok'));
-  diffData.disappeared?.forEach(h=>addScanLine(`  [GONE] ${h.ip}`,'warn'));
-  diffData.changed?.forEach(h=>{ addScanLine(`  [CHANGED] ${h.ip}`,'warn'); h.changes?.forEach(c=>addScanLine(`    ${c}`,'muted')); });
-  setOverlay('diff');
+  setStatus('loading diff…','scanning');
+  try{
+    diffData=await apiGet('/api/diff');
+    addScanLine(diffData.summary||'Diff unavailable until two explicit Discovery scans exist',diffData.comparable?'ok':'muted');
+    diffData.appeared?.forEach(h=>addScanLine(`  [NEW] ${h.ip} ${h.hostname}`,'ok'));
+    diffData.disappeared?.forEach(h=>addScanLine(`  [GONE] ${h.ip}`,'warn'));
+    diffData.changed?.forEach(h=>{ addScanLine(`  [CHANGED] ${h.ip}`,'warn'); h.changes?.forEach(c=>addScanLine(`    ${c}`,'muted')); });
+    setStatus('done','ready');
+    setOverlay('diff');
+  }catch(e){ showActionError('network diff',e); }
 };
 $('btnRescore').onclick=async()=>{
   addScanLine('→ POST /api/scan/rescore','muted'); activateTab('scanout');
-  const d=await apiPost('/api/scan/rescore');
-  addScanLine(`Rescored ${d.rescored} hosts, ${d.flagged} flagged`,'ok');
-  d.results?.filter(r=>r.status!=='normal').forEach(r=>{ addScanLine(`  [${r.status.toUpperCase()}] ${r.ip} risk=${r.risk_score}`,'warn'); r.reasons?.slice(0,2).forEach(reason=>addScanLine(`    - ${reason}`,'muted')); });
-  fetchGraph(); fetchStats(); fetchIntelFeed();
+  setStatus('rescoring…','scanning');
+  try{
+    const d=await apiPost('/api/scan/rescore');
+    addScanLine(`Rescored ${d.rescored} hosts, ${d.flagged} flagged`,'ok');
+    d.results?.filter(r=>r.status!=='normal').forEach(r=>{ addScanLine(`  [${r.status.toUpperCase()}] ${r.ip} risk=${r.risk_score}`,'warn'); r.reasons?.slice(0,2).forEach(reason=>addScanLine(`    - ${reason}`,'muted')); });
+    setStatus('done','ready');
+    fetchGraph(); fetchStats(); fetchIntelFeed();
+  }catch(e){ showActionError('risk rescore',e); }
 };
 $('btnDeployTraps').onclick=()=>deployTrapBundle();
 $('btnStopAllTraps').onclick=async()=>{
-  const data=await apiGet('/api/traps');
-  for(const t of data.traps||[]){ if(t.status==='active') await fetch('/api/traps/'+t.id,{method:'DELETE',headers:{'X-LANimals-Operator':'1'}}); }
-  addScanLine('All traps stopped','muted'); await fetchTraps(); await fetchGraph();
+  activateTab('scanout');
+  setStatus('stopping traps…','scanning');
+  try{
+    const data=await apiGet('/api/traps');
+    const active=(data.traps||[]).filter(t=>t.status==='active');
+    for(const t of active) await apiDelete('/api/traps/'+encodeURIComponent(t.id));
+    addScanLine(`Stopped ${active.length} active trap(s)`,'ok');
+    setStatus('traps stopped','ready');
+    await fetchTraps(); await fetchGraph();
+  }catch(e){
+    showActionError('stop all traps',e);
+  }
 };
 $('btnSysinfo').onclick=fetchSysinfo;
 $('btnReport').onclick=()=>window.open('/api/export/report','_blank');

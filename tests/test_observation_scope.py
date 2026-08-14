@@ -65,3 +65,38 @@ def test_rogue_scan_refreshes_neighbor_cache_before_reading_mac():
         "hostname": "fixture",
         "reason": "MAC changed from baseline",
     }]
+
+
+def test_arp_refresh_filters_passive_evidence_to_requested_cidr():
+    from core import nexus_api
+
+    arp = [
+        {"ip": "192.168.250.0", "mac": "AA:00:00:00:00:00", "source": "arp"},
+        {"ip": "192.168.250.2", "mac": "AA:00:00:00:00:02", "source": "arp"},
+        {"ip": "192.168.251.9", "mac": "AA:00:00:00:01:09", "source": "arp"},
+    ]
+    local = [
+        {"ip": "192.168.250.1", "source": "local"},
+        {"ip": "10.0.0.5", "source": "local"},
+    ]
+    saved = {}
+    persisted = []
+    completed = {}
+
+    with (
+        patch.object(nexus_collectors, "validate_scan_cidr", return_value="192.168.250.0/30"),
+        patch.object(nexus_api, "collect_arp_neighbors", return_value=arp),
+        patch.object(nexus_api, "collect_local_interfaces", return_value=local),
+        patch.object(nexus_api, "save_discovery_cache", side_effect=lambda data: saved.update(data)),
+        patch.object(nexus_api, "upsert_hosts", side_effect=lambda rows: persisted.extend(rows)),
+        patch.object(nexus_api, "_job_log"),
+        patch.object(nexus_api, "_job_done", side_effect=lambda jid, result, error=None: completed.update({"result": result, "error": error})),
+    ):
+        nexus_api._run_arp_refresh("job", "192.168.250.0/30")
+
+    assert [row["ip"] for row in saved["arp_neighbors"]] == ["192.168.250.2"]
+    assert [row["ip"] for row in saved["local_interfaces"]] == ["192.168.250.1"]
+    assert saved["cidr"] == "192.168.250.0/30"
+    assert {row["ip"] for row in persisted} == {"192.168.250.1", "192.168.250.2"}
+    assert completed["error"] is None
+    assert completed["result"]["cidr"] == "192.168.250.0/30"
