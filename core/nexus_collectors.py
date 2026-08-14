@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import socket
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List
+
+from core.nexus_scope import validate_host_target, validate_scan_cidr
 
 ROOT = Path(__file__).resolve().parent.parent
 TMP_DIR = ROOT / "tmp"
@@ -17,19 +18,8 @@ _VIRTUAL_IFACE_PREFIXES = (
     "docker", "veth", "virbr", "br-", "lxc", "lxd",
     "vbox", "vmnet", "tun", "tap", "wg", "utun", "lxcbr",
 )
-_VIRTUAL_IP_PREFIXES = (
-    "172.17.", "172.18.", "172.19.", "172.20.", "172.21.", "172.22.",
-    "172.23.", "172.24.", "172.25.", "172.26.", "172.27.", "172.28.",
-    "172.29.", "172.30.", "172.31.", "10.0.3.", "10.0.2.",
-)
-
-
 def _is_virtual_iface(iface: str) -> bool:
     return any(iface.lower().startswith(p) for p in _VIRTUAL_IFACE_PREFIXES)
-
-
-def _is_virtual_ip(ip: str) -> bool:
-    return any(ip.startswith(p) for p in _VIRTUAL_IP_PREFIXES)
 
 
 # ── OUI vendor lookup ─────────────────────────────────────────────────────────
@@ -96,9 +86,11 @@ def _run(cmd: list[str], timeout: int = 30) -> str:
 
 
 def _nmap_cmd(args: list[str]) -> list[str]:
-    """Prepend sudo if not root — needed for MAC/ARP data."""
-    if shutil.which("sudo") and os.geteuid() != 0:
-        return ["sudo"] + ["nmap"] + args
+    """Build a non-interactive nmap command.
+
+    LANimals never invokes sudo from a background worker. Operators who need
+    privileged scan modes must start LANimals with the required privileges.
+    """
     return ["nmap"] + args
 
 
@@ -185,7 +177,6 @@ def collect_local_interfaces() -> List[Dict[str, Any]]:
             if (
                 fam == "AF_INET"
                 and not ip.startswith("127.")
-                and not _is_virtual_ip(ip)
                 and ip not in seen_ips
             ):
                 seen_ips.add(ip)
@@ -203,9 +194,11 @@ def collect_local_interfaces() -> List[Dict[str, Any]]:
 
 
 def collect_nmap_ping_sweep(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]]:
+    cidr = validate_scan_cidr(cidr)
     if shutil.which("nmap") is None:
         return []
     xml_path = TMP_DIR / "nexus_ping_scan.xml"
+    xml_path.unlink(missing_ok=True)
     _run(_nmap_cmd(["-sn", cidr, "-oX", str(xml_path)]), timeout=90)
     if not xml_path.exists():
         return []
@@ -251,7 +244,7 @@ def collect_host_map(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]]:
 
 
 def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
-    from core.nexus_state import load_state, save_state
+    from core.nexus_db import get_mac_baseline
 
     current_arp = collect_arp_neighbors()
     current_nmap = collect_nmap_ping_sweep(cidr=cidr)
@@ -262,8 +255,7 @@ def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
         if ip and ip not in current:
             current[ip] = row
 
-    state = load_state()
-    baseline: Dict[str, Any] = state.get("mac_baseline", {})
+    baseline: Dict[str, Any] = get_mac_baseline()
 
     rogues = []
     for ip, info in current.items():
@@ -271,7 +263,7 @@ def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
         if not mac:
             continue
         if ip in baseline:
-            if baseline[ip].get("mac") and baseline[ip]["mac"] != mac:
+            if baseline[ip].get("mac") and baseline[ip]["mac"].lower() != mac.lower():
                 rogues.append({
                     "ip": ip,
                     "mac": mac,
@@ -288,32 +280,12 @@ def collect_rogue_scan(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
                 "reason": "New host not in baseline",
             })
 
-    for ip, info in current.items():
-        if ip not in baseline:
-            baseline[ip] = {"mac": info.get("mac"), "first_seen": _now_str()}
-    state["mac_baseline"] = baseline
-    save_state(state)
-
-    # Sync baseline to SQLite
-    try:
-        from core.nexus_db import update_mac_baseline as _upsert_baseline
-        for ip, info in current.items():
-            mac = info.get("mac")
-            if mac:
-                _upsert_baseline(ip, mac, info.get("hostname", ip))
-    except Exception:
-        pass
-
     return {
         "rogues": rogues,
         "known_count": len(baseline),
         "scanned_count": len(current),
+        "observations": list(current.values()),
     }
-
-
-def _now_str() -> str:
-    from datetime import datetime
-    return datetime.utcnow().isoformat() + "Z"
 
 
 def collect_sysinfo() -> Dict[str, Any]:
@@ -339,7 +311,6 @@ def collect_sysinfo() -> Dict[str, Any]:
                 a.address for a in addrs
                 if getattr(a.family, "name", "") == "AF_INET"
                 and not a.address.startswith("127.")
-                and not _is_virtual_ip(a.address)
             ]
             if ips:
                 ifaces[iface] = ips
@@ -371,18 +342,21 @@ def collect_all(cidr: str = "192.168.1.0/24") -> Dict[str, Any]:
 def collect_service_scan(targets: List[str]) -> List[Dict[str, Any]]:
     if shutil.which("nmap") is None:
         return []
-    ipv4 = [t for t in targets if _is_ipv4(t)]
+    ipv4 = [validate_host_target(t) for t in targets]
     if not ipv4:
         return []
     xml_path = TMP_DIR / "nexus_service_scan.xml"
+    xml_path.unlink(missing_ok=True)
     _run(_nmap_cmd(["-sV", "-oX", str(xml_path)] + ipv4), timeout=180)
     return _parse_nmap_services(xml_path, source="nmap_service")
 
 
 def collect_services_for_ip(ip: str) -> List[Dict[str, Any]]:
-    if shutil.which("nmap") is None or not _is_ipv4(ip):
+    ip = validate_host_target(ip)
+    if shutil.which("nmap") is None:
         return []
     xml_path = TMP_DIR / f"nexus_svc_{ip.replace('.', '_')}.xml"
+    xml_path.unlink(missing_ok=True)
     _run(_nmap_cmd(["-Pn", "-sV", "-oX", str(xml_path), ip]), timeout=120)
     return _parse_nmap_services(xml_path, source="nmap_service_targeted", filter_ip=ip)
 

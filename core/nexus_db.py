@@ -69,9 +69,21 @@ def init_db() -> None:
             first_seen  TEXT,
             last_seen   TEXT
         );
+        CREATE TABLE IF NOT EXISTS baseline_decisions (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts            TEXT NOT NULL,
+            ip            TEXT NOT NULL,
+            action        TEXT NOT NULL CHECK(action IN ('accept','defer')),
+            observed_mac  TEXT,
+            previous_mac  TEXT,
+            hostname      TEXT,
+            note          TEXT DEFAULT ''
+        );
         CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts DESC);
         CREATE INDEX IF NOT EXISTS idx_events_ip ON events(ip);
         CREATE INDEX IF NOT EXISTS idx_services_ip ON services(ip);
+        CREATE INDEX IF NOT EXISTS idx_baseline_decisions_ip
+            ON baseline_decisions(ip, id DESC);
         """)
         # Migrate: add notes column if upgrading from older DB
         try:
@@ -255,6 +267,140 @@ def update_mac_baseline(ip: str, mac: str, hostname: str) -> None:
         """, (ip, mac, hostname, now, now))
         c.commit()
         c.close()
+
+
+def get_pending_baseline_changes() -> List[Dict[str, Any]]:
+    """Return observations that require an explicit operator decision."""
+    with _lock:
+        c = _conn()
+        rows = c.execute("""
+            SELECT h.ip, h.mac AS observed_mac, h.hostname, h.vendor,
+                   h.first_seen, h.last_seen,
+                   b.mac AS baseline_mac, b.hostname AS baseline_hostname
+            FROM hosts h
+            LEFT JOIN mac_baseline b ON b.ip = h.ip
+            WHERE h.mac IS NOT NULL
+              AND (b.ip IS NULL
+                   OR (b.mac IS NOT NULL AND lower(h.mac) != lower(b.mac)))
+            ORDER BY h.ip
+        """).fetchall()
+        c.close()
+    pending = []
+    for row in rows:
+        item = dict(row)
+        item["status"] = "new" if not item.get("baseline_mac") else "changed"
+        item["reason"] = (
+            "Host is not in the accepted baseline"
+            if item["status"] == "new"
+            else "Observed MAC differs from the accepted baseline"
+        )
+        pending.append(item)
+    return pending
+
+
+def accept_baseline_observation(ip: str, note: str = "") -> Dict[str, Any]:
+    """Atomically accept the current host identity and record the decision."""
+    now = _now()
+    with _lock:
+        c = _conn()
+        try:
+            c.execute("BEGIN IMMEDIATE")
+            host = c.execute(
+                "SELECT ip,mac,hostname FROM hosts WHERE ip=?", (ip,)
+            ).fetchone()
+            if not host:
+                raise ValueError("host has not been observed")
+            if not host["mac"]:
+                raise ValueError("host has no observed MAC address")
+            previous = c.execute(
+                "SELECT mac FROM mac_baseline WHERE ip=?", (ip,)
+            ).fetchone()
+            previous_mac = previous["mac"] if previous else None
+            c.execute("""
+                INSERT INTO mac_baseline (ip,mac,hostname,first_seen,last_seen)
+                VALUES (?,?,?,?,?)
+                ON CONFLICT(ip) DO UPDATE SET
+                    mac=excluded.mac,
+                    hostname=excluded.hostname,
+                    last_seen=excluded.last_seen
+            """, (ip, host["mac"], host["hostname"] or ip, now, now))
+            cursor = c.execute("""
+                INSERT INTO baseline_decisions
+                    (ts,ip,action,observed_mac,previous_mac,hostname,note)
+                VALUES (?,?,?,?,?,?,?)
+            """, (
+                now, ip, "accept", host["mac"], previous_mac,
+                host["hostname"] or ip, note.strip(),
+            ))
+            c.commit()
+            return {
+                "id": cursor.lastrowid,
+                "ts": now,
+                "ip": ip,
+                "action": "accept",
+                "observed_mac": host["mac"],
+                "previous_mac": previous_mac,
+                "hostname": host["hostname"] or ip,
+                "note": note.strip(),
+            }
+        except Exception:
+            c.rollback()
+            raise
+        finally:
+            c.close()
+
+
+def defer_baseline_observation(ip: str, note: str = "") -> Dict[str, Any]:
+    """Record a fail-closed decision without mutating the accepted baseline."""
+    now = _now()
+    with _lock:
+        c = _conn()
+        try:
+            c.execute("BEGIN IMMEDIATE")
+            host = c.execute(
+                "SELECT ip,mac,hostname FROM hosts WHERE ip=?", (ip,)
+            ).fetchone()
+            if not host:
+                raise ValueError("host has not been observed")
+            previous = c.execute(
+                "SELECT mac FROM mac_baseline WHERE ip=?", (ip,)
+            ).fetchone()
+            previous_mac = previous["mac"] if previous else None
+            cursor = c.execute("""
+                INSERT INTO baseline_decisions
+                    (ts,ip,action,observed_mac,previous_mac,hostname,note)
+                VALUES (?,?,?,?,?,?,?)
+            """, (
+                now, ip, "defer", host["mac"], previous_mac,
+                host["hostname"] or ip, note.strip(),
+            ))
+            c.commit()
+            return {
+                "id": cursor.lastrowid,
+                "ts": now,
+                "ip": ip,
+                "action": "defer",
+                "observed_mac": host["mac"],
+                "previous_mac": previous_mac,
+                "hostname": host["hostname"] or ip,
+                "note": note.strip(),
+            }
+        except Exception:
+            c.rollback()
+            raise
+        finally:
+            c.close()
+
+
+def get_baseline_decisions(limit: int = 100) -> List[Dict[str, Any]]:
+    with _lock:
+        c = _conn()
+        rows = c.execute(
+            "SELECT * FROM baseline_decisions ORDER BY id DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+        c.close()
+    return [dict(row) for row in rows]
 
 
 def get_db_stats() -> Dict[str, Any]:
