@@ -36,27 +36,45 @@ jobs:
       - name: Apply fail-closed integrity patch
         run: python scripts/apply_state_evidence_integrity.py
 
-      - name: Keep empty graph reads DB-independent
+      - name: Keep empty graph reads storage-independent
         run: |
           python - <<'PY'
           from pathlib import Path
           path = Path('core/nexus_builder.py')
           text = path.read_text(encoding='utf-8')
-          old = '''def _overlay_persisted_host_state(nodes: Dict[str, GraphNode]) -> None:
-              from core.nexus_db import get_all_hosts
+          replacements = [
+              (
+                  '''def _overlay_persisted_host_state(nodes: Dict[str, GraphNode]) -> None:
+                  from core.nexus_db import get_all_hosts
 
-              persisted = {row["ip"]: row for row in get_all_hosts()}
-          '''.replace('              ', '')
-          new = '''def _overlay_persisted_host_state(nodes: Dict[str, GraphNode]) -> None:
-              from core.nexus_db import get_all_hosts
+                  persisted = {row["ip"]: row for row in get_all_hosts()}
+                  '''.replace('                  ', ''),
+                  '''def _overlay_persisted_host_state(nodes: Dict[str, GraphNode]) -> None:
+                  from core.nexus_db import get_all_hosts
 
-              if not nodes:
-                  return
-              persisted = {row["ip"]: row for row in get_all_hosts()}
-          '''.replace('              ', '')
-          if text.count(old) != 1:
-              raise SystemExit('builder overlay source drifted')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+                  if not nodes:
+                      return
+                  persisted = {row["ip"]: row for row in get_all_hosts()}
+                  '''.replace('                  ', ''),
+              ),
+              (
+                  '''def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
+                  """Compatibility helper: graph reads expose durable events and never mutate state."""
+                  return _durable_graph_events()
+                  '''.replace('                  ', ''),
+                  '''def _generate_state_events(nodes: Dict[str, GraphNode]) -> List[GraphEvent]:
+                  """Compatibility helper: graph reads expose durable events and never mutate state."""
+                  if not nodes:
+                      return []
+                  return _durable_graph_events()
+                  '''.replace('                  ', ''),
+              ),
+          ]
+          for old, new in replacements:
+              if text.count(old) != 1:
+                  raise SystemExit('builder empty-state source drifted')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
           PY
 
       - name: Run integrity regressions
