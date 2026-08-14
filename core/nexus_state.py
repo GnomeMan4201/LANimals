@@ -1,38 +1,187 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+import os
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 from core.nexus_paths import DATA_DIR
 
 SNAPSHOT_STATE_FILE = DATA_DIR / "network_snapshot.json"
 LEGACY_STATE_FILE = DATA_DIR / "nexus_state.json"
+SNAPSHOT_SCHEMA_VERSION = 2
+
+
+def _normalize_snapshot(data: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(data, dict):
+        return None
+    hosts = data.get("hosts")
+    if not isinstance(hosts, dict):
+        return None
+    normalized_hosts: Dict[str, Dict[str, Any]] = {}
+    for key, value in hosts.items():
+        if not isinstance(key, str) or not isinstance(value, dict):
+            continue
+        ip = str(value.get("ip") or key)
+        normalized_hosts[ip] = {
+            "ip": ip,
+            "hostname": value.get("hostname") or value.get("label") or ip,
+            "label": value.get("label") or value.get("hostname") or ip,
+            "mac": value.get("mac"),
+            "status": value.get("status") or "normal",
+            "risk_score": int(value.get("risk_score") or 0),
+            "group": value.get("group"),
+            "last_seen": value.get("last_seen"),
+            "observed_at": value.get("observed_at") or data.get("saved_at"),
+            "source": value.get("source") or data.get("source"),
+        }
+    return {
+        "hosts": normalized_hosts,
+        "saved_at": data.get("saved_at"),
+        "source": data.get("source"),
+        "scope": data.get("scope"),
+    }
+
+
+def _state_path() -> Path:
+    if SNAPSHOT_STATE_FILE.exists():
+        return SNAPSHOT_STATE_FILE
+    return LEGACY_STATE_FILE
+
+
+def load_snapshot_pair() -> Dict[str, Any]:
+    path = _state_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"schema_version": SNAPSHOT_SCHEMA_VERSION, "previous": None, "current": None}
+
+    if isinstance(data, dict) and data.get("schema_version") == SNAPSHOT_SCHEMA_VERSION:
+        return {
+            "schema_version": SNAPSHOT_SCHEMA_VERSION,
+            "previous": _normalize_snapshot(data.get("previous")),
+            "current": _normalize_snapshot(data.get("current")),
+        }
+
+    # Compatibility with the pre-v2 single-snapshot file. Treat it as current;
+    # the next explicit acquisition will shift it to previous.
+    return {
+        "schema_version": SNAPSHOT_SCHEMA_VERSION,
+        "previous": None,
+        "current": _normalize_snapshot(data),
+    }
 
 
 def load_snapshot_state() -> Dict[str, Any]:
-    path = SNAPSHOT_STATE_FILE
-    if not path.exists() and LEGACY_STATE_FILE.exists():
-        path = LEGACY_STATE_FILE
-    try:
-        data = json.loads(path.read_text())
-    except Exception:
+    """Compatibility reader returning the current snapshot's legacy shape."""
+    current = load_snapshot_pair().get("current")
+    if not current:
         return {}
-    hosts = data.get("hosts")
-    return {"hosts": hosts, "saved_at": data.get("saved_at")} if isinstance(hosts, dict) else {}
+    return {"hosts": current["hosts"], "saved_at": current.get("saved_at")}
+
+
+def _atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if path.exists() and path.is_symlink():
+        raise ValueError(f"refusing symlinked snapshot state: {path}")
+    descriptor, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary = Path(temp_name)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            descriptor = -1
+            json.dump(payload, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(path)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+
+
+def advance_snapshot_state(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Advance the observation baseline only after an explicit acquisition."""
+    current = _normalize_snapshot(data)
+    if current is None:
+        raise ValueError("snapshot state requires a hosts mapping")
+    pair = load_snapshot_pair()
+    payload = {
+        "schema_version": SNAPSHOT_SCHEMA_VERSION,
+        "previous": pair.get("current"),
+        "current": current,
+    }
+    _atomic_write_json(SNAPSHOT_STATE_FILE, payload)
+    return payload
 
 
 def save_snapshot_state(data: Dict[str, Any]) -> None:
-    hosts = data.get("hosts")
-    if not isinstance(hosts, dict):
-        raise ValueError("snapshot state requires a hosts mapping")
-    payload = {"hosts": hosts, "saved_at": data.get("saved_at")}
-    SNAPSHOT_STATE_FILE.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    tmp_path = SNAPSHOT_STATE_FILE.with_suffix(".tmp")
-    tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
-    tmp_path.replace(SNAPSHOT_STATE_FILE)
+    """Compatibility alias. New code should call advance_snapshot_state explicitly."""
+    advance_snapshot_state(data)
 
 
-# Compatibility aliases for older callers. These now represent snapshots only;
-# MAC baselines are authoritative in SQLite and must never share this file.
+def diff_snapshots(previous: Any, current: Any) -> Dict[str, Any]:
+    prev = _normalize_snapshot(previous)
+    cur = _normalize_snapshot(current)
+    if not prev or not cur:
+        return {
+            "comparable": False,
+            "reason": "two explicit observation snapshots are required",
+            "appeared": [], "disappeared": [], "changed": [],
+            "summary": "No comparable discovery snapshots yet",
+        }
+    if prev.get("scope") and cur.get("scope") and prev["scope"] != cur["scope"]:
+        return {
+            "comparable": False,
+            "reason": f"observation scopes differ: {prev['scope']} vs {cur['scope']}",
+            "appeared": [], "disappeared": [], "changed": [],
+            "summary": "Discovery snapshots use different scopes",
+        }
+
+    prev_hosts = prev["hosts"]
+    cur_hosts = cur["hosts"]
+    prev_ips = set(prev_hosts)
+    cur_ips = set(cur_hosts)
+
+    appeared = [cur_hosts[ip] for ip in sorted(cur_ips - prev_ips)]
+    disappeared = [prev_hosts[ip] for ip in sorted(prev_ips - cur_ips)]
+    changed = []
+    for ip in sorted(cur_ips & prev_ips):
+        old = prev_hosts[ip]
+        new = cur_hosts[ip]
+        changes = []
+        old_mac = old.get("mac")
+        new_mac = new.get("mac")
+        if old_mac and new_mac and str(old_mac).lower() != str(new_mac).lower():
+            changes.append(f"MAC: {old_mac} → {new_mac}")
+        if old.get("status") != new.get("status"):
+            changes.append(f"status: {old.get('status')} → {new.get('status')}")
+        if old.get("risk_score") != new.get("risk_score"):
+            changes.append(f"risk: {old.get('risk_score')} → {new.get('risk_score')}")
+        if changes:
+            changed.append({
+                "ip": ip,
+                "hostname": new.get("hostname") or new.get("label") or ip,
+                "changes": changes,
+            })
+
+    return {
+        "comparable": True,
+        "reason": None,
+        "source": cur.get("source"),
+        "scope": cur.get("scope"),
+        "previous_saved_at": prev.get("saved_at"),
+        "current_saved_at": cur.get("saved_at"),
+        "appeared": appeared,
+        "disappeared": disappeared,
+        "changed": changed,
+        "summary": f"+{len(appeared)} new  -{len(disappeared)} gone  ~{len(changed)} changed",
+    }
+
+
+# Compatibility aliases for older callers. These represent observation snapshots
+# only; MAC baselines remain authoritative in SQLite and never share this file.
 load_state = load_snapshot_state
 save_state = save_snapshot_state

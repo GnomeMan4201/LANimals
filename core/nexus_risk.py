@@ -133,9 +133,17 @@ def score_host(
         reasons.append(f"Elevated port count ({port_count} open ports)")
 
     # ── Honeypot interaction — highest weight signal ─────────────────────────
-    honeypot_hits: int = host.get("honeypot_hits", 0)
-    if isinstance(_meta, dict):
-        honeypot_hits = max(honeypot_hits, int(_meta.get("honeypot_hits", 0)))
+    def _safe_int(value: Any) -> int:
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    honeypot_hits = max(
+        _safe_int(honeypot_hits),
+        _safe_int(host.get("honeypot_hits", 0)),
+        _safe_int(_meta.get("honeypot_hits", 0)) if isinstance(_meta, dict) else 0,
+    )
     if honeypot_hits > 0:
         score += min(50 + honeypot_hits * 5, 70)
         reasons.append(
@@ -205,8 +213,8 @@ def rescore_all_hosts() -> List[Dict[str, Any]]:
         h["risk_score"] = score
         h["status"] = status
         meta["risk_reasons"] = reasons[:20]
-        # Remove heavy fields before re-serializing
-        meta.pop("cves", None)
+        # Detailed CVE evidence is already bounded by nexus_db.upsert_host.
+        # Do not delete it during a derived risk evaluation.
         meta_str = _json.dumps(meta)
         h["meta"] = meta_str
         upsert_host(h)

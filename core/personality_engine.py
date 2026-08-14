@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from core.nexus_db import DB_PATH
 
 _lock = threading.Lock()
+PERSONALITY_RULE_VERSION = "1"
 
 # ── Personality definitions ───────────────────────────────────────────────────
 
@@ -80,7 +81,9 @@ def init_personality_tables() -> None:
             stealth         INTEGER DEFAULT 10,
             persistence     INTEGER DEFAULT 6,
             assigned_at     TEXT,
-            reason          TEXT
+            reason          TEXT,
+            rule_version    TEXT,
+            input_summary   TEXT
         );
 
         CREATE TABLE IF NOT EXISTS mutation_chain (
@@ -105,6 +108,11 @@ def init_personality_tables() -> None:
         CREATE INDEX IF NOT EXISTS idx_mutation_ip ON mutation_chain(ip);
         CREATE INDEX IF NOT EXISTS idx_mutation_ts ON mutation_chain(ts DESC);
         """)
+        columns = {row[1] for row in c.execute("PRAGMA table_info(host_personalities)").fetchall()}
+        if "rule_version" not in columns:
+            c.execute("ALTER TABLE host_personalities ADD COLUMN rule_version TEXT")
+        if "input_summary" not in columns:
+            c.execute("ALTER TABLE host_personalities ADD COLUMN input_summary TEXT")
         c.commit()
         c.close()
 
@@ -151,25 +159,39 @@ def assign_personality(
         personality = "scout"
         reason = "Default assignment — insufficient signals for specialization"
 
-    _save_personality(ip, personality, reason)
+    input_summary = {
+        "risk_score": int(risk_score),
+        "open_ports": sorted(open_ports, key=lambda value: int(value) if value.isdigit() else value),
+        "honeypot_hits": honeypot_hits,
+        "cve_count": int(meta.get("cve_count", 0) or 0),
+    }
+    _save_personality(ip, personality, reason, input_summary)
     return personality, reason
 
 
-def _save_personality(ip: str, personality: str, reason: str) -> None:
+def _save_personality(
+    ip: str,
+    personality: str,
+    reason: str,
+    input_summary: Dict[str, Any],
+) -> None:
     p = PERSONALITIES[personality]
     with _lock:
         c = sqlite3.connect(str(DB_PATH), check_same_thread=False)
         c.execute("""
             INSERT INTO host_personalities
-                (ip, personality, aggression, stealth, persistence, assigned_at, reason)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (ip, personality, aggression, stealth, persistence, assigned_at, reason,
+                 rule_version, input_summary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(ip) DO UPDATE SET
                 personality=excluded.personality,
                 aggression=excluded.aggression,
                 stealth=excluded.stealth,
                 persistence=excluded.persistence,
                 assigned_at=excluded.assigned_at,
-                reason=excluded.reason
+                reason=excluded.reason,
+                rule_version=excluded.rule_version,
+                input_summary=excluded.input_summary
         """, (
             ip,
             personality,
@@ -178,6 +200,8 @@ def _save_personality(ip: str, personality: str, reason: str) -> None:
             p["persistence"],
             datetime.utcnow().isoformat(),
             reason,
+            PERSONALITY_RULE_VERSION,
+            json.dumps(input_summary, sort_keys=True),
         ))
         c.commit()
         c.close()
