@@ -12,6 +12,8 @@ jobs:
   patch-and-verify:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
         with:
