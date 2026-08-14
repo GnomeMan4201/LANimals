@@ -1,0 +1,42 @@
+name: Apply cold-cache rogue fix
+
+on:
+  push:
+    branches: [ agent/fresh-operator-journey ]
+    paths:
+      - scripts/apply_rogue_refresh_fix.py
+      - .github/workflows/apply-rogue-refresh-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fresh-operator-journey
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Apply cold-cache correction
+        run: python scripts/apply_rogue_refresh_fix.py
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt >/dev/null
+      - name: Verify focused regression
+        run: |
+          python -m py_compile core/nexus_collectors.py
+          pytest tests/test_observation_scope.py tests/test_contracts.py tests/test_state_evidence_integrity.py -q
+      - name: Commit verified correction
+        run: |
+          rm scripts/apply_rogue_refresh_fix.py
+          rm .github/workflows/apply-rogue-refresh-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Refresh neighbor evidence before rogue comparison'
+          git push origin HEAD:agent/fresh-operator-journey
