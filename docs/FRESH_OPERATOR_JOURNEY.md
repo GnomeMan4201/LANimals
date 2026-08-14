@@ -4,6 +4,8 @@ This document defines the release-blocking first-user path for the supported LAN
 
 The CI journey uses an isolated HOME/XDG tree and a private network fixture created entirely inside the GitHub Actions runner. The fixture is a veth pair plus a network namespace on `192.168.250.0/30` with a known HTTP service. No public or third-party network is probed.
 
+A Discovery or rogue acquisition is also required to keep passive ARP/local-interface evidence inside the exact validated CIDR requested by the operator. Network and broadcast addresses are not host observations, and observations from another interface/subnet must not contaminate inventory or diff state.
+
 The release gate verifies, in order:
 
 1. checkout-first installation creates an isolated `.venv` and working `~/.local/bin/lanimals` link;
@@ -14,7 +16,7 @@ The release gate verifies, in order:
 6. targeted service fingerprinting finds the fixture service and the same service is readable from durable host evidence;
 7. host notes survive a read-back round trip;
 8. HTML report export contains the observed host and service and is persisted in the report index;
-9. a second explicit Discovery produces a comparable stable diff;
+9. a second explicit Discovery produces a comparable diff with no false host appearance/disappearance; derived risk/status changes may legitimately reflect intervening operator evidence decisions;
 10. a trap can be explicitly deployed and is visible as active;
 11. a real fixture MAC transition creates a pending `changed` baseline observation;
 12. deferring the changed identity does not mutate the accepted baseline;
