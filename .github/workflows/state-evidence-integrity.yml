@@ -1,0 +1,62 @@
+name: State evidence integrity hardening
+
+on:
+  push:
+    branches: [ agent/state-evidence-integrity ]
+    paths:
+      - scripts/apply_state_evidence_integrity.py
+      - .github/workflows/state-evidence-integrity.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/state-evidence-integrity
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y nmap net-tools iproute2
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Apply fail-closed integrity patch
+        run: python scripts/apply_state_evidence_integrity.py
+
+      - name: Run integrity regressions
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest tests/test_state_evidence_integrity.py tests/test_contracts.py tests/test_operator_lifecycle.py tests/test_api_contracts.py tests/test_capability_manifest.py tests/test_product_identity.py -v --tb=short
+
+      - name: Run full test suite
+        env:
+          PYTHONPATH: .
+        run: pytest -v --tb=short
+
+      - name: Run appliance smoke test
+        run: bash scripts/smoke_appliance.sh
+
+      - name: Commit verified changes
+        run: |
+          rm scripts/apply_state_evidence_integrity.py
+          rm .github/workflows/state-evidence-integrity.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Make LANimals state and evidence consistent'
+          git push origin HEAD:agent/state-evidence-integrity
