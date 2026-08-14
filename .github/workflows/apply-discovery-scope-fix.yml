@@ -1,0 +1,41 @@
+name: Apply exact discovery scope fix
+
+on:
+  push:
+    branches: [ agent/fresh-operator-journey ]
+    paths:
+      - scripts/apply_discovery_scope_fix.py
+      - .github/workflows/apply-discovery-scope-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fresh-operator-journey
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Apply acquisition-boundary correction
+        run: python scripts/apply_discovery_scope_fix.py
+      - name: Verify syntax and focused contracts
+        run: |
+          python -m py_compile core/nexus_collectors.py core/nexus_api.py
+          python -m pip install -r requirements-dev.txt >/dev/null
+          pytest tests/test_contracts.py tests/test_api_contracts.py tests/test_state_evidence_integrity.py -q
+      - name: Commit verified correction
+        run: |
+          rm scripts/apply_discovery_scope_fix.py
+          rm .github/workflows/apply-discovery-scope-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Constrain discovery evidence to the requested CIDR'
+          git push origin HEAD:agent/fresh-operator-journey
