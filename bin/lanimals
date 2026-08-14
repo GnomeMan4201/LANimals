@@ -21,10 +21,11 @@ BLUE='\033[34m'
 CYAN='\033[36m'
 
 show_help() {
-    echo -e "${BOLD}${MAROON}LANimals Nexus Command Center${NORMAL}"
+    echo -e "${BOLD}${MAROON}LANimals Command Center${NORMAL}"
+    echo "Local Network Intelligence Platform"
     echo ""
     echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
-    echo -e "${BOLD}${MAROON}║               SYSTEM COMMANDS                 ║${NORMAL}"
+    echo -e "${BOLD}${MAROON}║          SUPPORTED APPLIANCE COMMANDS         ║${NORMAL}"
     echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
     echo -e "  ${BOLD}dash${NORMAL}      Show LANimals dashboard"
     echo -e "  ${BOLD}start${NORMAL}     Start the local browser appliance"
@@ -33,22 +34,22 @@ show_help() {
     echo -e "  ${BOLD}open${NORMAL}      Open the running browser console"
     echo -e "  ${BOLD}setup${NORMAL}     Approve the private LAN scan scope"
     echo -e "  ${BOLD}doctor${NORMAL}    Check dependencies and configuration"
-    echo -e "  ${BOLD}sysinfo${NORMAL}   Analyze system components"
+    echo -e "  ${BOLD}config${NORMAL}    Show the active LANimals configuration"
+    echo -e "  ${BOLD}sysinfo${NORMAL}   Analyze local system components"
     echo ""
-    echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
-    echo -e "${BOLD}${MAROON}║               NETWORK COMMANDS                ║${NORMAL}"
-    echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
+    echo -e "${BOLD}${YELLOW}╔═══════════════════════════════════════════════╗${NORMAL}"
+    echo -e "${BOLD}${YELLOW}║      EXPERIMENTAL / LEGACY RESEARCH TOOLS     ║${NORMAL}"
+    echo -e "${BOLD}${YELLOW}╚═══════════════════════════════════════════════╝${NORMAL}"
+    echo "  Preserved for research lineage. These commands are not"
+    echo "  automatically covered by the v2.1 appliance contract."
+    echo ""
     echo -e "  ${BOLD}recon${NORMAL}     Run autonomous recon"
     echo -e "  ${BOLD}alert${NORMAL}     Run threat alert system"
     echo -e "  ${BOLD}monitor${NORMAL}   Start continuous monitoring"
     echo -e "  ${BOLD}traffic${NORMAL}   Analyze network traffic"
     echo -e "  ${BOLD}netmap${NORMAL}    Map network devices visually"
     echo -e "  ${BOLD}viznet${NORMAL}    Interactive network visualization"
-    echo ""
-    echo -e "${BOLD}${MAROON}╔═══════════════════════════════════════════════╗${NORMAL}"
-    echo -e "${BOLD}${MAROON}║               SECURITY COMMANDS               ║${NORMAL}"
-    echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
-    echo -e "  ${BOLD}fortress${NORMAL}  Security hardening toolkit" 
+    echo -e "  ${BOLD}fortress${NORMAL}  Security hardening toolkit"
     echo -e "  ${BOLD}hunter${NORMAL}    Threat hunting and detection"
     echo -e "  ${BOLD}threats${NORMAL}   Show recent threats"
     echo -e "  ${BOLD}vulnscan${NORMAL}  Network vulnerability scanner"
@@ -58,7 +59,7 @@ show_help() {
     echo -e "${BOLD}${MAROON}╚═══════════════════════════════════════════════╝${NORMAL}"
     echo -e "  ${BOLD}help${NORMAL}      Show this help message"
     echo -e "  ${BOLD}version${NORMAL}   Show LANimals version"
-    echo -e "  ${BOLD}update${NORMAL}    Check for updates"
+    echo -e "  ${BOLD}update${NORMAL}    Show update guidance"
     echo ""
     echo -e "For command-specific help, use: ${BOLD}lanimals [command] --help${NORMAL}"
 }
@@ -133,7 +134,7 @@ case "$1" in
         ;;
     version|--version|-V)
         echo -e "${BOLD}${MAROON}LANimals${NORMAL} - Version ${VERSION}"
-        echo -e "Network Security Toolkit"
+        echo "Local Network Intelligence Platform"
         ;;
     update)
         echo -e "${BOLD}${MAROON}[ UPDATE ]${NORMAL} Automatic update checking is not implemented."
@@ -145,7 +146,7 @@ case "$1" in
         ;;
     *)
         echo "Unknown LANimals command: $1" >&2
-        echo "Run 'lanimals help' for the supported command list." >&2
+        echo "Run 'lanimals help' for the command list and support status." >&2
         exit 2
         ;;
 esac
