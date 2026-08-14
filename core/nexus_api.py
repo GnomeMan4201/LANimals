@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 import uuid
@@ -355,7 +356,7 @@ def favicon():
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "service": "lanimals-nexus", "version": VERSION}
+    return {"ok": True, "service": "lanimals", "product": "LANimals", "version": VERSION}
 
 
 @app.get("/api/scope")
@@ -395,14 +396,41 @@ def get_node(node_id: str):
 
 @app.get("/api/reports")
 def get_reports():
+    REPORTS_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     files = []
-    if REPORTS_DIR.exists():
-        for path in sorted(REPORTS_DIR.glob("report_*.json"), reverse=True):
-            stat = path.stat()
-            files.append({"name": path.name, "size": stat.st_size, "modified": stat.st_mtime})
+    for path in sorted(
+        REPORTS_DIR.glob("report_*.html"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ):
+        if not path.is_file() or path.is_symlink():
+            continue
+        stat = path.stat()
+        files.append({
+            "name": path.name,
+            "size": stat.st_size,
+            "modified": stat.st_mtime,
+            "url": f"/api/reports/{path.name}",
+        })
     return {"reports": files[:20]}
 
 
+def _safe_report_name(value: str) -> str:
+    name = Path(value).name
+    if name != value or not name.startswith("report_") or not name.endswith(".html"):
+        raise HTTPException(status_code=400, detail="invalid report name")
+    if not re.fullmatch(r"report_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{6}\.html", name):
+        raise HTTPException(status_code=400, detail="invalid report name")
+    return name
+
+
+@app.get("/api/reports/{name}")
+def get_report(name: str):
+    safe_name = _safe_report_name(name)
+    path = REPORTS_DIR / safe_name
+    if not path.is_file() or path.is_symlink():
+        raise HTTPException(status_code=404, detail="report not found")
+    return FileResponse(path, media_type="text/html", filename=safe_name)
 @app.get("/api/logs")
 def get_logs():
     snap = build_snapshot()
@@ -572,43 +600,53 @@ def get_anomaly():
 
 @app.get("/api/export/report")
 def export_report():
-    """Generate a full HTML operator report."""
+    """Generate, persist, and return a local HTML operator report."""
     from fastapi.responses import HTMLResponse
+    from html import escape as html_escape
+
     hosts = get_all_hosts()
     events = get_recent_events(limit=100)
     stats = get_db_stats()
     now = _now_iso()
 
+    def h(value: Any) -> str:
+        return html_escape(str(value if value is not None else ""), quote=True)
+
     rows = ""
-    for h in sorted(hosts, key=lambda x: x.get("ip") or ""):
-        svcs = get_services_for_ip(h["ip"])
-        svc_str = ", ".join(f"{s['service_name']}:{s['port']}" for s in svcs) or "—"
-        status_color = "#ff4455" if h["status"]=="critical" else "#c97b00" if h["status"]=="warning" else "#2a9d4e"
+    for host in sorted(hosts, key=lambda item: item.get("ip") or ""):
+        services = get_services_for_ip(host["ip"])
+        svc_str = ", ".join(
+            f"{service.get('service_name') or 'service'}:{service.get('port') or '?'}"
+            for service in services
+        ) or "—"
+        status = str(host.get("status") or "normal")
+        status_color = "#ff4455" if status == "critical" else "#c97b00" if status == "warning" else "#2a9d4e"
         rows += f"""<tr>
-            <td>{h.get("ip","")}</td>
-            <td>{h.get("hostname","")}</td>
-            <td>{h.get("mac","") or "—"}</td>
-            <td>{h.get("vendor","") or "—"}</td>
-            <td style="color:{status_color}">{h.get("status","normal")}</td>
-            <td>{h.get("risk_score",0)}</td>
-            <td style="font-size:11px">{svc_str}</td>
-            <td>{h.get("last_seen","") or "—"}</td>
+            <td>{h(host.get("ip"))}</td>
+            <td>{h(host.get("hostname"))}</td>
+            <td>{h(host.get("mac") or "—")}</td>
+            <td>{h(host.get("vendor") or "—")}</td>
+            <td style="color:{status_color}">{h(status)}</td>
+            <td>{h(host.get("risk_score", 0))}</td>
+            <td style="font-size:11px">{h(svc_str)}</td>
+            <td>{h(host.get("last_seen") or "—")}</td>
         </tr>"""
 
     event_rows = ""
-    for e in events[:50]:
-        sev_color = "#ff4455" if e["severity"] in ("critical","high") else "#c97b00" if e["severity"]=="warning" else "#3b7ecf"
+    for event in events[:50]:
+        severity = str(event.get("severity") or "info")
+        sev_color = "#ff4455" if severity in ("critical", "high") else "#c97b00" if severity == "warning" else "#3b7ecf"
         event_rows += f"""<tr>
-            <td style="color:{sev_color}">{e["severity"].upper()}</td>
-            <td>{e["ts"]}</td>
-            <td>{e["title"]}</td>
-            <td>{e.get("summary","")}</td>
-            <td>{e.get("ip","") or "—"}</td>
+            <td style="color:{sev_color}">{h(severity.upper())}</td>
+            <td>{h(event.get("ts"))}</td>
+            <td>{h(event.get("title"))}</td>
+            <td>{h(event.get("summary"))}</td>
+            <td>{h(event.get("ip") or "—")}</td>
         </tr>"""
 
     html = f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/>
-<title>LANimals Report — {now}</title>
+<title>LANimals Report — {h(now)}</title>
 <style>
   body{{font-family:'JetBrains Mono',monospace;background:#0b0b0d;color:#f0f1f3;padding:32px;}}
   h1{{color:#d61f2c;font-size:28px;margin-bottom:4px;}}
@@ -621,17 +659,17 @@ def export_report():
   .stat{{display:inline-block;background:#111115;border:1px solid #252530;border-radius:6px;padding:12px 20px;margin:0 8px 8px 0;}}
   .sv{{font-size:28px;font-weight:800;color:#d61f2c;}}
   .sl{{font-size:10px;color:#7a8090;text-transform:uppercase;}}
-  .footer{{color:#252530;font-size:10px;margin-top:48px;}}
+  .footer{{color:#7a8090;font-size:10px;margin-top:48px;}}
 </style>
 </head><body>
 <h1>LANimals</h1>
-<h2>Network Intelligence Report — Generated {now}</h2>
+<h2>Network Intelligence Report — Generated {h(now)}</h2>
 <div>
-  <div class="stat"><div class="sv">{stats["hosts"]}</div><div class="sl">Hosts</div></div>
-  <div class="stat"><div class="sv">{stats["services"]}</div><div class="sl">Services</div></div>
-  <div class="stat"><div class="sv" style="color:#c97b00">{stats["warnings"]}</div><div class="sl">Warnings</div></div>
-  <div class="stat"><div class="sv">{stats["baseline_entries"]}</div><div class="sl">Baseline</div></div>
-  <div class="stat"><div class="sv">{stats["events"]}</div><div class="sl">Events</div></div>
+  <div class="stat"><div class="sv">{h(stats["hosts"])}</div><div class="sl">Hosts</div></div>
+  <div class="stat"><div class="sv">{h(stats["services"])}</div><div class="sl">Services</div></div>
+  <div class="stat"><div class="sv" style="color:#c97b00">{h(stats["warnings"])}</div><div class="sl">Warnings</div></div>
+  <div class="stat"><div class="sv">{h(stats["baseline_entries"])}</div><div class="sl">Baseline</div></div>
+  <div class="stat"><div class="sv">{h(stats["events"])}</div><div class="sl">Events</div></div>
 </div>
 <h3>Host Inventory</h3>
 <table><thead><tr>
@@ -642,10 +680,19 @@ def export_report():
 <table><thead><tr>
   <th>Severity</th><th>Timestamp</th><th>Event</th><th>Summary</th><th>IP</th>
 </tr></thead><tbody>{event_rows}</tbody></table>
-<div class="footer">LANimals Nexus v{VERSION} — badBANANA/LANimals</div>
+<div class="footer">LANimals v{h(VERSION)} — badBANANA/LANimals</div>
 </body></html>"""
 
-    return HTMLResponse(content=html)
+    REPORTS_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    filename = datetime.now(timezone.utc).strftime("report_%Y-%m-%d_%H-%M-%S_%f.html")
+    report_path = REPORTS_DIR / filename
+    report_path.write_text(html, encoding="utf-8")
+    report_path.chmod(0o600)
+
+    return HTMLResponse(
+        content=html,
+        headers={"X-LANimals-Report": filename, "Cache-Control": "no-store"},
+    )
 
 
 
@@ -784,6 +831,25 @@ def enrich_vt(ip: str):
 
 # ── CVE scan ──────────────────────────────────────────────────────────────────
 
+def _parse_cvss(value: Any) -> Optional[float]:
+    try:
+        score = float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return score if 0.0 <= score <= 10.0 else None
+
+
+def _cve_severity(value: Any) -> str:
+    score = _parse_cvss(value)
+    if score is None:
+        return "warning"
+    if score >= 7.0:
+        return "critical"
+    if score >= 4.0:
+        return "warning"
+    return "info"
+
+
 def _run_cve_scan(jid: str, ip: str) -> None:
     import shutil, subprocess, json as _json
     from xml.etree import ElementTree as ET
@@ -841,9 +907,7 @@ def _run_cve_scan(jid: str, ip: str) -> None:
             insert_events([{
                 "id": f"evt:cve:{ip}:{cve['cve']}",
                 "ts": _now_iso(),
-                "severity": "critical" if float(cve["score"]) >= 7.0 else "warning"
-                            if float(cve["score"]) >= 4.0 else "info"
-                            if cve["score"] != "?" else "warning",
+                "severity": _cve_severity(cve.get("score")),
                 "title": f"CVE: {cve['cve']}",
                 "summary": f"CVSS {cve['score']} on port {cve['port']}",
                 "ip": ip,

@@ -944,7 +944,7 @@ function updateRecommendations(){
 
   const noServices=nodes.filter(n=>n.node_type==='host'&&!(n.meta?.services?.length));
   if(noServices.length>0){
-    recs.push({pri:'low',text:`${noServices.length} host(s) without service data — scan services`,action:()=>{}});
+    recs.push({pri:'low',text:`${noServices.length} host(s) without service data — inspect first host`,action:()=>selectIpOnGraph(noServices[0].ip)});
   }
 
   if(trapData.filter(t=>t.status==='active').length===0){
@@ -1033,10 +1033,18 @@ async function deployTrapBundle(){
 // ── Render Reports ────────────────────────────────────────────────────────────
 function renderReports(reports){
   const wrap=$('reportsList');
-  if(!reports.length){ wrap.innerHTML='<div class="log-line muted">No reports.</div>'; return; }
+  wrap.innerHTML='';
+  if(!reports.length){ wrap.innerHTML='<div class="log-line muted">No reports generated in this operator data directory.</div>'; return; }
   reports.forEach(r=>{
-    const d=document.createElement('div'); d.className='log-line';
+    const d=document.createElement('div');
+    d.className='log-line';
+    d.style.cursor='pointer';
+    d.setAttribute('role','button');
+    d.tabIndex=0;
     d.textContent=`${r.name}  ${(r.size/1024).toFixed(1)}kb  ${new Date(r.modified*1000).toLocaleString()}`;
+    const open=()=>window.open(r.url||('/api/reports/'+encodeURIComponent(r.name)),'_blank','noopener');
+    d.onclick=open;
+    d.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } };
     wrap.appendChild(d);
   });
 }
@@ -1983,7 +1991,6 @@ setInterval(fetchTraps,4000);
 setInterval(fetchIntelFeed,8000);
 setInterval(fetchJobs,5000);
 setInterval(pollAlerts,3000);
-setInterval(()=>apiPost('/api/scan/arp').catch(()=>{}),300000);
 </script>
 </body>
 </html>
