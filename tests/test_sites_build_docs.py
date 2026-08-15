@@ -26,6 +26,15 @@ def test_hosted_surface_is_unambiguously_representative():
         assert "representative" in lowered
 
 
+def test_hosted_surface_cannot_invent_a_live_bridge():
+    for text in (SPEC, PROMPT):
+        lowered = text.lower()
+        assert "localhost" in lowered
+        assert "private" in lowered
+        assert "toggle" in lowered
+        assert "go live" in lowered
+
+
 def test_side_effecting_routes_remain_explicit_post_mutations():
     # Exact transport semantics belong in the paste-ready prompt and handoff.
     # `site_capabilities.json` and its own contract tests remain authoritative.
