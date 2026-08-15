@@ -32,6 +32,8 @@ Persistent treatment required somewhere in the primary chrome:
 
 Representative actions may mutate only the page session. They must not claim that ARP, nmap, service scanning, CVE correlation, watchdog checks, VirusTotal enrichment, traps, or any other network operation actually executed against the visitor's environment.
 
+The public hosted surface must not probe `127.0.0.1`, `localhost`, RFC1918/private addresses, or browser-local network endpoints in an attempt to discover a LANimals runtime. It must not expose a hosted "Go Live" switch or user-controlled mode toggle that implies the public deployment can become operational. Operational mode exists only when the interface is actually served by the self-hosted LANimals runtime.
+
 ### Self-hosted console
 
 The self-hosted web console is operational and talks same-origin to the local LANimals runtime, loopback-first at `http://127.0.0.1:8080`.
@@ -106,7 +108,7 @@ Animation should explain state changes, not decorate them.
 
 Prefer a four-part operator workspace:
 
-1. **Top status bar** — `LANimals`, mode badge, approved/representative CIDR, runtime/status, concise global state.
+1. **Top status bar** — `LANimals`, a truthful surface-mode indicator, approved/representative CIDR, runtime/status, concise global state. The representative/operational distinction is environment-derived, never a fake user-controlled toggle.
 2. **Left operation rail** — explicit acquisition and analysis actions grouped by purpose.
 3. **Central topology workspace** — graph/map as the primary spatial investigation surface.
 4. **Right investigation panel** — selected host, risk, identity, services, CVEs, notes, baseline status, trap/enrichment evidence, and context-specific actions.
@@ -269,6 +271,7 @@ Do **not** create:
 - unsupported AI/ML claims
 - fabricated "live threats" or random alert spam
 - a remote cloud scanner story
+- hosted localhost/private-network probing or a fake "Go Live" bridge
 - an operating-system shell
 - a neon red/green hacker theme
 - glossy glassmorphism as the main visual language
@@ -290,11 +293,12 @@ It must also:
 5. display scope before acquisition
 6. make empty, running, partial, successful, and failed states distinct
 7. make representative state impossible to confuse with local evidence
-8. remain usable on a phone
-9. keep `LANimals` spelling and maroon product identity consistent
-10. retain the operator/CLI lineage without turning the UI into terminal cosplay
-11. contain no dead controls, placeholder panels, TODO text, or invented backend promises
-12. preserve the small banana signature only as a secondary artifact if the asset is supplied
+8. prevent the hosted deployment from probing localhost/private networks or exposing a fake live-mode toggle
+9. remain usable on a phone
+10. keep `LANimals` spelling and maroon product identity consistent
+11. retain the operator/CLI lineage without turning the UI into terminal cosplay
+12. contain no dead controls, placeholder panels, TODO text, or invented backend promises
+13. preserve the small banana signature only as a secondary artifact if the asset is supplied
 
 ## Build priority
 
