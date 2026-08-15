@@ -239,6 +239,7 @@ textarea:focus-visible {
 .edge { stroke: #3a3138; stroke-width: 1.2; }
 .edge.hot { stroke: #694149; stroke-dasharray: 4 5; }
 .graph-node { cursor: pointer; outline: none; }
+.graph-node circle.node-hit { fill: transparent; stroke: none; pointer-events: all; }
 .graph-node circle.node-ring { fill: #151217; stroke: #52464f; stroke-width: 1.4; transition: stroke .12s, fill .12s, r .12s; }
 .graph-node circle.node-core { fill: #7c7179; pointer-events: none; }
 .graph-node text { fill: #b8b0b6; font-size: 10px; font-family: var(--mono); pointer-events: none; }
@@ -387,11 +388,21 @@ textarea:focus-visible {
   .version, .top-status { display: none; }
   .mode-band { justify-content: flex-start; min-width: 0; }
   .mode-badge { font-size: 8px; padding: 5px 7px; }
+  .topology-wrap { grid-template-rows: 52px 1fr; }
+  .topology-toolbar { padding: 4px 9px; }
+  .search-wrap input { height: 44px; }
+  .toolbar-button { min-width: 44px; height: 44px; }
+  .evidence-drawer { grid-template-rows: 45px 1fr; }
+  .tab { height: 44px; min-height: 44px; }
+  .op-button { min-height: 44px; }
+  .small-button { min-height: 44px; }
+  .terminal-shell { grid-template-rows: 1fr 44px; }
+  .terminal-input-row, #terminalInput { min-height: 44px; }
   .mobile-icon {
     display: inline-grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: 1px solid var(--border);
     background: var(--surface-2);
     border-radius: 7px;
@@ -414,7 +425,7 @@ textarea:focus-visible {
   .mobile-scrim { position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,.55); }
   .mobile-scrim.open { display: block; }
   .center { height: 100%; grid-template-rows: minmax(310px, 1fr) min(40vh, 242px); }
-  .topology-toolbar { padding: 7px 9px; gap: 7px; }
+  .topology-toolbar { gap: 7px; }
   .view-subtitle { display: none; }
   .search-wrap { width: 44%; }
   .legend { gap: 7px; font-size: 8px; bottom: 8px; left: 8px; }

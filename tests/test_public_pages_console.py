@@ -116,3 +116,15 @@ def test_public_javascript_parses_when_node_is_available():
         check=False,
     )
     assert result.returncode == 0, result.stderr
+
+def test_phone_touch_targets_are_thumb_sized_without_inflating_desktop():
+    mobile = APP_CSS.split("@media (max-width: 760px)", 1)[1].split("@media (max-width: 460px)", 1)[0]
+    assert ".mobile-icon" in mobile and "width: 44px" in mobile and "height: 44px" in mobile
+    assert ".op-button { min-height: 44px; }" in mobile
+    assert ".small-button { min-height: 44px; }" in mobile
+    assert ".tab { height: 44px; min-height: 44px; }" in mobile
+    assert ".search-wrap input { height: 44px; }" in mobile
+    assert ".toolbar-button { min-width: 44px; height: 44px; }" in mobile
+    assert ".terminal-input-row, #terminalInput { min-height: 44px; }" in mobile
+    assert 'class: "node-hit", r: 24' in APP_JS
+    assert ".graph-node circle.node-hit" in APP_CSS
