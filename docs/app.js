@@ -288,6 +288,7 @@
         "aria-label": `${host.name}, ${host.ip}, risk ${host.risk}`,
         "data-ip": host.ip
       });
+      group.appendChild(svgEl("circle", { class: "node-hit", r: 24 }));
       group.appendChild(svgEl("circle", { class: "node-ring", r: 18 }));
       group.appendChild(svgEl("circle", { class: "node-core", r: 5 }));
       const name = svgEl("text", { x: 27, y: -2 });
