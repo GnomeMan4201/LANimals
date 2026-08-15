@@ -29,6 +29,8 @@ Never claim that the hosted site actually scanned the visitor's network, perform
 
 Representative actions may mutate only in-memory page/session state and must remain clearly representative.
 
+The public hosted deployment must not probe `127.0.0.1`, `localhost`, RFC1918/private addresses, or browser-local network endpoints in an attempt to discover a LANimals runtime. Do not provide a hosted "Go Live" switch or mode toggle that implies the public site can become operational. Operational mode exists only when the interface is actually served by the self-hosted LANimals runtime.
+
 The real self-hosted LANimals browser console is operational against the local runtime. Every operational control must map exactly to `site_capabilities.json`, including method, route, target, persistence, operator-header requirement, and failure semantics. Do not invent a new live feature because it looks useful.
 
 ## Design direction
@@ -51,7 +53,7 @@ If the supplied badBANANA banana asset is present, place it as a small bottom-ri
 
 On desktop, build a real operator workspace:
 
-- top status bar with `LANimals`, hosted/live mode, scope, and runtime/status
+- top status bar with `LANimals`, a truthful surface-mode indicator, scope, and runtime/status; never make the representative/live distinction a fake user-controlled toggle
 - left operation rail for acquisition and analysis actions
 - central topology/graph workspace as the main investigation surface
 - right host investigation panel for selected-host evidence and bounded actions
@@ -183,6 +185,7 @@ Do not create:
 - fictional AI/ML detection claims
 - fake cloud scanning
 - fake remote LAN access
+- hosted localhost/private-network probing or a fake "Go Live" bridge
 - operating-system shell
 - random alert spam
 - decorative panels that do not correspond to LANimals state
@@ -196,17 +199,18 @@ Before considering the build finished, self-check all of the following:
 1. Every operational control maps to `site_capabilities.json`.
 2. Hosted mode is impossible to mistake for live LAN access.
 3. Representative data is labeled before it can be mistaken for evidence.
-4. No active collection or side effect occurs on page load.
-5. Scope is visible before acquisition.
-6. Mutation failures and partial results remain visible.
-7. The terminal never implies a system shell.
-8. `LANimals` capitalization is correct everywhere.
-9. The maroon visual system is applied consistently throughout the tool.
-10. The design retains the old CLI/operator lineage without becoming terminal cosplay.
-11. Desktop and phone workflows are both genuinely usable.
-12. There are no dead controls, placeholders, TODOs, or backend promises not present in the repo.
-13. The banana asset, if supplied, is only a small bottom-right signature.
-14. The result is an operator interface, not a marketing campaign.
+4. The hosted deployment does not probe localhost/private addresses or expose a fake live-mode toggle.
+5. No active collection or side effect occurs on page load.
+6. Scope is visible before acquisition.
+7. Mutation failures and partial results remain visible.
+8. The terminal never implies a system shell.
+9. `LANimals` capitalization is correct everywhere.
+10. The maroon visual system is applied consistently throughout the tool.
+11. The design retains the old CLI/operator lineage without becoming terminal cosplay.
+12. Desktop and phone workflows are both genuinely usable.
+13. There are no dead controls, placeholders, TODOs, or backend promises not present in the repo.
+14. The banana asset, if supplied, is only a small bottom-right signature.
+15. The result is an operator interface, not a marketing campaign.
 
 Do not return a design brief or describe what you would build. Build the actual working site experience to the highest quality possible within these constraints.
 
