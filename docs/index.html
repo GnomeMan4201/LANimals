@@ -1,53 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>LANimals</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b090b">
+  <meta name="description" content="LANimals representative operator workflow. No live LAN access from the public hosted page.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-src 'none';">
+  <title>LANimals — Representative Operator Console</title>
+  <link rel="stylesheet" href="./app.css">
+  <script src="./app.js" defer></script>
 </head>
 <body>
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/GnomeMan4201/LANimals/main/assets/lanimals_logo.png" width="200">
-    <h1><code>LANIMALS</code></h1>
-    <p><code>LAN Threat Recon + Subnet Mapping Toolkit</code></p>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-cluster">
+        <button class="mobile-icon" id="opsToggle" type="button" aria-label="Open operations">≡</button>
+        <span class="brand">LANimals</span>
+        <span class="version">v2.1.0</span>
+      </div>
+
+      <div class="mode-band">
+        <span class="mode-badge">REPRESENTATIVE / NO LIVE LAN ACCESS</span>
+      </div>
+
+      <div class="top-status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-pair"><span>SURFACE</span><b>HOSTED / SESSION</b></span>
+        <span class="status-pair"><span>SCOPE</span><b>192.168.50.0/24</b></span>
+        <span class="status-pair"><span>HOSTS</span><b id="hostCount">9</b></span>
+      </div>
+      <button class="mobile-icon" id="hostToggle" type="button" aria-label="Open selected host">◎</button>
+    </header>
+
+    <main class="workspace">
+      <div class="mobile-scrim" id="mobileScrim" aria-hidden="true"></div>
+
+      <aside class="panel operations" id="operationsPanel" aria-label="Operator actions">
+        <div class="section-title">Acquisition / representative</div>
+        <div class="op-group">
+          <button class="op-button" type="button" data-action="discovery">
+            <span class="op-icon">01</span><span class="op-label">Discovery</span><span class="op-meta">SESSION</span>
+          </button>
+          <button class="op-button" type="button" data-action="arp">
+            <span class="op-icon">02</span><span class="op-label">ARP Refresh</span><span class="op-meta">SESSION</span>
+          </button>
+          <button class="op-button" type="button" data-action="hostmap">
+            <span class="op-icon">03</span><span class="op-label">Host Map</span><span class="op-meta">SESSION</span>
+          </button>
+          <button class="op-button" type="button" data-action="rogue">
+            <span class="op-icon">04</span><span class="op-label">Rogue / Identity Check</span><span class="op-meta">SESSION</span>
+          </button>
+        </div>
+
+        <div class="op-group">
+          <div class="section-title">Analysis</div>
+          <button class="op-button" type="button" data-action="rescore">
+            <span class="op-icon">R</span><span class="op-label">Risk Rescore</span><span class="op-meta">SESSION</span>
+          </button>
+          <button class="op-button" type="button" data-action="diff">
+            <span class="op-icon">Δ</span><span class="op-label">Observation Diff</span><span class="op-meta">READ</span>
+          </button>
+          <button class="op-button" type="button" data-action="audit">
+            <span class="op-icon">A</span><span class="op-label">Security Audit</span><span class="op-meta">READ</span>
+          </button>
+        </div>
+
+        <div class="op-group">
+          <div class="section-title">Evidence</div>
+          <button class="op-button" type="button" data-action="traps">
+            <span class="op-icon">T</span><span class="op-label">Trap Inventory</span><span class="op-meta">VIEW</span>
+          </button>
+          <button class="op-button" type="button" data-action="report">
+            <span class="op-icon">↳</span><span class="op-label">Report Preview</span><span class="op-meta">MEMORY</span>
+          </button>
+        </div>
+
+        <div class="scope-card" aria-label="Representative scope">
+          <div class="section-title">Target before acquisition</div>
+          <div class="scope-line"><span>CIDR</span><b>192.168.50.0/24</b></div>
+          <div class="scope-line"><span>Mode</span><b>REPRESENTATIVE</b></div>
+        </div>
+
+        <div class="op-group">
+          <div class="section-title">Self-hosted runtime required</div>
+          <button class="op-button" type="button" disabled title="Unavailable without the LANimals local runtime">
+            <span class="op-icon">×</span><span class="op-label">Service Fingerprinting</span><span class="op-meta">LOCAL</span>
+          </button>
+          <button class="op-button" type="button" disabled title="Unavailable without the LANimals local runtime">
+            <span class="op-icon">×</span><span class="op-label">CVE Correlation</span><span class="op-meta">LOCAL</span>
+          </button>
+          <button class="op-button" type="button" disabled title="Unavailable without the LANimals local runtime">
+            <span class="op-icon">×</span><span class="op-label">System Inventory</span><span class="op-meta">LOCAL</span>
+          </button>
+          <button class="op-button" type="button" disabled title="Unavailable without the LANimals local runtime">
+            <span class="op-icon">×</span><span class="op-label">Anomaly Scan</span><span class="op-meta">LOCAL</span>
+          </button>
+          <button class="op-button" type="button" disabled title="Unavailable without the LANimals local runtime">
+            <span class="op-icon">×</span><span class="op-label">Watchdog</span><span class="op-meta">LOCAL</span>
+          </button>
+          <button class="op-button" type="button" disabled title="Unavailable without the LANimals local runtime">
+            <span class="op-icon">×</span><span class="op-label">VirusTotal Enrichment</span><span class="op-meta">LOCAL</span>
+          </button>
+          <button class="op-button" type="button" disabled title="Unavailable without the LANimals local runtime">
+            <span class="op-icon">×</span><span class="op-label">Deploy / Stop Trap</span><span class="op-meta">LOCAL</span>
+          </button>
+        </div>
+
+        <div class="mode-card">
+          <strong>This page never becomes live.</strong><br>
+          It does not probe localhost, RFC1918 addresses, or the visitor LAN. Operational controls exist only when LANimals itself serves the self-hosted console against the local runtime.<br><br>
+          <a href="https://github.com/GnomeMan4201/LANimals" rel="noopener noreferrer">repository ↗</a>
+        </div>
+      </aside>
+
+      <section class="center" aria-label="Representative LAN investigation workspace">
+        <div class="topology-wrap">
+          <div class="topology-toolbar">
+            <div>
+              <div class="view-title">Network topology</div>
+              <div class="view-subtitle">representative session evidence</div>
+            </div>
+            <div class="search-wrap">
+              <span class="search-mark" aria-hidden="true">/</span>
+              <label class="sr-only" for="hostSearch">Find host by name, IP, or role</label>
+              <input id="hostSearch" type="search" autocomplete="off" placeholder="find host / ip / role">
+            </div>
+            <button class="toolbar-button" id="labelToggle" type="button" aria-pressed="true">Labels</button>
+          </div>
+
+          <div class="topology-stage">
+            <svg id="topologySvg" role="group" aria-label="Representative network topology. Use Tab to reach host nodes."></svg>
+            <div class="legend" aria-hidden="true">
+              <span><i></i>low</span><span><i class="med"></i>medium</span><span><i class="high"></i>high</span>
+            </div>
+          </div>
+        </div>
+
+        <section class="evidence-drawer" aria-label="Evidence and command drawer">
+          <div class="tabs" role="tablist" aria-label="Evidence views">
+            <button class="tab active" type="button" role="tab" aria-selected="true" data-tab="events">EVENTS <span class="tab-count" id="eventCount">0</span></button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="jobs">JOBS <span class="tab-count" id="jobCount">0</span></button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="baseline">BASELINE <span class="tab-count" id="baselineCount">0</span></button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="traps">TRAPS</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="audit">AUDIT / DIFF</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="reports">REPORTS</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="terminal">TERMINAL</button>
+          </div>
+
+          <div class="tab-panels">
+            <div class="tab-panel active" id="eventsPanel" data-panel="events" role="tabpanel"></div>
+            <div class="tab-panel" id="jobsPanel" data-panel="jobs" role="tabpanel"></div>
+            <div class="tab-panel" id="baselinePanel" data-panel="baseline" role="tabpanel"></div>
+            <div class="tab-panel" id="trapsPanel" data-panel="traps" role="tabpanel"></div>
+            <div class="tab-panel" id="auditPanel" data-panel="audit" role="tabpanel"></div>
+            <div class="tab-panel" id="reportsPanel" data-panel="reports" role="tabpanel"></div>
+            <div class="tab-panel" data-panel="terminal" role="tabpanel">
+              <form class="terminal-shell" id="terminalForm" autocomplete="off">
+                <div class="terminal-output" id="terminalOutput" aria-live="polite"></div>
+                <div class="terminal-input-row">
+                  <span class="terminal-prompt">lanimals&gt;</span>
+                  <label class="sr-only" for="terminalInput">LANimals representative command</label>
+                  <input id="terminalInput" type="text" spellcheck="false" autocomplete="off" placeholder="help">
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="panel investigation" id="investigationPanel" aria-label="Selected host investigation">
+        <div class="section-title">Selected host / representative</div>
+        <div id="hostDetail"></div>
+      </aside>
+    </main>
   </div>
 
-  <hr>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="false"></div>
 
-  <h2>[ DASHBOARD PREVIEW ]</h2>
-  <img src="https://raw.githubusercontent.com/GnomeMan4201/LANimals/main/assets/sysinfo.png">
-  <img src="https://raw.githubusercontent.com/GnomeMan4201/LANimals/main/assets/recon2.png">
-
-  <hr>
-
-  <h2>Features</h2>
-  <ul>
-    <li>Autonomous Recon & Subnet Mapping</li>
-    <li>Live Threat Monitoring + Alerts</li>
-    <li>Traffic Visualizer & Interface Prober</li>
-    <li>Security Toolkit: Hardening + Hunting</li>
-    <li>Terminal-Only, Operator Focused</li>
-  </ul>
-
-  <hr>
-
-  <h2>GitHub</h2>
-  <ul>
-    <li><a href="https://github.com/GnomeMan4201/LANimals">View Repo</a></li>
-    <li><a href="https://github.com/GnomeMan4201/LANimals/archive/refs/heads/main.zip">Download Latest ZIP</a></li>
-  </ul>
-
-  <div align="center">
-    <p><code>Built for speed. Shaped by paranoia. LANimals maps your prey.</code></p>
+  <div class="modal-backdrop" id="reportModal" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+      <header class="modal-head">
+        <span class="modal-title" id="reportTitle">LANimals report preview</span>
+        <button class="small-button" id="closeReport" type="button">CLOSE</button>
+      </header>
+      <div class="modal-body" id="reportBody"></div>
+    </section>
   </div>
+
+  <noscript>
+    <p>This representative operator console requires JavaScript for in-memory interaction. No JavaScript action performs live LAN access.</p>
+  </noscript>
 </body>
 </html>
-
- 
- 
- 
-<!-- trigger -->
-<!-- redeploy -->
-<!-- live now -->
-<!-- final go -->
-<!-- hard rebuild -->
-<!-- purge flush 1749197895 -->
