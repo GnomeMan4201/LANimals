@@ -49,4 +49,4 @@ append = '''\n\ndef test_phone_touch_targets_are_thumb_sized_without_inflating_d
 text = tests.read_text(encoding="utf-8")
 if "test_phone_touch_targets_are_thumb_sized_without_inflating_desktop" in text:
     raise SystemExit("phone touch regression test already present")
-tests.write_text(text.rstrip() + append + "\n", encoding="utf-8")
+tests.write_text(text.rstrip() + append.rstrip() + "\n", encoding="utf-8")
