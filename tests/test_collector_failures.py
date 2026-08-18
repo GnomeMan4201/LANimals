@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-os.environ["LANIMALS_ALLOWED_CIDRS"] = "192.168.1.0/24"
+os.environ["LANIMALS_ALLOWED_CIDRS"] = "192.168.50.0/24"
 os.environ["LANIMALS_MAX_SCAN_ADDRESSES"] = "256"
 
 from core import nexus_collectors as collectors
@@ -56,7 +56,7 @@ class CollectorCommandTests(unittest.TestCase):
     def test_required_nmap_unavailable_is_failure(self) -> None:
         with patch.object(collectors.shutil, "which", return_value=None):
             with self.assertRaisesRegex(collectors.CollectorError, "unavailable: nmap"):
-                collectors.collect_nmap_ping_sweep("192.168.1.0/24")
+                collectors.collect_nmap_ping_sweep("192.168.50.0/24")
 
     def test_valid_zero_host_nmap_xml_is_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -73,7 +73,7 @@ class CollectorCommandTests(unittest.TestCase):
                 return_value="/usr/bin/nmap",
             ), patch.object(collectors, "_run", side_effect=successful_empty_scan):
                 self.assertEqual(
-                    collectors.collect_nmap_ping_sweep("192.168.1.0/24"),
+                    collectors.collect_nmap_ping_sweep("192.168.50.0/24"),
                     [],
                 )
 
@@ -88,13 +88,13 @@ class DiscoveryFailureTests(unittest.TestCase):
     def test_required_collector_failure_marks_discovery_job_error(self) -> None:
         from core import nexus_api
 
-        jid = nexus_api._job_create("discovery", {"cidr": "192.168.1.0/24"})
+        jid = nexus_api._job_create("discovery", {"cidr": "192.168.50.0/24"})
         with patch.object(
             nexus_api,
             "collect_arp_neighbors",
             side_effect=collectors.CollectorError("ip neigh failed"),
         ):
-            nexus_api._run_discovery(jid, "192.168.1.0/24")
+            nexus_api._run_discovery(jid, "192.168.50.0/24")
 
         job = nexus_api._job_get(jid)
         self.assertEqual(job["status"], "error")
