@@ -1,9 +1,6 @@
 name: One-shot notes migration patch
 
 on:
-  push:
-    branches:
-      - agent/fail-closed-notes-migration
   pull_request:
     branches:
       - main
@@ -44,7 +41,7 @@ jobs:
           tests.write_text('''from __future__ import annotations\n\nimport sqlite3\nimport tempfile\nimport unittest\nfrom pathlib import Path\nfrom unittest.mock import patch\n\nfrom core import nexus_db\n\n\nclass NotesMigrationTests(unittest.TestCase):\n    def setUp(self) -> None:\n        self.tempdir = tempfile.TemporaryDirectory()\n        self.db_path = Path(self.tempdir.name) / "lanimals.db"\n        self.db_patch = patch.object(nexus_db, "DB_PATH", self.db_path)\n        self.db_patch.start()\n\n    def tearDown(self) -> None:\n        self.db_patch.stop()\n        self.tempdir.cleanup()\n\n    def _create_legacy_hosts_table(self) -> None:\n        conn = sqlite3.connect(self.db_path)\n        conn.execute("CREATE TABLE hosts (ip TEXT PRIMARY KEY, mac TEXT)")\n        conn.commit()\n        conn.close()\n\n    def _host_columns(self) -> list[str]:\n        conn = sqlite3.connect(self.db_path)\n        try:\n            return [row[1] for row in conn.execute("PRAGMA table_info(hosts)").fetchall()]\n        finally:\n            conn.close()\n\n    def test_legacy_schema_gains_notes_column(self) -> None:\n        self._create_legacy_hosts_table()\n\n        nexus_db.init_db()\n\n        self.assertIn("notes", self._host_columns())\n\n    def test_current_schema_initialization_is_idempotent(self) -> None:\n        nexus_db.init_db()\n        nexus_db.init_db()\n\n        columns = self._host_columns()\n        self.assertEqual(columns.count("notes"), 1)\n\n    def test_real_migration_error_propagates_and_connection_closes(self) -> None:\n        self._create_legacy_hosts_table()\n        inner = sqlite3.connect(self.db_path, check_same_thread=False)\n        inner.row_factory = sqlite3.Row\n\n        class FailingConnection:\n            def __init__(self, connection: sqlite3.Connection) -> None:\n                self.connection = connection\n                self.closed = False\n\n            def executescript(self, sql: str):\n                return self.connection.executescript(sql)\n\n            def execute(self, sql: str, parameters=()):\n                if sql.startswith("ALTER TABLE hosts ADD COLUMN notes"):\n                    raise sqlite3.OperationalError("synthetic migration failure")\n                return self.connection.execute(sql, parameters)\n\n            def commit(self) -> None:\n                self.connection.commit()\n\n            def rollback(self) -> None:\n                self.connection.rollback()\n\n            def close(self) -> None:\n                self.closed = True\n                self.connection.close()\n\n        failing = FailingConnection(inner)\n        with patch.object(nexus_db, "_conn", return_value=failing):\n            with self.assertRaisesRegex(sqlite3.OperationalError, "synthetic migration failure"):\n                nexus_db.init_db()\n\n        self.assertTrue(failing.closed)\n\n\nif __name__ == "__main__":\n    unittest.main()\n''', encoding="utf-8")
           PY
       - name: Verify focused migration tests
-        run: python -m pytest -q tests/test_db_migrations.py
+        run: python -m unittest tests.test_db_migrations -v
       - name: Commit exact patch
         run: |
           git config user.name "github-actions[bot]"
