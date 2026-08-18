@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/fail-closed-notes-migration
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
