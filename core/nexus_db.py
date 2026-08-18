@@ -25,7 +25,8 @@ def _conn() -> sqlite3.Connection:
 def init_db() -> None:
     with _lock:
         c = _conn()
-        c.executescript("""
+        try:
+            c.executescript("""
         CREATE TABLE IF NOT EXISTS hosts (
             ip          TEXT PRIMARY KEY,
             mac         TEXT,
@@ -84,14 +85,17 @@ def init_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_services_ip ON services(ip);
         CREATE INDEX IF NOT EXISTS idx_baseline_decisions_ip
             ON baseline_decisions(ip, id DESC);
-        """)
-        # Migrate: add notes column if upgrading from older DB
-        try:
-            c.execute("ALTER TABLE hosts ADD COLUMN notes TEXT DEFAULT \'\'"  )
+            """)
+            # Migrate legacy hosts schemas based on actual column metadata.
+            columns = {row[1] for row in c.execute("PRAGMA table_info(hosts)").fetchall()}
+            if "notes" not in columns:
+                c.execute("ALTER TABLE hosts ADD COLUMN notes TEXT DEFAULT ''")
+            c.commit()
         except Exception:
-            pass  # column already exists
-        c.commit()
-        c.close()
+            c.rollback()
+            raise
+        finally:
+            c.close()
 
 
 def _now() -> str:
