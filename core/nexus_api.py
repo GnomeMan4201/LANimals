@@ -571,8 +571,11 @@ def get_anomaly():
 
     try:
         conns = psutil.net_connections(kind="inet")
-    except Exception as e:
-        return {"error": str(e), "anomalies": []}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"live connection collection failed: {exc}",
+        ) from exc
 
     anomalies = []
     seen = set()

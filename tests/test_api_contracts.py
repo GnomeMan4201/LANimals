@@ -98,6 +98,34 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(accepted.json()["decision"]["action"], "accept")
         self.assertEqual(self.client.get("/api/baseline").json()["pending"], [])
 
+    def test_anomaly_collection_failure_is_not_clean_scan(self) -> None:
+        with patch("psutil.net_connections", side_effect=PermissionError("denied")):
+            response = self.client.post(
+                "/api/scan/anomaly",
+                headers=OPERATOR_HEADERS,
+            )
+
+        self.assertEqual(response.status_code, 503)
+        body = response.json()
+        self.assertIn("collection failed", body["detail"])
+        self.assertNotIn("anomalies", body)
+        events = nexus_db.get_recent_events(limit=20)
+        self.assertFalse(any(event["title"] == "Anomaly Scan" for event in events))
+
+    def test_anomaly_empty_collection_is_successful_zero_result(self) -> None:
+        with patch("psutil.net_connections", return_value=[]):
+            response = self.client.post(
+                "/api/scan/anomaly",
+                headers=OPERATOR_HEADERS,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["anomalies"], [])
+        self.assertEqual(body["count"], 0)
+        events = nexus_db.get_recent_events(limit=20)
+        self.assertTrue(any(event["title"] == "Anomaly Scan" for event in events))
+
     def test_terminal_rejects_shell_commands(self) -> None:
         with self.client.websocket_connect("/ws/terminal") as websocket:
             greeting = websocket.receive_text()
