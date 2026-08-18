@@ -13,6 +13,10 @@ LEGACY_STATE_FILE = DATA_DIR / "nexus_state.json"
 SNAPSHOT_SCHEMA_VERSION = 2
 
 
+class SnapshotStateError(RuntimeError):
+    """Raised when persisted observation history exists but is not trustworthy."""
+
+
 def _normalize_snapshot(data: Any) -> Optional[Dict[str, Any]]:
     if not isinstance(data, dict):
         return None
@@ -50,26 +54,60 @@ def _state_path() -> Path:
     return LEGACY_STATE_FILE
 
 
+def _empty_pair() -> Dict[str, Any]:
+    return {
+        "schema_version": SNAPSHOT_SCHEMA_VERSION,
+        "previous": None,
+        "current": None,
+    }
+
+
+def _normalize_persisted_snapshot(value: Any, *, label: str, path: Path) -> Optional[Dict[str, Any]]:
+    if value is None:
+        return None
+    normalized = _normalize_snapshot(value)
+    if normalized is None:
+        raise SnapshotStateError(f"invalid {label} snapshot structure: {path}")
+    return normalized
+
+
 def load_snapshot_pair() -> Dict[str, Any]:
     path = _state_path()
+    if not path.exists():
+        return _empty_pair()
+    if path.is_symlink():
+        raise SnapshotStateError(f"refusing symlinked snapshot state: {path}")
+
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {"schema_version": SNAPSHOT_SCHEMA_VERSION, "previous": None, "current": None}
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SnapshotStateError(f"cannot read snapshot state: {path}") from exc
 
-    if isinstance(data, dict) and data.get("schema_version") == SNAPSHOT_SCHEMA_VERSION:
+    if isinstance(data, dict) and "schema_version" in data:
+        if data.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
+            raise SnapshotStateError(
+                f"unsupported snapshot schema version in {path}: "
+                f"{data.get('schema_version')!r}"
+            )
         return {
             "schema_version": SNAPSHOT_SCHEMA_VERSION,
-            "previous": _normalize_snapshot(data.get("previous")),
-            "current": _normalize_snapshot(data.get("current")),
+            "previous": _normalize_persisted_snapshot(
+                data.get("previous"), label="previous", path=path
+            ),
+            "current": _normalize_persisted_snapshot(
+                data.get("current"), label="current", path=path
+            ),
         }
 
     # Compatibility with the pre-v2 single-snapshot file. Treat it as current;
     # the next explicit acquisition will shift it to previous.
+    legacy = _normalize_snapshot(data)
+    if legacy is None:
+        raise SnapshotStateError(f"invalid legacy snapshot structure: {path}")
     return {
         "schema_version": SNAPSHOT_SCHEMA_VERSION,
         "previous": None,
-        "current": _normalize_snapshot(data),
+        "current": legacy,
     }
 
 
