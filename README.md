@@ -258,6 +258,12 @@ The smoke path verifies the local browser-appliance lifecycle in addition to uni
 
 That file is the boundary between what LANimals **does**, what requires the local appliance, and what remains research lineage.
 
+## Contributing and independent validation
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution scope, safety requirements, validation commands, and capability-contract rules.
+
+Independent fresh-install and scope-contract replication is tracked in [Issue #21](https://github.com/GnomeMan4201/LANimals/issues/21). A successful external report strengthens confidence in the documented supported path without being treated as proof of compatibility with every environment.
+
 ---
 
 *LANimals // badBANANA research // GnomeMan4201*
