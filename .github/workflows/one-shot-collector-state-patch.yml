@@ -16,77 +16,15 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: agent/explicit-collector-failure-state
-      - name: Apply exact collector-state patch and regressions
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path("core/nexus_collectors.py")
-          text = path.read_text(encoding="utf-8")
-
-          def replace_once(old: str, new: str, label: str) -> None:
-              global text
-              if text.count(old) != 1:
-                  raise SystemExit(f"unexpected source shape for {label}: {text.count(old)} matches")
-              text = text.replace(old, new, 1)
-
-          replace_once(
-              "TMP_DIR = CACHE_DIR\n\n",
-              "TMP_DIR = CACHE_DIR\n\n\nclass CollectorError(RuntimeError):\n    \"\"\"Required collector execution failed; zero observations were not established.\"\"\"\n\n",
-              "CollectorError insertion",
-          )
-
-          replace_once(
-              '''def _run(cmd: list[str], timeout: int = 30) -> str:\n    try:\n        result = subprocess.run(\n            cmd, capture_output=True, text=True, timeout=timeout, check=False\n        )\n        return (result.stdout + "\\n" + result.stderr).strip()\n    except Exception:\n        return ""\n''',
-              '''def _run(cmd: list[str], timeout: int = 30) -> str:\n    try:\n        result = subprocess.run(\n            cmd, capture_output=True, text=True, timeout=timeout, check=False\n        )\n    except subprocess.TimeoutExpired as exc:\n        raise CollectorError(\n            f"collector command timed out after {timeout}s: {' '.join(cmd)}"\n        ) from exc\n    except OSError as exc:\n        raise CollectorError(\n            f"collector command failed to start: {' '.join(cmd)}: {exc}"\n        ) from exc\n\n    if result.returncode != 0:\n        detail = (result.stderr or result.stdout or "").strip()\n        suffix = f": {detail}" if detail else ""\n        raise CollectorError(\n            f"collector command exited {result.returncode}: {' '.join(cmd)}{suffix}"\n        )\n    return (result.stdout + "\\n" + result.stderr).strip()\n''',
-              "_run",
-          )
-
-          replace_once(
-              '''def collect_nmap_ping_sweep(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]]:\n    cidr = validate_scan_cidr(cidr)\n    if shutil.which("nmap") is None:\n        return []\n    xml_path = TMP_DIR / "nexus_ping_scan.xml"\n    xml_path.unlink(missing_ok=True)\n    _run(_nmap_cmd(["-sn", cidr, "-oX", str(xml_path)]), timeout=90)\n    if not xml_path.exists():\n        return []\n    try:\n        from xml.etree import ElementTree as ET\n        root = ET.parse(xml_path).getroot()\n    except Exception:\n        return []\n''',
-              '''def collect_nmap_ping_sweep(cidr: str = "192.168.1.0/24") -> List[Dict[str, Any]]:\n    cidr = validate_scan_cidr(cidr)\n    if shutil.which("nmap") is None:\n        raise CollectorError("required collector command unavailable: nmap")\n    xml_path = TMP_DIR / "nexus_ping_scan.xml"\n    xml_path.unlink(missing_ok=True)\n    _run(_nmap_cmd(["-sn", cidr, "-oX", str(xml_path)]), timeout=90)\n    if not xml_path.exists():\n        raise CollectorError("nmap ping sweep completed without XML output")\n    try:\n        from xml.etree import ElementTree as ET\n        root = ET.parse(xml_path).getroot()\n    except Exception as exc:\n        raise CollectorError(f"invalid nmap ping XML: {exc}") from exc\n''',
-              "nmap ping sweep",
-          )
-
-          replace_once(
-              '''    uname = _run(["uname", "-a"])\n    if uname:\n        info["uname"] = uname\n''',
-              '''    try:\n        uname = _run(["uname", "-a"])\n    except CollectorError as exc:\n        info["uname_error"] = str(exc)\n    else:\n        if uname:\n            info["uname"] = uname\n''',
-              "optional uname",
-          )
-
-          replace_once(
-              '''def collect_service_scan(targets: List[str]) -> List[Dict[str, Any]]:\n    if shutil.which("nmap") is None:\n        return []\n''',
-              '''def collect_service_scan(targets: List[str]) -> List[Dict[str, Any]]:\n    if shutil.which("nmap") is None:\n        raise CollectorError("required collector command unavailable: nmap")\n''',
-              "service scan nmap availability",
-          )
-
-          replace_once(
-              '''def collect_services_for_ip(ip: str) -> List[Dict[str, Any]]:\n    ip = validate_host_target(ip)\n    if shutil.which("nmap") is None:\n        return []\n''',
-              '''def collect_services_for_ip(ip: str) -> List[Dict[str, Any]]:\n    ip = validate_host_target(ip)\n    if shutil.which("nmap") is None:\n        raise CollectorError("required collector command unavailable: nmap")\n''',
-              "targeted service scan nmap availability",
-          )
-
-          replace_once(
-              '''def _parse_nmap_services(\n    xml_path: Path, source: str = "nmap", filter_ip: str | None = None\n) -> List[Dict[str, Any]]:\n    if not xml_path.exists():\n        return []\n    try:\n        from xml.etree import ElementTree as ET\n        root = ET.parse(xml_path).getroot()\n    except Exception:\n        return []\n''',
-              '''def _parse_nmap_services(\n    xml_path: Path, source: str = "nmap", filter_ip: str | None = None\n) -> List[Dict[str, Any]]:\n    if not xml_path.exists():\n        raise CollectorError(f"nmap service scan completed without XML output: {xml_path}")\n    try:\n        from xml.etree import ElementTree as ET\n        root = ET.parse(xml_path).getroot()\n    except Exception as exc:\n        raise CollectorError(f"invalid nmap service XML {xml_path}: {exc}") from exc\n''',
-              "service XML parser",
-          )
-
-          path.write_text(text, encoding="utf-8")
-
-          Path("tests/test_collector_failures.py").write_text('''from __future__ import annotations\n\nimport subprocess\nimport tempfile\nimport unittest\nfrom pathlib import Path\nfrom types import SimpleNamespace\nfrom unittest.mock import patch\n\nfrom core import nexus_collectors as collectors\n\n\nclass CollectorCommandTests(unittest.TestCase):\n    def test_successful_command_preserves_output(self) -> None:\n        completed = SimpleNamespace(returncode=0, stdout="observed\\n", stderr="")\n        with patch.object(collectors.subprocess, "run", return_value=completed):\n            self.assertEqual(collectors._run(["ip", "neigh"]), "observed")\n\n    def test_successful_empty_command_is_valid_empty_output(self) -> None:\n        completed = SimpleNamespace(returncode=0, stdout="", stderr="")\n        with patch.object(collectors.subprocess, "run", return_value=completed):\n            self.assertEqual(collectors._run(["ip", "neigh"]), "")\n\n    def test_timeout_is_typed_failure(self) -> None:\n        with patch.object(\n            collectors.subprocess,\n            "run",\n            side_effect=subprocess.TimeoutExpired(["ip", "neigh"], 30),\n        ):\n            with self.assertRaisesRegex(collectors.CollectorError, "timed out"):\n                collectors._run(["ip", "neigh"], timeout=30)\n\n    def test_nonzero_exit_is_typed_failure_with_stderr(self) -> None:\n        completed = SimpleNamespace(returncode=2, stdout="", stderr="permission denied")\n        with patch.object(collectors.subprocess, "run", return_value=completed):\n            with self.assertRaisesRegex(collectors.CollectorError, "permission denied"):\n                collectors._run(["ip", "neigh"])
-\n    def test_launch_failure_is_typed_failure(self) -> None:\n        with patch.object(\n            collectors.subprocess,\n            "run",\n            side_effect=FileNotFoundError("ip"),\n        ):\n            with self.assertRaisesRegex(collectors.CollectorError, "failed to start"):\n                collectors._run(["ip", "neigh"])
-\n    def test_required_nmap_unavailable_is_failure(self) -> None:\n        with patch.object(collectors.shutil, "which", return_value=None):\n            with self.assertRaisesRegex(collectors.CollectorError, "unavailable: nmap"):\n                collectors.collect_nmap_ping_sweep("192.168.1.0/24")\n\n    def test_valid_zero_host_nmap_xml_is_success(self) -> None:\n        with tempfile.TemporaryDirectory() as tmp:\n            tmp_path = Path(tmp)\n            xml_path = tmp_path / "nexus_ping_scan.xml"\n\n            def successful_empty_scan(*args, **kwargs):\n                xml_path.write_text("<nmaprun></nmaprun>", encoding="utf-8")\n                return ""\n\n            with patch.object(collectors, "TMP_DIR", tmp_path), patch.object(\n                collectors.shutil, "which", return_value="/usr/bin/nmap"\n            ), patch.object(collectors, "_run", side_effect=successful_empty_scan):\n                self.assertEqual(\n                    collectors.collect_nmap_ping_sweep("192.168.1.0/24"), []\n                )\n\n    def test_scope_rejection_happens_before_subprocess(self) -> None:\n        with patch.object(collectors, "_run") as run_mock:\n            with self.assertRaises(Exception):\n                collectors.collect_nmap_ping_sweep("8.8.8.0/24")\n        run_mock.assert_not_called()\n\n\nclass DiscoveryFailureTests(unittest.TestCase):\n    def test_required_collector_failure_marks_discovery_job_error(self) -> None:\n        from core import nexus_api\n\n        jid = nexus_api._job_create("discovery", {"cidr": "192.168.1.0/24"})\n        with patch.object(\n            nexus_api,\n            "collect_arp_neighbors",\n            side_effect=collectors.CollectorError("ip neigh failed"),\n        ):\n            nexus_api._run_discovery(jid, "192.168.1.0/24")\n\n        job = nexus_api._job_get(jid)\n        self.assertEqual(job["status"], "error")\n        self.assertIsNone(job["result"])
-        self.assertIn("ip neigh failed", job["error"])
-\n\nif __name__ == "__main__":\n    unittest.main()\n''', encoding="utf-8")
-          PY
-      - name: Verify dependency-free collector command regressions
+      - name: Apply exact collector-state transformation
+        run: python tools/_one_shot_patch_collectors.py
+      - name: Verify dependency-free collector regressions
         run: python -m unittest tests.test_collector_failures.CollectorCommandTests -v
       - name: Commit exact patch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add core/nexus_collectors.py tests/test_collector_failures.py
+          git add core/nexus_collectors.py
           git diff --cached --check
           git commit -m "Distinguish collector failures from zero results"
           git push origin HEAD:agent/explicit-collector-failure-state
