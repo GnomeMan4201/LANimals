@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+
+os.environ["LANIMALS_ALLOWED_CIDRS"] = "192.168.1.0/24"
+os.environ["LANIMALS_MAX_SCAN_ADDRESSES"] = "256"
 
 from core import nexus_collectors as collectors
 
