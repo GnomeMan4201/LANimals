@@ -184,6 +184,8 @@ def send_to_threatmap(
         response = json.loads(line)
     except json.JSONDecodeError as exc:
         raise ThreatmapHandoffError("threatmapd returned invalid JSON") from exc
+    if not isinstance(response, dict):
+        raise ThreatmapHandoffError("threatmapd response must be a JSON object")
     if response.get("id") != request["id"]:
         raise ThreatmapHandoffError("threatmapd response id mismatch")
     if response.get("ok") is not True:
