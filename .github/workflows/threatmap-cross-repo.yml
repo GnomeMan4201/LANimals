@@ -1,0 +1,142 @@
+name: THREATMAP Cross-Repo Contract
+
+on:
+  push:
+    branches: [field/threatmap-handoff-v1]
+    paths:
+      - 'core/threatmap_handoff.py'
+      - 'tests/test_threatmap_handoff.py'
+      - 'docs/THREATMAP_HANDOFF.md'
+      - '.github/workflows/threatmap-cross-repo.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'core/threatmap_handoff.py'
+      - 'tests/test_threatmap_handoff.py'
+      - 'docs/THREATMAP_HANDOFF.md'
+      - '.github/workflows/threatmap-cross-repo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout LANimals candidate
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Checkout pinned THREATMAP contract
+        uses: actions/checkout@v7
+        with:
+          repository: GnomeMan4201/threatmap
+          ref: cf0702cda101e308d3f792858cb1c805583d6b57
+          path: threatmap
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install pinned THREATMAP core
+        run: python -m pip install ./threatmap/field
+
+      - name: Prove handoff acceptance, replay, tamper rejection, and write boundary
+        run: |
+          python - <<'PY'
+          import tempfile
+          from pathlib import Path
+
+          from core.threatmap_handoff import build_threatmap_candidate
+          from threatmap_core.models import CaseRecord
+          from threatmap_core.service import ThreatmapService, handle_request
+          from threatmap_core.store import ThreatmapStore
+
+          ts = "2026-08-26T02:00:00-05:00"
+          source_record = {
+              "host": "192.0.2.44",
+              "port": 22,
+              "service": "ssh",
+              "scope": "192.0.2.0/24",
+          }
+          candidate = build_threatmap_candidate(
+              source_record_id="LAN-OBS-0001",
+              observed_at=ts,
+              observation_type="network_observation",
+              source="approved_private_lan",
+              source_locator="192.0.2.44",
+              source_record=source_record,
+              collector_version="2.1.0-cross-repo",
+          )
+
+          with tempfile.TemporaryDirectory() as tmp:
+              store = ThreatmapStore(Path(tmp) / "cross-repo.sqlite")
+              try:
+                  store.insert(
+                      CaseRecord(
+                          case_id="CASE-XREPO-001",
+                          title="LANimals cross-repo contract",
+                          status="OPEN",
+                          created_at=ts,
+                          updated_at=ts,
+                      )
+                  )
+                  service = ThreatmapService(store)
+
+                  request = {
+                      "id": "xrepo-accept",
+                      "op": "handoff.lanimals.accept",
+                      "params": {
+                          "case_id": "CASE-XREPO-001",
+                          "candidate": candidate,
+                      },
+                  }
+                  first = handle_request(service, request)
+                  second = handle_request(service, request)
+
+                  assert first["ok"] is True, first
+                  assert first["result"]["inserted"] is True, first
+                  assert second["ok"] is True, second
+                  assert second["result"]["inserted"] is False, second
+                  assert (
+                      first["result"]["evidence"]["record_id"]
+                      == second["result"]["evidence"]["record_id"]
+                  )
+                  assert (
+                      first["result"]["evidence"]["payload"]["verification_status"]
+                      == "UNVERIFIED"
+                  )
+
+                  before_tamper = store.list_case_records("CASE-XREPO-001")
+                  tampered = dict(candidate)
+                  tampered["source_record"] = {**source_record, "port": 443}
+                  rejected = handle_request(
+                      service,
+                      {
+                          "id": "xrepo-tamper",
+                          "op": "handoff.lanimals.accept",
+                          "params": {
+                              "case_id": "CASE-XREPO-001",
+                              "candidate": tampered,
+                          },
+                      },
+                  )
+                  assert rejected["ok"] is False, rejected
+                  assert rejected["error"]["code"] == "VALIDATION_ERROR", rejected
+
+                  records = store.list_case_records("CASE-XREPO-001")
+                  assert len(records) == len(before_tamper)
+                  record_types = [record.record_type for record in records]
+                  assert record_types.count("evidence") == 1, record_types
+                  assert record_types.count("entity") == 0, record_types
+                  assert record_types.count("relationship") == 0, record_types
+              finally:
+                  store.close()
+
+          print("LANimals/THREATMAP cross-repo contract: PASS")
+          PY
