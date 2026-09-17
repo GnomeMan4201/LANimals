@@ -80,6 +80,20 @@ def _serve_once(path: Path, response_factory, captured: dict):
         server.close()
 
 
+def _start_server(socket_path: Path, response_factory, captured: dict):
+    thread = threading.Thread(
+        target=_serve_once,
+        args=(socket_path, response_factory, captured),
+        daemon=True,
+    )
+    thread.start()
+    for _ in range(100):
+        if socket_path.exists():
+            break
+        thread.join(0.01)
+    return thread
+
+
 def test_send_to_threatmap_uses_local_ipc_contract():
     with tempfile.TemporaryDirectory() as tmp:
         socket_path = Path(tmp) / "threatmapd.sock"
@@ -95,16 +109,7 @@ def test_send_to_threatmap_uses_local_ipc_contract():
                 },
             }
 
-        thread = threading.Thread(
-            target=_serve_once,
-            args=(socket_path, response_factory, captured),
-            daemon=True,
-        )
-        thread.start()
-        for _ in range(100):
-            if socket_path.exists():
-                break
-            thread.join(0.01)
+        thread = _start_server(socket_path, response_factory, captured)
 
         result = send_to_threatmap(
             socket_path,
@@ -133,21 +138,35 @@ def test_send_surfaces_threatmap_rejection():
                 "error": {"code": "VALIDATION_ERROR", "message": "hash mismatch"},
             }
 
-        thread = threading.Thread(
-            target=_serve_once,
-            args=(socket_path, response_factory, captured),
-            daemon=True,
-        )
-        thread.start()
-        for _ in range(100):
-            if socket_path.exists():
-                break
-            thread.join(0.01)
+        thread = _start_server(socket_path, response_factory, captured)
 
         with pytest.raises(ThreatmapHandoffRejected) as exc:
             send_to_threatmap(socket_path, "CASE-001", candidate(), request_id="reject")
         thread.join(timeout=1)
         assert exc.value.code == "VALIDATION_ERROR"
+
+
+def test_send_rejects_non_object_json_response():
+    with tempfile.TemporaryDirectory() as tmp:
+        socket_path = Path(tmp) / "threatmapd.sock"
+        captured = {}
+
+        def response_factory(_request):
+            return []
+
+        thread = _start_server(socket_path, response_factory, captured)
+
+        with pytest.raises(
+            ThreatmapHandoffError,
+            match="response must be a JSON object",
+        ):
+            send_to_threatmap(
+                socket_path,
+                "CASE-001",
+                candidate(),
+                request_id="non-object",
+            )
+        thread.join(timeout=1)
 
 
 def test_send_rejects_non_socket_path():
