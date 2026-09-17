@@ -1,10 +1,10 @@
 # THREATMAP handoff v1
 
-LANimals can export one observed record to the private THREATMAP FIELD service without receiving direct database access.
+LANimals can export one observation-shaped record to the private THREATMAP FIELD service without receiving direct database access.
 
 The integration lives in `core/threatmap_handoff.py` and is intentionally narrow:
 
-1. LANimals canonicalizes the source observation and computes SHA-256.
+1. LANimals canonicalizes the supplied source record and computes SHA-256.
 2. LANimals builds a schema-v1 evidence candidate containing the source record and its hash.
 3. LANimals sends `handoff.lanimals.accept` to the owner-only local `threatmapd` Unix socket.
 4. THREATMAP recalculates the source hash before accepting anything.
@@ -38,4 +38,8 @@ Before connecting, LANimals requires the configured path to be:
 
 `threatmapd` performs its own peer-UID validation independently.
 
-This module does not scan, broaden network scope, or bypass LANimals' existing approved-scope controls. It only transports an observation that already exists.
+## Boundary not yet provided by this module
+
+This transport helper does not itself prove that the supplied candidate came from LANimals' persisted observation history or that the observation was collected under the active approved-scope workflow. The eventual production call site must obtain the source record from the trusted LANimals observation path and preserve that scope/provenance binding before invoking the handoff.
+
+The module itself performs no scanning, expands no network scope, and grants no direct THREATMAP database access. Its current guarantee is limited to deterministic candidate construction, local socket validation, transport, response validation, and propagation of THREATMAP's accept/reject result.
